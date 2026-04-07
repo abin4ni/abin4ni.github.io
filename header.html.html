@@ -1,0 +1,70 @@
+<!-- ═══ NAV ═══ -->
+<nav class="topnav">
+  <!-- 漢堡選單 (Mobile Menu) -->
+  <button class="hamburger-btn" id="hamburger-btn" onclick="if(window.toggleMobileMenu) toggleMobileMenu()">☰</button>
+
+  <!-- 品牌標誌 -->
+  <a class="logo-wrap" href="/index.html">
+    <div class="logo-mark" id="logo-mark-wrap">
+      <span class="logo-letter">B</span>
+    </div>
+    <div class="logo-name"><em id="logo-bin">Bin</em>Tools</div>
+  </a>
+
+  <!-- 桌面版工具分頁 -->
+  <div class="tool-tabs desktop-only" id="tool-tabs">
+    <a class="tool-tab active" href="/tools.html#excel" onclick="if(window.switchTool){switchTool('excel');return false;}" id="tab-excel">
+      <div class="tool-tab-icon">📊</div>
+      <div class="tool-tab-label"><b data-i18n="tab_exceltojpg">ExceltoJPG</b><span data-i18n="tab_subtitle">試算表轉圖片</span></div>
+    </a>
+    <a class="tool-tab" href="/tools.html#transcribe" onclick="if(window.switchTool){switchTool('transcribe');return false;}" id="tab-transcribe">
+      <div class="tool-tab-icon">🎙️</div>
+      <div class="tool-tab-label"><b>音影轉文字</b><span>AI 語音辨識轉檔</span></div>
+    </a>
+    <a class="tool-tab" href="/tools.html#render" onclick="if(window.switchTool){switchTool('render');return false;}" id="tab-render">
+      <div class="tool-tab-icon">🎬</div>
+      <div class="tool-tab-label"><b data-i18n="tab_render">影片渲染估算</b><span data-i18n="tab_render_sub">4K 渲染時間計算</span></div>
+    </a>
+    <a class="tool-tab" href="/tools.html#pomodoro" onclick="if(window.switchTool){switchTool('pomodoro');return false;}" id="tab-pomodoro">
+      <div class="tool-tab-icon">🕒</div>
+      <div class="tool-tab-label"><b>專注計時</b><span>時鐘鐘計時器</span></div>
+    </a>
+  </div>
+
+  <!-- 右側快速功能 -->
+  <div class="nav-right">
+    <div class="topnav-ad">
+      <ins class="adsbygoogle" style="display:inline-block;width:300px;height:50px" data-ad-client="ca-pub-2247011498149704" data-ad-slot="auto"></ins>
+      <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+    </div>
+    <div class="lang-dropdown">
+      <button class="icon-btn" onclick="if(window.toggleLangMenu) toggleLangMenu()" id="lang-btn-label">🌐 繁中</button>
+      <div class="lang-menu" id="lang-menu">
+        <button class="lang-item act" onclick="if(window.setLang) setLang('zh-TW','繁中',this)">🇹🇼 繁體中文</button>
+        <button class="lang-item" onclick="if(window.setLang) setLang('en','EN',this)">🇺🇸 English</button>
+        <button class="lang-item" onclick="if(window.setLang) setLang('fr','FR',this)">🇫🇷 Français</button>
+        <button class="lang-item" onclick="if(window.setLang) setLang('ja','日本語',this)">🇯🇵 日本語</button>
+        <button class="lang-item" onclick="if(window.setLang) setLang('ko','한국어',this)">🇰🇷 한국어</button>
+      </div>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">☀️ 淺色</button>
+  </div>
+</nav>
+
+<!-- 行動版漢堡選單面板 -->
+<div class="mobile-menu" id="mobile-menu">
+  <div class="mobile-menu-content">
+    <a class="mobile-menu-item" href="/tools.html#excel" onclick="if(window.switchTool){switchTool('excel');toggleMobileMenu();return false;}" id="mobile-tab-excel">
+      <span>📊</span> <b data-i18n="tab_exceltojpg">ExceltoJPG</b>
+    </a>
+    <a class="mobile-menu-item" href="/tools.html#transcribe" onclick="if(window.switchTool){switchTool('transcribe');toggleMobileMenu();return false;}" id="mobile-tab-transcribe">
+      <span>🎙️</span> <b>音影轉文字</b>
+    </a>
+    <a class="mobile-menu-item" href="/tools.html#render" onclick="if(window.switchTool){switchTool('render');toggleMobileMenu();return false;}" id="mobile-tab-render">
+      <span>🎬</span> <b data-i18n="tab_render">影片渲染估算</b>
+    </a>
+    <a class="mobile-menu-item" href="/tools.html#pomodoro" onclick="if(window.switchTool){switchTool('pomodoro');toggleMobileMenu();return false;}" id="mobile-tab-pomodoro">
+      <span>🕒</span> <b>專注計時</b>
+    </a>
+  </div>
+</div>
