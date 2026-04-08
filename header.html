@@ -1,0 +1,52 @@
+<nav class="topnav">
+  <a class="logo-wrap" href="__BASE__index.html">
+    <div class="logo-mark"><span class="logo-letter">B</span></div>
+    <span class="logo-name">Bin<em>Tools</em></span>
+  </a>
+
+  <!-- 桌面版工具分頁（tools.html 專用，index.html 上會隱藏） -->
+  <div class="tool-tabs desktop-only" id="tool-tabs" style="display:none;">
+    <a class="tool-tab" href="__BASE__tools.html#excel"      id="tab-excel">
+      <div class="tool-tab-icon">📊</div>
+      <div class="tool-tab-label"><b>ExcelToJPG</b><span>試算表轉圖片</span></div>
+    </a>
+    <a class="tool-tab" href="__BASE__tools.html#transcribe" id="tab-transcribe">
+      <div class="tool-tab-icon">🎙️</div>
+      <div class="tool-tab-label"><b>音影轉文字</b><span>AI 語音辨識轉檔</span></div>
+    </a>
+    <a class="tool-tab" href="__BASE__tools.html#render"     id="tab-render">
+      <div class="tool-tab-icon">🎬</div>
+      <div class="tool-tab-label"><b>影片渲染估算</b><span>4K 渲染時間計算</span></div>
+    </a>
+    <a class="tool-tab" href="__BASE__tools.html#pomodoro"   id="tab-pomodoro">
+      <div class="tool-tab-icon">🕒</div>
+      <div class="tool-tab-label"><b>專注計時</b><span>番茄鐘計時器</span></div>
+    </a>
+  </div>
+
+  <div class="nav-right">
+    <div class="lang-dropdown" id="header-lang-dropdown" style="display:none;">
+      <button class="icon-btn" onclick="toggleLangMenu()" id="lang-btn-label">🌐 繁中</button>
+      <div class="lang-menu" id="lang-menu"></div>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">☀️ 淺色</button>
+  </div>
+</nav>
+
+<!-- 行動版漢堡選單（tools.html 專用） -->
+<div class="mobile-menu" id="mobile-menu" style="display:none;">
+  <div class="mobile-menu-content">
+    <a class="mobile-menu-item" href="__BASE__tools.html#excel">
+      <span>📊</span> <b>ExcelToJPG</b>
+    </a>
+    <a class="mobile-menu-item" href="__BASE__tools.html#transcribe">
+      <span>🎙️</span> <b>音影轉文字</b>
+    </a>
+    <a class="mobile-menu-item" href="__BASE__tools.html#render">
+      <span>🎬</span> <b>影片渲染估算</b>
+    </a>
+    <a class="mobile-menu-item" href="__BASE__tools.html#pomodoro">
+      <span>🕒</span> <b>專注計時</b>
+    </a>
+  </div>
+</div>
