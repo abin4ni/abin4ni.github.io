@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BinTools — ExcelToJPG & 影片渲染估算</title>
+<meta name="description" content="BinTools 免費線上工具：ExcelToJPG 試算表轉圖片，4K 影片渲染時間估算">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+TC:wght@400;500;700&family=Black+Han+Sans&family=Mantou:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2247011498149704" crossorigin="anonymous"></script>
+<style>
+/* ── Apple 風格色彩與變數 ── */
+:root {
+  --orange: #FF6000; --orange2: #FF8533; --orange-glow: rgba(255,96,0,.35); --orange-dim: rgba(255,96,0,.1); 
+  --blue: #1E4D8C; --blue2: #2E6AC9; --blue-glow: rgba(30,77,140,.35); --blue-dim: rgba(30,77,140,.1); 
+  --success: #34d399; --danger: #ff3b30; 
+  --radius: 10px; --radius-lg: 14px; --radius-xl: 18px;
+}
+@font-face{font-family:'LINESeedTW';font-weight:100;src:url('LINESeedTW_TTF_Th.ttf') format('truetype');}
+@font-face{font-family:'LINESeedTW';font-weight:400;src:url('LINESeedTW_TTF_Rg.ttf') format('truetype');}
+@font-face{font-family:'LINESeedTW';font-weight:700;src:url('LINESeedTW_TTF_Bd.ttf') format('truetype');}
+@font-face{font-family:'LINESeedTW';font-weight:800;src:url('LINESeedTW_TTF_Eb.ttf') format('truetype');}
+
+[data-theme="dark"]{
+  --bg: #000000; --bg2: #1c1c1e; --bg3: #2c2c2e; --bg4: #3a3a3c; --bg5: #48484a; 
+  --border: rgba(255,255,255,.1); --border2: rgba(255,255,255,.15); 
+  --text: #f5f5f7; --text2: #adadb8; --text3: #86868b; 
+  --input-bg: #1c1c1e; --section-bg: #1c1c1e; /* 統一背景色 */
+  --acc: var(--orange); --acc2: var(--orange2); --acc-glow: var(--orange-glow); --acc-dim: var(--orange-dim); 
+  --hero-bg: #000000; --nav-bg: rgba(28, 28, 30, 0.72); --card-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+[data-theme="light"]{
+  --bg: #f5f5f7; --bg2: #ffffff; --bg3: #f2f2f7; --bg4: #e5e5ea; --bg5: #d1d1d6; 
+  --border: rgba(0,0,0,.08); --border2: rgba(0,0,0,.12); 
+  --text: #1d1d1f; --text2: #6e6e73; --text3: #86868b; 
+  --input-bg: #ffffff; --section-bg: #ffffff; /* 統一背景色 */
+  --acc: var(--blue); --acc2: var(--blue2); --acc-glow: var(--blue-glow); --acc-dim: var(--blue-dim); 
+  --hero-bg: #1E4D8C; --nav-bg: rgba(255, 255, 255, 0.72); --card-shadow: none; /* 移除浮起陰影 */
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC','LINESeedTW','Syne',sans-serif;min-height:100vh;line-height:1.6;transition:background .25s,color .25s;display:flex;flex-direction:column;height:100vh;width:100%;overflow-x:hidden;}
+@media(max-width:768px){body{height:auto;min-height:100vh;width:100%;}}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:10px}
+
+/* ── NAV (毛玻璃) ── */
+.topnav{display:flex;align-items:center;gap:10px;padding:0 32px;height:58px;background:var(--nav-bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-wrap:nowrap;backdrop-filter: saturate(180%) blur(20px);-webkit-backdrop-filter: saturate(180%) blur(20px);}
+.logo-wrap{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
+.logo-mark{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;background:#1E4D8C;}
+.logo-letter{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;color:#fff;line-height:1;letter-spacing:-.02em;user-select:none;}
+[data-theme="dark"] .logo-mark{background:#FF6000;} [data-theme="dark"] .logo-letter{color:#000;}
+.logo-name{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.03em;color:var(--text)} .logo-name em{font-style:normal;color:var(--acc)}
+.tool-tabs{display:flex;align-items:center;gap:4px;background:transparent;border:none;border-radius:var(--radius-xl);padding:4px;margin-left:16px;overflow-x:auto;flex-shrink:1;}
+.tool-tab{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-lg);cursor:pointer;border:none;background:transparent;color:var(--text2);font-family:'Noto Sans TC',sans-serif;white-space:nowrap;transition:all .2s ease;text-decoration:none;flex-shrink:0;min-height:44px;}
+@media(max-width:768px){.tool-tab{min-height:48px;padding:10px 12px;}}
+.tool-tab:hover{background:var(--bg3);color:var(--text);} .tool-tab.active{background:transparent;color:var(--acc);font-weight:700;}
+.tool-tab-icon{font-size:18px;line-height:1.6} .tool-tab-label{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.tool-tab-label b{font-size:14px;font-weight:700} .tool-tab-label span{font-size:11px;opacity:.8}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.icon-btn{display:flex;align-items:center;gap:4px;padding:8px 12px;border-radius:980px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:13px;font-weight:500;font-family:'Noto Sans TC',sans-serif;cursor:pointer;transition:.15s;white-space:nowrap;}
+.icon-btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border2);}
+.hamburger-btn{display:none;flex-direction:column;gap:4px;width:40px;height:40px;padding:6px;background:transparent;border:none;color:var(--text);font-size:20px;cursor:pointer;flex-shrink:0;margin-right:8px;align-items:center;justify-content:center;transition:.2s;}
+.hamburger-btn:hover{background:var(--bg3);border-radius:var(--radius)}
+.desktop-only{display:flex !important}
+
+/* Mobile Menu & Lang */
+.mobile-menu{display:none;position:fixed;top:58px;left:0;right:0;background:var(--nav-bg);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--border);z-index:150;max-height:calc(100vh - 58px);overflow-y:auto;flex-direction:column;}
+.mobile-menu.open{display:flex} .mobile-menu-content{display:flex;flex-direction:column;padding:8px 0;}
+.mobile-menu-item{display:flex;align-items:center;gap:12px;padding:16px 24px;color:var(--text2);text-decoration:none;border-bottom:1px solid var(--border);background:transparent;font-family:'Noto Sans TC',sans-serif;font-size:15px;cursor:pointer;transition:.15s;}
+.mobile-menu-item:hover{background:var(--bg3);color:var(--text);}
+.mobile-menu-item span{font-size:20px} .mobile-menu-item b{font-weight:600;color:var(--text)}
+@media(max-width:768px){.hamburger-btn{display:flex} .desktop-only{display:none !important} .topnav{padding:0 16px;gap:8px;width:100%;box-sizing:border-box;} .logo-name{font-size:14px} .nav-right{gap:4px;margin-left:auto} .icon-btn{padding:6px 10px;font-size:12px;border-radius:8px;} .topnav-ad{display:none}}
+.lang-dropdown{position:relative} .lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:8px;min-width:160px;z-index:300;box-shadow:var(--card-shadow);}
+.lang-menu.open{display:block} .lang-item{display:block;width:100%;padding:10px 14px;font-size:13px;color:var(--text2);background:transparent;border:none;border-radius:8px;cursor:pointer;text-align:left;font-family:'Noto Sans TC',sans-serif;transition:.1s;}
+.lang-item:hover{background:var(--bg3);color:var(--text)} .lang-item.act{color:var(--acc);font-weight:600;background:var(--acc-dim);}
+
+/* POMODORO TIMER */
+.pomodoro-container{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:calc(100vh - 58px);padding:40px 20px;background:var(--bg);position:relative;}
+.pomodoro-focus-mode{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}
+.pomodoro-focus-mode.active{display:flex;} .pomodoro-focus-mode .topnav,.pomodoro-focus-mode .app-body{display:none !important}
+.pomodoro-timer{font-family:'Black Han Sans',sans-serif;font-size:120px;font-weight:400;color:var(--acc);text-align:center;line-height:1;margin:40px 0;letter-spacing:-.03em;}
+[data-theme="light"] .pomodoro-timer{color:var(--blue);}
+.pomodoro-status{font-size:24px;font-weight:600;color:var(--text);margin-bottom:20px;text-transform:uppercase;letter-spacing:.05em;}
+.pomodoro-mode-badge{display:inline-block;padding:8px 16px;background:var(--acc);color:#fff;border-radius:980px;font-size:14px;font-weight:600;margin-bottom:30px;}[data-theme="light"] .pomodoro-mode-badge{background:var(--blue)}
+.pomodoro-controls{display:flex;gap:16px;margin-top:40px;flex-wrap:wrap;justify-content:center;}
+.pomodoro-btn{padding:12px 32px;border:2px solid var(--acc);background:transparent;color:var(--acc);border-radius:980px;cursor:pointer;font-size:16px;font-weight:600;font-family:'Noto Sans TC',sans-serif;transition:.2s;min-width:120px;}
+.pomodoro-btn:hover{background:var(--acc);color:#fff} .pomodoro-btn.primary{background:var(--acc);color:#fff} .pomodoro-btn.primary:hover{background:var(--acc2);border-color:var(--acc2)}
+[data-theme="light"] .pomodoro-btn{border-color:var(--blue);color:var(--blue)} [data-theme="light"] .pomodoro-btn:hover{background:var(--blue);color:#fff} [data-theme="light"] .pomodoro-btn.primary{background:var(--blue);color:#fff} [data-theme="light"] .pomodoro-btn.primary:hover{background:var(--blue2);border-color:var(--blue2)}
+.pomodoro-mode-selector{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:30px;width:100%;max-width:400px;}
+.pomodoro-mode-btn{padding:16px;border:2px solid var(--border);background:var(--bg2);border-radius:var(--radius-lg);cursor:pointer;color:var(--text2);font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:600;transition:.2s;}
+.pomodoro-mode-btn:hover{border-color:var(--acc);color:var(--text)} .pomodoro-mode-btn.active{border-color:var(--acc);background:var(--acc);color:#fff}
+[data-theme="light"] .pomodoro-mode-btn.active{background:var(--blue);border-color:var(--blue)}
+.pomodoro-stats{margin-top:40px;text-align:center;color:var(--text2);font-size:14px;}
+.pomodoro-notification{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg2);border:2px solid var(--acc);border-radius:var(--radius-xl);padding:40px;text-align:center;z-index:1000;box-shadow:0 20px 60px rgba(0,0,0,.5);display:none;}
+.pomodoro-notification.active{display:block;animation:slideIn .3s ease-out;}[data-theme="light"] .pomodoro-notification{border-color:var(--blue)}
+@keyframes slideIn{from{opacity:0;transform:translate(-50%,-60%)}to{opacity:1;transform:translate(-50%,-50%)}}
+.pomodoro-notification-title{font-size:28px;font-weight:700;color:var(--acc);margin-bottom:16px;}[data-theme="light"] .pomodoro-notification-title{color:var(--blue)}
+.pomodoro-notification-msg{font-size:18px;color:var(--text);margin-bottom:24px;line-height:1.6;}
+.pomodoro-notification-btn{padding:12px 24px;background:var(--acc);color:#fff;border:none;border-radius:980px;cursor:pointer;font-size:16px;font-weight:600;font-family:'Noto Sans TC',sans-serif;transition:.2s;}
+.pomodoro-notification-btn:hover{background:var(--acc2)} [data-theme="light"] .pomodoro-notification-btn{background:var(--blue)} [data-theme="light"] .pomodoro-notification-btn:hover{background:var(--blue2)}
+
+.tool-panel{display:none} .tool-panel.active{display:block;} #panel-pomodoro.active{display:flex;flex-direction:column;flex:1;}
+
+/* HERO */
+.hero{background:var(--hero-bg);background-image:linear-gradient(135deg,var(--hero-bg) 0%,var(--blue2) 100%);padding:28px 24px 22px;text-align:center;border-bottom:1px solid var(--border);}[data-theme="dark"] .hero{background-image:linear-gradient(135deg,#1f1f23 0%,#26262c 100%);}
+.hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:#fff;letter-spacing:-.02em;margin-bottom:6px;}[data-theme="dark"] .hero-title{color:var(--text)}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.75);}[data-theme="dark"] .hero-sub{color:var(--text2)}
+.hero-tagline{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;font-size:14px;font-weight:500;color:#6e6e73;margin-bottom:4px;letter-spacing:-.01em;}[data-theme="dark"] .hero-tagline{color:var(--text2)}
+
+/* APP BODY */
+.app-body{display:grid;grid-template-columns:360px 1fr;flex:1;min-height:0;overflow:hidden;padding:24px 32px;gap:24px;}
+@media(max-width:768px){.app-body{grid-template-columns:1fr;padding:16px;gap:16px;overflow-y:auto;height:auto;min-height:calc(100vh - 58px);width:100%;box-sizing:border-box;}}
+
+/* SIDEBAR & Apple Cards */
+.sidebar{overflow-y:auto;height:100%;padding-right:12px;padding-bottom:60px;}
+@media(max-width:768px){.sidebar{padding:0;height:auto;overflow-y:visible;max-height:none;margin-bottom:12px;width:100%;box-sizing:border-box;}}
+
+/* 移除 Hover 浮起特效，統一背景色 */
+.sec-card, .rt-card {
+  background: var(--section-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: none; /* 移除陰影 */
+}
+@media(max-width:768px){.sec-card, .rt-card{width:100%;box-sizing:border-box;}}
+
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.sec-title{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);letter-spacing:.01em;}
+.sec-icon{width:28px;height:28px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:var(--acc);}
+.sidebar-ad{margin:4px 0 20px;}
+
+.tabs{display:flex;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:16px;}
+.tab{flex:1;font-size:13px;font-weight:500;font-family:'Noto Sans TC',sans-serif;padding:8px 6px;cursor:pointer;background:transparent;color:var(--text2);border:none;border-radius:8px;transition:.2s;text-align:center;}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+[data-theme="dark"] .tab.active{background:var(--bg4);box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* Inputs & Forms (Apple Style) */
+select, input[type=number], input[type=text], textarea {
+  font-size: 13px; font-family: 'Noto Sans TC', sans-serif;
+  padding: 10px 14px; background: var(--input-bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 12px; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  -moz-appearance: textfield; /* 移除數字輸入框內建的箭頭 */
+}
+select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 32px;
+}
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+textarea { width:100%; min-height:96px; resize:vertical; line-height:1.5; font-family:'Courier New',monospace; }
+select:focus, input[type=number]:focus, input[type=text]:focus, textarea:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-glow); }
+textarea::placeholder{color:var(--text3)}
+
+.drop-zone{border:2px dashed var(--border2);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:.2s;background:var(--input-bg);display:block;}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--acc);background:var(--acc-dim)}
+.drop-zone input{display:none}
+.drop-icon{font-size:28px;margin-bottom:8px}.drop-text{font-size:14px;font-weight:500;color:var(--text)}.drop-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.glink-row{display:flex;gap:8px} .glink-row input{flex:1;} .glink-row input::placeholder{color:var(--text3)}
+.hint{font-size:12px;background:var(--bg3);border-radius:10px;padding:10px 12px;color:var(--text2);line-height:1.6;margin-top:12px;}
+.badge-file{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:6px 12px;background:var(--acc-dim);border-radius:20px;color:var(--acc);margin-top:10px;}
+[data-theme="dark"] .badge-file{border-color:rgba(255,96,0,.3);}
+
+/* 調整按鈕 padding 與字體距離 */
+.font-upload-label{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:500;padding:10px 24px;border:1px dashed var(--border2);border-radius:980px;background:var(--bg2);color:var(--text2);cursor:pointer;transition:.15s;width:100%;margin-top:12px;}
+.font-upload-label:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-dim);}
+.font-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;background:var(--bg3);border-radius:20px;color:var(--text);margin:4px 4px 0 0;}
+.font-tag .rm{cursor:pointer;color:var(--text3);font-size:16px;line-height:1;margin-left:2px;}.font-tag .rm:hover{color:var(--danger)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:12px}@media(max-width:768px){.row{width:100%;box-sizing:border-box;}}
+.row label{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap}
+
+input[type=color]{width: 32px; height: 32px; border: 1px solid var(--border2); border-radius: 8px; cursor: pointer; padding: 2px; background: var(--input-bg); vertical-align: middle;}
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.color-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+
+/* 數字增減控制器 - 調整 padding */
+.num-stepper{display:flex;align-items:center;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--input-bg);}
+.num-stepper input[type=number]{border:none;border-radius:0;width:56px;text-align:center;background:transparent;color:var(--text);font-size:14px;font-weight:500;padding:8px 2px;-moz-appearance:textfield;}
+.num-stepper input[type=number]:focus{outline:none; box-shadow:none;}
+.num-step-btn{background:transparent;border:none;color:var(--text2);cursor:pointer;padding:8px 12px;font-size:18px;line-height:1;transition:color .15s, background .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.num-step-btn:hover{color:var(--text);background:var(--bg3);}
+.num-stepper .sep{width:1px;background:var(--border2);align-self:stretch;}
+
+/* Apple Toggle */
+.toggle{position:relative;display:inline-block;width:38px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.t-slider{position:absolute;cursor:pointer;inset:0;background:var(--bg5);border-radius:24px;transition:.3s;border:1px solid var(--border2);}
+.t-slider:before{position:absolute;content:"";height:16px;width:16px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 2px 4px rgba(0,0,0,0.2);}
+[data-theme="dark"] .t-slider:before{background:var(--text);}
+input:checked+.t-slider{background:var(--acc);border-color:var(--acc)}
+input:checked+.t-slider:before{transform:translateX(16px);background:#fff;}
+
+.card-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+/* 調整按鈕 padding 與字體距離 */
+.btn{font-size:13px;font-weight:500;font-family:'Noto Sans TC',sans-serif;padding:10px 20px;border:1px solid var(--border2);border-radius:980px;cursor:pointer;background:var(--input-bg);color:var(--text);transition:.2s;white-space:nowrap;}
+.btn:hover{background:var(--bg3)}
+.btn-sm{font-size:12px;padding:6px 12px}
+.btn-acc{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600;}
+.btn-acc:hover{opacity:.9}
+
+.status{font-size:12px;color:var(--acc)}
+.msg{font-size:12px;padding:8px 12px;border-radius:8px;margin-top:8px;font-weight:500;}
+.msg.ok{background:rgba(52,211,153,.1);color:#10b981;border:1px solid rgba(52,211,153,.2)}
+[data-theme="dark"] .msg.ok{color:var(--success);}
+.msg.err{background:rgba(255,59,48,.1);color:var(--danger);border:1px solid rgba(255,59,48,.2)}
+.sheet-select{margin-top:12px;display:none}.sheet-select label{font-size:13px;font-weight:500;color:var(--text);margin-right:8px}
+.data-preview-box{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;font-family:'Courier New',monospace;color:var(--text2);white-space:pre;overflow-x:auto;max-height:80px;margin-top:8px}
+
+/* MAIN PANEL */
+.main-panel{display:flex;flex-direction:column;background:var(--section-bg);overflow:hidden;position:relative;height:100%; border-radius:var(--radius-xl); border:1px solid var(--border);}
+@media(max-width:768px){.main-panel{height:auto;min-height:400px;overflow:visible;}}
+.canvas-area{flex:1;overflow:hidden;background:var(--section-bg);position:relative;border-radius:var(--radius-xl) var(--radius-xl) 0 0;transition:background-color .2s,border-color .2s;max-width:100%;box-sizing:border-box;overflow-x:auto;}
+@media(max-width:768px){.canvas-area{min-height:300px;flex:0 1 auto;overflow:auto;border:none; border-radius:var(--radius-lg);}}
+[data-theme="dark"] .canvas-area{background:#111113;border-color:var(--border);}
+
+.canvas-viewport{position:absolute;inset:0;overflow:hidden;cursor:default;}
+.canvas-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0;box-sizing:border-box;overflow:hidden;}
+.canvas-placeholder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--text3);pointer-events:none;user-select:none;width:100%;}
+.canvas-placeholder .ph-icon{font-size:48px;margin-bottom:12px;filter:grayscale(1) opacity(.4)}
+.canvas-placeholder p{font-size:14px;font-weight:500;line-height:1.6;color:var(--text2);}
+.canvas-placeholder .ph-hint{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;padding:6px 16px;background:var(--bg3);border-radius:980px;color:var(--text2);}
+/* 移除預覽圖的陰影，讓它更平整 */
+#preview-canvas{display:block;border-radius:0;max-width:100%;max-height:100%;width:auto;height:auto;margin:auto;box-shadow:none;object-fit:contain;}
+
+.preview-overlay{position:absolute;inset:0;pointer-events:none;}
+.preview-info{position:absolute;bottom:16px;left:16px;display:flex;align-items:center;gap:10px;pointer-events:none;}
+.preview-label-pill{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.05em;background:var(--nav-bg);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:8px;padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+.size-pill{font-size:12px;font-weight:500;padding:4px 12px;background:var(--nav-bg);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:980px;color:var(--text2);box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+.gen-status-txt{font-size:13px;font-weight:500;color:var(--text2);}
+.dl-wrap{display:flex;flex-direction:column;align-items:flex-start;}
+
+/* 參考下載圖片按鈕的 padding */
+.dl-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;padding:12px 24px;background:var(--acc);color:#fff;border-radius:980px;text-decoration:none;transition:all .2s ease;border:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;}
+.dl-btn:hover{opacity:.9; transform:scale(0.98);}
+
+.dl-hint{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.4;}
+.bottom-action-bar{flex-shrink:0;padding:16px 24px;background:var(--section-bg);border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;border-radius:0 0 var(--radius-xl) var(--radius-xl);}
+@media(max-width:768px){.bottom-action-bar{border-radius:0 0 var(--radius-lg) var(--radius-lg); margin-top:0; flex-direction:column; align-items:stretch; text-align:center; gap:12px;}}
+
+.bottom-ad{flex-shrink:0;min-height:80px;border-top:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px; margin-top:24px; border-radius:var(--radius-xl);}
+
+/* HERO STRIP */
+.hero-wrap{background:var(--bg);padding:48px 40px 40px 64px !important;border-bottom:1px solid var(--border);width:100%;box-sizing:border-box;}
+.hero-title{font-family:'Black Han Sans','Mantou',sans-serif !important;font-weight:400 !important;font-size:36px;color:var(--text);letter-spacing:-.02em;margin-bottom:8px;}
+.hero-subtitle{font-family:'Noto Sans TC',sans-serif !important;font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px;letter-spacing:-.01em;}
+.hero-desc{font-size:14px;color:var(--text2);margin-top:4px;}
+@media(max-width:768px){.hero-wrap{padding:32px 24px 24px !important;}}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex}
+.modal{background:var(--section-bg);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);}[data-theme="dark"] .modal{box-shadow:0 20px 60px rgba(0,0,0,0.6);}
+.modal h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text);margin-bottom:16px}
+.modal h3{font-size:15px;font-weight:600;color:var(--text);margin:20px 0 8px}
+.modal p{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+.modal-close{position:absolute;top:16px;right:16px;background:var(--bg3);border:none;color:var(--text2);width:32px;height:32px;border-radius:16px;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s;}
+.modal-close:hover{background:var(--bg4);color:var(--text)}
+
+/* RENDER TOOL */
+.render-tool{max-width:900px;margin:0 auto;padding:40px 24px;}
+.render-tool > h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px;}
+.render-tool > .rt-sub{font-size:13px;color:var(--text2);margin-bottom:24px;}
+.rt-label{font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;display:block;}
+.rt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+.rt-opt{border:1px solid var(--border);border-radius:14px;padding:12px 16px;cursor:pointer;transition:.2s;background:var(--input-bg);}
+.rt-opt:hover{border-color:var(--acc);background:var(--acc-dim);}
+.rt-opt.sel{border-color:var(--acc);background:var(--acc-dim);box-shadow:0 0 0 1px var(--acc);}
+.rt-opt-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.rt-opt.sel .rt-opt-title{color:var(--acc);}
+.rt-opt-sub{font-size:12px;color:var(--text2);}
+.rt-slider-row{display:flex;align-items:center;gap:16px;}
+.rt-slider-row input[type=range]{flex:1;accent-color:var(--acc);height:6px;}
+.rt-val{font-size:15px;font-weight:600;color:var(--text);min-width:70px;}
+.rt-soft{display:flex;flex-wrap:wrap;gap:8px;}
+.rt-sw{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1px solid var(--border);border-radius:980px;font-size:14px;font-weight:500;cursor:pointer;transition:.2s;background:var(--input-bg);color:var(--text2);}
+.rt-sw.sel{border-color:var(--acc);background:var(--acc);color:#fff;}
+.rt-result{background:var(--section-bg);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;text-align:center;margin-top:24px;}
+.rt-result .rr-lbl{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:12px;letter-spacing:0.05em;text-transform:uppercase;}
+.rt-result .rr-time{font-family:'Syne',sans-serif;font-size:56px;font-weight:800;color:var(--acc);margin-bottom:8px;line-height:1;}
+.rt-result .rr-range{font-size:14px;color:var(--text3);}
+.rt-ad{background:var(--section-bg);border:1px solid var(--border);border-radius:var(--radius-xl);padding:16px;text-align:center;margin-top:20px;min-height:100px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;}
+.rt-select-row{margin-bottom:8px;}
+.rt-hw-select{width:100%;padding:10px 14px;font-size:14px;font-weight:500;font-family:'Noto Sans TC',sans-serif;border:1px solid var(--border);border-radius:10px;background:var(--input-bg);color:var(--text);cursor:pointer;transition:border-color .2s;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
+.rt-hw-select:focus{border-color:var(--acc);outline:none;box-shadow:0 0 0 3px var(--acc-glow);}
+
+.features-strip{background:var(--section-bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:40px 0;margin-top:20px;}
+.features-container{max-width:1100px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:30px;}
+.feature-item{text-align:left;}
+.feature-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px;display:block;}
+.feature-text{font-size:12px;color:var(--text2);line-height:1.5;display:block;}
+
+/* FOOTER */
+footer{background:var(--bg);border-top:1px solid var(--border);padding:18px 32px;display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:var(--text3);}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+.footer-links a{color:var(--text2);text-decoration:none;font-size:12px;transition:.15s}.footer-links a:hover{color:var(--acc)}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav class="topnav">
+  <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
+  <a class="logo-wrap" href="#">
+    <div class="logo-mark" id="logo-mark-wrap"><span class="logo-letter">B</span></div>
+    <div class="logo-name"><em id="logo-bin">Bin</em>Tools</div>
+  </a>
+
+  <div class="tool-tabs desktop-only" id="tool-tabs">
+    <a class="tool-tab active" href="#" onclick="switchTool('excel');return false" id="tab-excel">
+      <div class="tool-tab-icon">📊</div>
+      <div class="tool-tab-label"><b data-i18n="tab_exceltojpg">ExceltoJPG</b><span data-i18n="tab_subtitle">試算表轉圖片</span></div>
+    </a>
+    <a class="tool-tab" href="#" onclick="switchTool('transcribe');return false" id="tab-transcribe">
+      <div class="tool-tab-icon">🎙️</div>
+      <div class="tool-tab-label"><b>音影轉文字</b><span>AI 語音辨識轉檔</span></div>
+    </a>
+    <a class="tool-tab" href="#" onclick="switchTool('render');return false" id="tab-render">
+      <div class="tool-tab-icon">🎬</div>
+      <div class="tool-tab-label"><b data-i18n="tab_render">影片渲染估算</b><span data-i18n="tab_render_sub">4K 渲染時間計算</span></div>
+    </a>
+    <a class="tool-tab" href="#" onclick="switchTool('pomodoro');return false" id="tab-pomodoro">
+      <div class="tool-tab-icon">🕒</div>
+      <div class="tool-tab-label"><b>專注計時</b><span>時鐘鐘計時器</span></div>
+    </a>
+  </div>
+
+  <div class="nav-right">
+    <div class="topnav-ad">
+      <ins class="adsbygoogle" style="display:inline-block;width:300px;height:50px" data-ad-client="ca-pub-2247011498149704" data-ad-slot="auto"></ins>
+      <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+    </div>
+    <div class="lang-dropdown">
+      <button class="icon-btn" onclick="toggleLangMenu()" id="lang-btn-label">🌐 繁中</button>
+      <div class="lang-menu" id="lang-menu">
+        <button class="lang-item act" onclick="setLang('zh-TW','繁中',this)">🇹🇼 繁體中文</button>
+        <button class="lang-item" onclick="setLang('en','EN',this)">🇺🇸 English</button>
+      </div>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn">☀️ 淺色</button>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobile-menu">
+  <div class="mobile-menu-content">
+    <a class="mobile-menu-item" href="#" onclick="switchTool('excel');toggleMobileMenu();return false" id="mobile-tab-excel">
+      <span>📊</span> <b data-i18n="tab_exceltojpg">ExceltoJPG</b>
+    </a>
+    <a class="mobile-menu-item" href="#" onclick="switchTool('transcribe');toggleMobileMenu();return false" id="mobile-tab-transcribe">
+      <span>🎙️</span> <b>音影轉文字</b>
+    </a>
+    <a class="mobile-menu-item" href="#" onclick="switchTool('render');toggleMobileMenu();return false" id="mobile-tab-render">
+      <span>🎬</span> <b data-i18n="tab_render">影片渲染估算</b>
+    </a>
+    <a class="mobile-menu-item" href="#" onclick="switchTool('pomodoro');toggleMobileMenu();return false" id="mobile-tab-pomodoro">
+      <span>🕒</span> <b>專注計時</b>
+    </a>
+  </div>
+</div>
+
+<!-- ── PANEL 1: ExcelToJPG ── -->
+<div class="tool-panel active" id="panel-excel">
+  <div class="hero-wrap">
+    <h1 class="hero-title">ExceltoJPG</h1>
+    <p class="hero-subtitle">表格美化工具</p>
+    <p class="hero-desc" data-i18n="hero_desc">線上將 Excel 文字轉換為高品質的表格 JPG 圖檔</p>
+  </div>
+
+  <div class="app-body">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Data Source -->
+    <div class="sec-card" id="datasource-card">
+      <div class="sec-header">
+        <div class="sec-title"><div class="sec-icon">📋</div><span data-i18n="sec_datasource">資料來源</span></div>
+      </div>
+      <div class="tabs" id="step2-target">
+        <button class="tab active" onclick="switchTab('paste')" data-i18n="tab_paste">貼上文字</button>
+        <button class="tab" onclick="switchTab('file')" data-i18n="tab_file">上傳檔案</button>
+        <button class="tab" onclick="switchTab('gsheet')">Google Sheets</button>
+      </div>
+      <div id="tab-paste" class="tab-panel active">
+        <textarea id="csv-input" data-i18n-placeholder="csv_placeholder" placeholder="從 Excel / Google Sheets 複製後貼上（Tab 分隔），或 CSV 格式&#10;&#10;姓名&#9;部門&#9;薪資&#9;績效&#10;王小明&#9;工程部&#9;85,000&#9;A"></textarea>
+      </div>
+      <div id="tab-file" class="tab-panel">
+        <label class="drop-zone" id="drop-zone" for="file-upload">
+          <div class="drop-icon">📂</div>
+          <div class="drop-text" data-i18n="drop_text">點擊或拖曳檔案到此</div>
+          <div class="drop-sub">.xlsx　.xls　.csv</div>
+          <input type="file" id="file-upload" accept=".xlsx,.xls,.csv">
+        </label>
+        <div id="file-badge-wrap"></div>
+        <div id="sheet-select" class="sheet-select">
+          <label data-i18n="sheet_label">工作表</label>
+          <select id="sheet-name" class="rt-hw-select"></select>
+        </div>
+        <div id="file-msg"></div>
+      </div>
+      <div id="tab-gsheet" class="tab-panel">
+        <div class="glink-row">
+          <input type="text" id="gsheet-url" data-i18n-placeholder="gsheet_placeholder" placeholder="貼上 Google 試算表分享網址">
+          <button class="btn btn-sm" onclick="loadGSheet()" data-i18n="btn_load">載入</button>
+        </div>
+        <div id="gsheet-msg"></div>
+        <div class="hint" data-i18n="gsheet_hint">試算表須設為「知道連結的人可以檢視」</div>
+      </div>
+      <div id="data-preview" style="display:none">
+        <p style="font-size:12px;color:var(--text3);margin-top:12px;margin-bottom:4px;font-weight:500;" data-i18n="preview_label">資料預覽（前4行）</p>
+        <div class="data-preview-box" id="data-preview-inner"></div>
+      </div>
+    </div>
+
+    <!-- AdSense -->
+    <div class="sidebar-ad">
+      <ins class="adsbygoogle" style="display:block;width:300px;height:90px" data-ad-client="ca-pub-2247011498149704" data-ad-slot="auto"></ins>
+      <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+    </div>
+
+    <!-- Font -->
+    <div class="sec-card" id="font-card">
+      <div class="sec-header">
+        <div class="sec-title"><div class="sec-icon">🔤</div><span data-i18n="sec_font">字體設定</span></div>
+      </div>
+      <div class="row" id="step3-target">
+        <label data-i18n="font_label">字體</label>
+        <select id="font-select" class="rt-hw-select" style="flex:1;min-width:0"></select>
+        <span class="status" id="font-status"></span>
+      </div>
+      <label class="font-upload-label" for="font-upload-input">
+        ＋ <span data-i18n="btn_upload_font">上傳字體</span>
+        <input type="file" id="font-upload-input" accept=".ttf,.otf,.woff2" style="display:none" multiple>
+      </label>
+      <div id="custom-font-tags" style="margin-top:4px"></div>
+      <div class="hint" style="margin-top:12px" data-i18n="hint_font">上傳喜歡的字體（格式 .ttf / .otf / .woff2）</div>
+      <hr class="card-divider">
+      <div class="color-grid" style="margin-bottom:8px">
+        <div class="color-item"><input type="color" id="header-text-color" value="#ffffff"><label data-i18n="color_header_text">標題文字</label></div>
+        <div class="color-item"><input type="color" id="body-text-color" value="#1e293b"><label data-i18n="color_body_text">內容文字</label></div>
+      </div>
+      <div class="row">
+        <label data-i18n="label_fontsize">字體大小</label>
+        <div class="num-stepper">
+          <button class="num-step-btn" onclick="stepNum('font-size',-2)">−</button>
+          <div class="sep"></div>
+          <input type="number" id="font-size" value="24" min="14" max="96">
+          <div class="sep"></div>
+          <button class="num-step-btn" onclick="stepNum('font-size',2)">+</button>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">px</span>
+      </div>
+    </div>
+
+    <!-- Table Style -->
+    <div class="sec-card" id="style-card">
+      <div class="sec-header">
+        <div class="sec-title"><div class="sec-icon">🎨</div><span data-i18n="sec_style">表格樣式</span></div>
+      </div>
+      <div class="row">
+        <label data-i18n="label_style">樣式</label>
+        <select id="theme" class="rt-hw-select">
+          <option value="modern" data-i18n-opt="opt_modern">Modern 圓角</option>
+          <option value="minimal" data-i18n-opt="opt_minimal">Minimal 線條</option>
+          <option value="dark" data-i18n-opt="opt_dark">Dark 深色</option>
+          <option value="gradient" data-i18n-opt="opt_gradient">Gradient 漸層</option>
+          <option value="bordered" data-i18n-opt="opt_bordered">Bordered 全框線</option>
+        </select>
+      </div>
+      <div class="color-grid" style="margin-bottom:8px">
+        <div class="color-item"><input type="color" id="accent" value="#FF6000"><label data-i18n="color_header_bg">標題背景</label></div>
+        <div class="color-item"><input type="color" id="bg-color" value="#ffffff"><label data-i18n="color_table_bg">表格背景</label></div>
+        <div class="color-item"><input type="color" id="canvas-bg" value="#111114"><label data-i18n="color_canvas_bg">畫布背景</label></div>
+        <div class="color-item"><input type="color" id="border-color" value="#e2e8f0"><label data-i18n="color_border">格線顏色</label></div>
+      </div>
+      <div class="row">
+        <label>行距</label>
+        <div class="num-stepper">
+          <button class="num-step-btn" onclick="stepNum('row-gap',-2)">−</button>
+          <div class="sep"></div>
+          <input type="number" id="row-gap" value="26" min="0" max="100">
+          <div class="sep"></div>
+          <button class="num-step-btn" onclick="stepNum('row-gap',2)">+</button>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">px</span>
+      </div>
+      <div class="row">
+        <label>列距</label>
+        <div class="num-stepper">
+          <button class="num-step-btn" onclick="stepNum('col-gap',-2)">−</button>
+          <div class="sep"></div>
+          <input type="number" id="col-gap" value="26" min="0" max="100">
+          <div class="sep"></div>
+          <button class="num-step-btn" onclick="stepNum('col-gap',2)">+</button>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">px</span>
+      </div>
+      <div class="row">
+        <label data-i18n="label_radius">圓角</label>
+        <div class="num-stepper">
+          <button class="num-step-btn" onclick="stepNum('radius',-4)">−</button>
+          <div class="sep"></div>
+          <input type="number" id="radius" value="20" min="0" max="60">
+          <div class="sep"></div>
+          <button class="num-step-btn" onclick="stepNum('radius',4)">+</button>
+        </div>
+        <span style="font-size:11px;color:var(--text3)">px</span>
+      </div>
+      <hr class="card-divider">
+      <div class="sec-header" style="margin-bottom:12px; display:flex; align-items:center; justify-content:flex-start; gap:12px;">
+        <div class="sec-title" style="font-size:14px; font-weight:700; color:var(--text);"><span data-i18n="label_stripe">交替行顏色</span></div>
+        <label class="toggle"><input type="checkbox" id="stripe-toggle" checked><span class="t-slider"></span></label>
+      </div>
+      <div id="stripe-opts">
+        <div class="color-grid" style="margin-bottom:6px">
+          <div class="color-item"><input type="color" id="row-odd" value="#ffffff"><label data-i18n="color_row_odd">奇數行</label></div>
+          <div class="color-item"><input type="color" id="row-even" value="#fff3ec"><label data-i18n="color_row_even">偶數行</label></div>
+        </div>
+        <div class="row">
+          <label data-i18n="label_preset">預設</label>
+          <select id="stripe-preset" class="rt-hw-select" style="font-size:11px">
+            <option value="" data-i18n-opt="opt_custom">自訂</option>
+            <option value="#ffffff|#fff3ec" data-i18n-opt="opt_orange_tint">橘調</option>
+            <option value="#ffffff|#eff6ff" data-i18n-opt="opt_blue_tint">藍調</option>
+            <option value="#ffffff|#f0fdf4" data-i18n-opt="opt_green_tint">草綠</option>
+            <option value="#ffffff|#fdf4ff" data-i18n-opt="opt_purple_tint">淡紫</option>
+            <option value="#ffffff|#fff7ed" data-i18n-opt="opt_warm_orange">暖橙</option>
+            <option value="#ffffff|#fef9c3" data-i18n-opt="opt_yellow">鵝黃</option>
+            <option value="#f8fafc|#e2e8f0" data-i18n-opt="opt_gray">灰階</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div class="sec-card" id="export-card">
+      <div class="sec-header">
+        <div class="sec-title"><div class="sec-icon">💾</div><span data-i18n="sec_export">匯出設定</span></div>
+      </div>
+      <div class="row" id="step4-target">
+        <label data-i18n="label_resolution">解析度（16:9）</label>
+        <select id="resolution" class="rt-hw-select">
+          <option value="1920|1080">1920 × 1080（FHD）</option>
+          <option value="2560|1440">2560 × 1440（QHD）</option>
+          <option value="3840|2160">3840 × 2160（4K）</option>
+        </select>
+      </div>
+      <div class="row">
+        <label data-i18n="label_format">格式</label>
+        <select id="fmt" class="rt-hw-select">
+          <option value="png" data-i18n-opt="opt_png">PNG（無損）</option>
+          <option value="jpeg" data-i18n-opt="opt_jpeg">JPEG（較小）</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:4px">
+        <label class="toggle"><input type="checkbox" id="transparent-bg"><span class="t-slider"></span></label>
+        <span style="font-size:12px;color:var(--text2)" data-i18n="label_transparent">透明背景（僅 PNG，只匯出表格）</span>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+  </div><!-- /sidebar -->
+
+  <!-- MAIN PANEL -->
+  <div class="main-panel">
+    <div class="canvas-area" id="canvas-area">
+      <div class="canvas-viewport" id="canvas-viewport">
+        <div class="canvas-inner" id="canvas-inner">
+          <canvas id="preview-canvas"></canvas>
+        </div>
+      </div>
+      <!-- Placeholder -->
+      <div class="canvas-placeholder" id="placeholder">
+        <div class="ph-icon">🖼️</div>
+        <p data-i18n="ph_text">左側設定完成後<br>按下方「產生圖片」開始</p>
+        <div class="ph-hint" data-i18n="ph_hint">支援 Excel / CSV / Google 試算表</div>
+      </div>
+      <!-- Bottom-left info -->
+      <div class="preview-info">
+        <span class="preview-label-pill" data-i18n="label_preview">圖片預覽</span>
+        <span class="size-pill" id="size-badge" data-i18n="size_badge_default">尚未產生</span>
+      </div>
+    </div>
+    
+    <!-- Bottom action bar -->
+    <div class="bottom-action-bar" id="step5-target">
+      <span class="gen-status-txt" id="gen-status"></span>
+      <div class="dl-wrap" id="dl-wrap">
+        <a id="dl-anchor" class="dl-btn" href="#" onclick="showDownloadHint()">⬇ <span data-i18n="btn_download">下載圖片</span></a>
+        <div class="dl-hint" id="dl-hint" style="display:none;">若下載無反應，右鍵點選圖片預覽另存圖片</div>
+      </div>
+    </div>
+    <div class="bottom-ad">
+      <ins class="adsbygoogle" style="display:inline-block;width:728px;height:90px" data-ad-client="ca-pub-2247011498149704" data-ad-slot="auto"></ins>
+      <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+    </div>
+  </div><!-- /main-panel -->
+  </div><!-- /app-body -->
+</div><!-- /panel-excel -->
+
+<!-- ── PANEL 2: Transcribe Tool ── -->
+<div class="tool-panel" id="panel-transcribe">
+  <div class="hero-wrap">
+    <h1 class="hero-title" style="font-size:36px;">音影轉文字</h1>
+    <p class="hero-subtitle">AI 語音辨識與字幕產生</p>
+    <p class="hero-desc">上傳影片或音檔，自動辨識文字並匯出多種格式</p>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="sec-card">
+        <span class="sec-title"><span class="sec-icon">📁</span>上傳檔案</span>
+        <label class="drop-zone" id="trans-drop-zone">
+          <div class="drop-icon">🎙️</div>
+          <div class="drop-text">點擊或拖拽音影檔</div>
+          <div class="drop-sub">支援 MP4, MP3, WAV, MOV (最大 500MB)</div>
+          <input type="file" id="trans-file-input" accept="audio/*,video/*">
+        </label>
+      </div>
+      <div class="sec-card">
+        <span class="sec-title"><span class="sec-icon">⚙️</span>辨識設定</span>
+        <div class="row">
+          <label>辨識語言</label>
+          <select id="trans-lang" class="rt-hw-select">
+            <option value="auto">自動偵測</option>
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <label class="toggle"><input type="checkbox" id="trans-timestamp" checked><span class="t-slider"></span></label>
+          <span style="font-size:13px;color:var(--text2);font-weight:500;">包含時間碼 (CC 字幕)</span>
+        </div>
+      </div>
+    </div>
+    <div class="main-panel">
+      <div class="canvas-area" style="background:var(--section-bg) !important; display:flex; flex-direction:column; padding:32px;">
+        <div id="trans-placeholder" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text3);">
+          <div style="font-size:56px; margin-bottom:16px;">📝</div>
+          <p style="font-weight:600;font-size:16px;color:var(--text);">尚未辨識文字</p>
+          <p style="font-size:13px;">請先從左側上傳檔案開始辨識</p>
+        </div>
+      </div>
+      <div class="bottom-action-bar">
+        <button class="dl-btn" style="width:100%; justify-content:center;" onclick="alert('此功能需要後端 AI 支援，目前為介面展示')">🚀 開始辨識</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PANEL 3: Render Estimator ── -->
+<div class="tool-panel" id="panel-render">
+  <div class="hero-wrap">
+    <h1 class="hero-title" style="font-size:36px;">4K 影片渲染時間估算</h1>
+    <p class="hero-subtitle">硬體效能評估工具 (Hardware-Aware Engine)</p>
+    <p class="hero-desc">根據您的硬體配置精準估算渲染時間（基準：i5-13600K + RTX 3060 Ti）</p>
+  </div>
+  
+  <div class="render-tool" style="padding-top:0;">
+    <!-- 設備選擇區塊 -->
+    <div class="rt-card" style="margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <span class="rt-label" style="margin:0; font-size:18px;">🖥️ 您的硬體設備</span>
+        <button onclick="toggleDeviceSelector()" style="padding:10px 20px; background:var(--acc); color:white; border:none; border-radius:980px; cursor:pointer; font-weight:600; font-size:14px; transition:0.2s;">
+          選擇設備
+        </button>
+      </div>
+      
+      <!-- 已選設備顯示 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; background:var(--bg); padding:20px; border-radius:16px; border:1px solid var(--border);">
+        <div>
+          <div style="font-size:13px; color:var(--text2); margin-bottom:6px; font-weight:500;">CPU</div>
+          <div id="selected-cpu-display" style="font-weight:700; font-size:16px; color:var(--text);">未選擇</div>
+        </div>
+        <div>
+          <div style="font-size:13px; color:var(--text2); margin-bottom:6px; font-weight:500;">GPU</div>
+          <div id="selected-gpu-display" style="font-weight:700; font-size:16px; color:var(--text);">未選擇</div>
+        </div>
+      </div>
+      <div style="margin-top:16px; text-align:right; font-size:14px; font-weight:500; color:var(--text2);">
+        綜合硬體權重：<span id="hardware-factor-display" style="font-weight:800; color:var(--acc);">1.00 (基準 ✓)</span>
+      </div>
+      
+      <!-- 多層級選擇面板 (隱藏) -->
+      <div id="device-selector-panel" style="display:none; margin-top:20px; padding:24px; background:var(--bg); border-radius:16px; border:1px solid var(--border);">
+        <div style="margin-bottom:20px; padding:16px; background:var(--section-bg); border-radius:14px; border:1px solid var(--border);">
+          <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px;">🔲 CPU 選擇</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">1. 作業系統</label>
+              <select id="cpu-os-select" onchange="updateCPUBrandSelect()" class="rt-hw-select">
+                <option value="">-- 選擇 OS --</option>
+                <option value="Windows">Windows</option>
+                <option value="Mac">Mac</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">2. 品牌</label>
+              <select id="cpu-brand-select" onchange="updateCPUTypeSelect()" class="rt-hw-select">
+                <option value="">-- 先選擇 OS --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">3. 系列</label>
+              <select id="cpu-type-select" onchange="updateCPUModelSelect()" class="rt-hw-select">
+                <option value="">-- 先選擇品牌 --</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">4. 型號</label>
+              <select id="cpu-model-select" class="rt-hw-select">
+                <option value="">-- 先選擇系列 --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:24px; padding:16px; background:var(--section-bg); border-radius:14px; border:1px solid var(--border);">
+          <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px;">🎮 GPU 選擇</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">1. 品牌</label>
+              <select id="gpu-brand-select" onchange="updateGPUSeriesSelect()" class="rt-hw-select">
+                <option value="">-- 選擇品牌 --</option>
+                <option value="NVIDIA">NVIDIA</option>
+                <option value="AMD">AMD</option>
+                <option value="Intel">Intel Arc</option>
+                <option value="Apple">Apple Silicon</option>
+                <option value="none">無獨立 GPU</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">2. 系列</label>
+              <select id="gpu-series-select" onchange="updateGPUModelSelect()" class="rt-hw-select">
+                <option value="">-- 先選擇品牌 --</option>
+              </select>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label style="font-size:12px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">3. 型號</label>
+              <select id="gpu-model-select" class="rt-hw-select">
+                <option value="">-- 先選擇系列 --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:16px;">
+          <button onclick="confirmDeviceSelection()" style="flex:1; padding:14px; background:var(--success); color:#fff; border:none; border-radius:980px; cursor:pointer; font-weight:600; font-size:15px; transition:.2s;">✓ 確認並套用</button>
+          <button onclick="toggleDeviceSelector()" style="flex:1; padding:14px; background:var(--bg4); color:var(--text); border:none; border-radius:980px; cursor:pointer; font-weight:600; font-size:15px; transition:.2s;">✕ 取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 影片參數區塊 -->
+    <div class="rt-card" style="margin-bottom:20px;">
+      <span class="rt-label">影片參數</span>
+      
+      <div style="margin-bottom:20px; padding:16px; background:var(--bg); border-radius:14px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+          <span style="font-size:14px; color:var(--text2); font-weight:500;">影片長度</span>
+          <span id="rt-dur-val" style="font-weight:700; color:var(--acc); font-size:16px;">1 分鐘</span>
+        </div>
+        <input type="range" id="rt-dur" min="1" max="120" value="1" oninput="document.getElementById('rt-dur-val').textContent = this.value + ' 分鐘'; renderEstimator();" style="width:100%;">
+      </div>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div>
+          <label style="font-size:13px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">解析度</label>
+          <select id="rt-res" onchange="renderEstimator()" class="rt-hw-select">
+            <option value="1080p">1080p FHD</option>
+            <option value="4K" selected>4K UHD</option>
+            <option value="8K">8K</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px; color:var(--text2); display:block; margin-bottom:6px; font-weight:500;">影格率 (FPS)</label>
+          <select id="rt-fps" onchange="renderEstimator()" class="rt-hw-select">
+            <option value="24" selected>24 fps (電影)</option>
+            <option value="30">30 fps (標準)</option>
+            <option value="60">60 fps (流暢)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 估算結果 -->
+    <div class="rt-result" id="rt-result">
+      <div class="rr-lbl">AI 預估渲染時間</div>
+      <div id="rt-time" class="rr-time">21 秒</div>
+      <div class="rr-range">基於 DaVinci Resolve 輸出標準 H.265</div>
+    </div>
+
+    <!-- 自我校正功能 -->
+    <div class="rt-card" style="margin-top:24px; border:1px solid var(--acc); background:var(--acc-dim);">
+      <span class="rt-label" style="color:var(--acc);">🤖 實際耗時自我校正 (AI 學習)</span>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:16px; line-height:1.6;">如果您發現實際渲染時間與預估有落差，請在此回報。系統會自動學習並校正您未來的估算結果。</p>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end;">
+        <div>
+          <label style="font-size:12px; color:var(--text2); font-weight:500; margin-bottom:4px; display:block;">預估耗時 (秒)</label>
+          <input type="number" id="predicted-time" placeholder="例: 21" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border2); background:var(--section-bg); color:var(--text); outline:none;">
+        </div>
+        <div>
+          <label style="font-size:12px; color:var(--text2); font-weight:500; margin-bottom:4px; display:block;">實際耗時 (秒)</label>
+          <input type="number" id="actual-time" placeholder="例: 18" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border2); background:var(--section-bg); color:var(--text); outline:none;">
+        </div>
+        <button onclick="submitCalibration()" style="padding:10px 24px; background:var(--success); color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; height:38px;">
+          校正
+        </button>
+      </div>
+      <div id="calibration-status" style="font-size:13px; margin-top:12px; font-weight:600;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- POMODORO TIMER PANEL -->
+<div class="tool-panel" id="panel-pomodoro">
+  <div class="pomodoro-container" id="pomodoro-main">
+    <div class="pomodoro-mode-selector" id="mode-selector">
+      <button class="pomodoro-mode-btn active" onclick="setPomodoroMode('standard', this)">
+        <div style="font-size:24px;margin-bottom:8px;">🕒</div>
+        <div>標準模式</div>
+        <div style="font-size:12px;opacity:.7;font-weight:400;margin-top:4px;">25 分鐘 / 休息 5 分鐘</div>
+      </button>
+      <button class="pomodoro-mode-btn" onclick="setPomodoroMode('deep', this)">
+        <div style="font-size:24px;margin-bottom:8px;">📚</div>
+        <div>深度學習</div>
+        <div style="font-size:12px;opacity:.7;font-weight:400;margin-top:4px;">50 分鐘 / 休息 10 分鐘</div>
+      </button>
+    </div>
+    
+    <div class="pomodoro-mode-badge" id="mode-badge">標準模式 (25 分鐘)</div>
+    <div class="pomodoro-status" id="pomodoro-status">準備開始</div>
+    <div class="pomodoro-timer" id="pomodoro-timer">25:00</div>
+    
+    <div class="pomodoro-controls">
+      <button class="pomodoro-btn primary" id="start-btn" onclick="startPomodoro()">▶ 開始專注</button>
+      <button class="pomodoro-btn" id="pause-btn" onclick="pausePomodoro()" style="display:none;">⏸ 暫停</button>
+      <button class="pomodoro-btn" onclick="resetPomodoro()">↻ 重置</button>
+    </div>
+    
+    <div class="pomodoro-stats" id="pomodoro-stats">
+      <div>今日完成: <strong id="today-count">0</strong> 個時鐘鐘</div>
+      <div style="margin-top:12px;font-size:13px;opacity:.8;">💡 提示：在專注時間內，全螢幕模式會自動啟動</div>
+    </div>
+  </div>
+  
+  <div class="pomodoro-focus-mode" id="focus-mode">
+    <div class="pomodoro-mode-badge" id="focus-mode-badge">專注中</div>
+    <div class="pomodoro-status" id="focus-status">專注時間</div>
+    <div class="pomodoro-timer" id="focus-timer">25:00</div>
+    <div class="pomodoro-controls">
+      <button class="pomodoro-btn primary" id="focus-start-btn" onclick="startPomodoro()" style="display:none;">▶ 繼續</button>
+      <button class="pomodoro-btn" id="focus-pause-btn" onclick="pausePomodoro()">⏸ 暫停</button>
+      <button class="pomodoro-btn" onclick="resetPomodoro()">↻ 重置</button>
+      <button class="pomodoro-btn" onclick="exitFocusMode()">✕ 退出全螢幕</button>
+    </div>
+  </div>
+  
+  <div class="pomodoro-notification" id="pomodoro-notification">
+    <div class="pomodoro-notification-title" id="notif-title">休息時間到！</div>
+    <div class="pomodoro-notification-msg" id="notif-msg">現在可以去檢查 MLB 9 局職棒的掛機進度囉！</div>
+    <button class="pomodoro-notification-btn" onclick="dismissNotification()">好的，我知道了</button>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <a href="#" onclick="openModal('modal-contact');return false" data-i18n="footer_contact">聯絡我們</a>
+    <a href="#" onclick="openModal('modal-privacy');return false" data-i18n="footer_privacy">隱私權政策</a>
+  </div>
+  <div>Copyright © 2026 abin4ni. All rights reserved.</div>
+</footer>
+
+<div class="modal-overlay" id="modal-contact">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-contact')">✕</button>
+    <h2 data-i18n="modal_contact_title">聯絡我們</h2>
+    <p data-i18n="modal_contact_p1">如有任何問題、建議或合作洽詢，歡迎透過以下方式與我們聯繫。</p>
+    <h3>GitHub</h3>
+    <p data-i18n="modal_contact_github">請至 GitHub 帳號 <strong>abin4ni</strong> 提交 Issue 或透過 GitHub 聯繫。</p>
+    <h3 data-i18n="modal_contact_suggest_title">功能建議</h3>
+    <p data-i18n="modal_contact_suggest_p">我們歡迎任何功能建議，將持續優化工具，為您提供更好的體驗。</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-privacy">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-privacy')">✕</button>
+    <h2 data-i18n="modal_privacy_title">隱私權政策與免責聲明</h2>
+    <h3 data-i18n="modal_privacy_h1">隱私權政策</h3>
+    <p data-i18n="modal_privacy_p1">本網站（BinTools）尊重並保護所有使用者的個人隱私權。</p>
+    <h3 data-i18n="modal_privacy_h2">Cookie 與廣告</h3>
+    <p>本網站使用 Google AdSense 投放廣告。您可至 <a href="https://www.google.com/settings/ads" target="_blank" style="color:var(--acc2)">Google 廣告設定</a> 停用個人化廣告。</p>
+    <h3 data-i18n="modal_privacy_h3">免責聲明</h3>
+    <p data-i18n="modal_privacy_p3">本工具以「現況」提供，使用者須自行承擔使用本工具的風險。</p>
+  </div>
+</div>
+
+<script>
+/* ── UI 介面輔助 ── */
+function switchTool(id) {
+  window.scrollTo({top:0, behavior:'smooth'});
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tool-tab').forEach(t => t.classList.remove('active'));
+  const p = document.getElementById('panel-' + id); if(p) p.classList.add('active');
+  const t = document.getElementById('tab-' + id); if(t) t.classList.add('active');
+}
+
+function applyLogoTheme(theme) {
+  const isDark = theme === 'dark';
+  const thBtn = document.getElementById('theme-btn');
+  if (thBtn) thBtn.textContent = isDark ? '🌙 深色' : '☀️ 淺色';
+}
+function toggleTheme() {
+  const h = document.documentElement, isDark = h.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  h.setAttribute('data-theme', next);
+  applyLogoTheme(next);
+  localStorage.setItem('bin-theme', next);
+  scheduleAutoPreview();
+}
+(function() {
+  let theme = localStorage.getItem('bin-theme');
+  if (!theme) theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  window.addEventListener('DOMContentLoaded', () => applyLogoTheme(theme));
+})();
+
+function toggleLangMenu() { document.getElementById('lang-menu').classList.toggle('open'); }
+document.addEventListener('click', e => { if (!e.target.closest('.lang-dropdown')) { const m = document.getElementById('lang-menu'); if(m) m.classList.remove('open'); } });
+
+const I18N = {
+  'zh-TW': {
+    tab_exceltojpg:'ExceltoJPG', tab_transcribe:'音影轉文字', tab_render:'影片渲染估算', tab_subtitle:'試算表轉圖片', tab_render_sub:'4K 渲染時間計算',
+    sec_datasource:'資料來源', sec_font:'字體設定', sec_style:'表格樣式', sec_export:'匯出設定',
+    tab_paste:'貼上文字', tab_file:'上傳檔案', drop_text:'點擊或拖曳檔案到此', sheet_label:'工作表', btn_load:'載入',
+    btn_upload_font:'上傳字體', font_label:'字體', label_fontsize:'字體大小', label_style:'樣式', label_stripe:'交替行顏色', label_preset:'預設',
+    label_resolution:'解析度（16:9）', label_format:'格式', label_transparent:'透明背景（僅 PNG）',
+    label_preview:'圖片預覽', size_badge_default:'尚未產生', btn_download:'下載圖片',
+    ph_text:'左側設定完成後<br>按下方「產生圖片」開始', ph_hint:'支援 Excel / CSV / Google 試算表',
+    footer_contact:'聯絡我們', footer_privacy:'隱私權政策', hero_desc:'線上將 Excel 文字轉換為高品質的表格 JPG 圖檔',
+    csv_placeholder:'從 Excel / Google Sheets 複製後貼上（Tab 分隔），或 CSV 格式', gsheet_placeholder:'貼上 Google 試算表分享網址',
+    preview_label:'資料預覽（前4行）', hint_font:'上傳喜歡的字體（格式 .ttf / .otf / .woff2）', gsheet_hint:'試算表須設為「知道連結的人可以檢視」',
+    color_header_text:'標題文字', color_body_text:'內容文字', color_header_bg:'標題背景', color_table_bg:'表格背景', color_canvas_bg:'畫布背景', color_border:'格線顏色', color_row_odd:'奇數行', color_row_even:'偶數行',
+    opt_modern:'Modern 圓角', opt_minimal:'Minimal 線條', opt_dark:'Dark 深色', opt_gradient:'Gradient 漸層', opt_bordered:'Bordered 全框線',
+    opt_custom:'自訂', opt_orange_tint:'橘調', opt_blue_tint:'藍調', opt_green_tint:'草綠', opt_purple_tint:'淡紫', opt_warm_orange:'暖橙', opt_yellow:'鵝黃', opt_gray:'灰階',
+    opt_png:'PNG（無損）', opt_jpeg:'JPEG（較小）', theme_dark:'🌙 深色', theme_light:'☀️ 淺色',
+    modal_contact_title:'聯絡我們', modal_contact_p1:'如有任何問題、建議或合作洽詢，歡迎透過以下方式與我們聯繫。', modal_contact_github:'請至 GitHub 帳號 abin4ni 提交 Issue 或透過 GitHub 聯繫。', modal_contact_suggest_title:'功能建議', modal_contact_suggest_p:'我們歡迎任何功能建議，將持續優化工具，為您提供更好的體驗。',
+    modal_privacy_title:'隱私權政策與免責聲明', modal_privacy_h1:'隱私權政策', modal_privacy_p1:'本網站尊重並保護所有使用者的個人隱私權。', modal_privacy_h2:'Cookie 與廣告', modal_privacy_h3:'免責聲明', modal_privacy_p3:'本工具以「現況」提供，使用者須自行承擔使用本工具的風險。'
+  },
+  'en': {
+    tab_exceltojpg:'ExceltoJPG', tab_transcribe:'Transcribe', tab_render:'Render Estimator', tab_subtitle:'Spreadsheet to Image', tab_render_sub:'4K Render Time',
+    sec_datasource:'Data Source', sec_font:'Font Settings', sec_style:'Table Style', sec_export:'Export Settings',
+    tab_paste:'Paste Text', tab_file:'Upload File', drop_text:'Click or drag file here', sheet_label:'Sheet', btn_load:'Load',
+    btn_upload_font:'Upload Font', font_label:'Font', label_fontsize:'Font Size', label_style:'Style', label_stripe:'Alternating Row Colors', label_preset:'Preset',
+    label_resolution:'Resolution (16:9)', label_format:'Format', label_transparent:'Transparent BG (PNG only)',
+    label_preview:'PREVIEW', size_badge_default:'Not generated', btn_download:'Download',
+    ph_text:'Configure settings on the left,<br>then click "Generate" below', ph_hint:'Supports Excel / CSV / Google Sheets',
+    footer_contact:'Contact', footer_privacy:'Privacy Policy', hero_desc:'Convert Excel data to high-quality table JPG images online',
+    csv_placeholder:'Paste from Excel / Google Sheets (tab-separated) or CSV format', gsheet_placeholder:'Paste Google Sheets share URL',
+    preview_label:'Data Preview (first 4 rows)', hint_font:'Upload fonts (.ttf / .otf / .woff2)', gsheet_hint:'Spreadsheet must be set to "Anyone with the link can view"',
+    color_header_text:'Header Text', color_body_text:'Body Text', color_header_bg:'Header BG', color_table_bg:'Table BG', color_canvas_bg:'Canvas BG', color_border:'Border Color', color_row_odd:'Odd Rows', color_row_even:'Even Rows',
+    opt_modern:'Modern Rounded', opt_minimal:'Minimal Lines', opt_dark:'Dark', opt_gradient:'Gradient', opt_bordered:'Bordered',
+    opt_custom:'Custom', opt_orange_tint:'Orange', opt_blue_tint:'Blue', opt_green_tint:'Green', opt_purple_tint:'Purple', opt_warm_orange:'Warm Orange', opt_yellow:'Yellow', opt_gray:'Grayscale',
+    opt_png:'PNG (Lossless)', opt_jpeg:'JPEG (Smaller)', theme_dark:'🌙 Dark', theme_light:'☀️ Light',
+    modal_contact_title:'Contact Us', modal_contact_p1:'For questions, suggestions, or collaboration, please reach out via the following.', modal_contact_github:'Please visit GitHub account abin4ni to submit an Issue.', modal_contact_suggest_title:'Feature Requests', modal_contact_suggest_p:'We welcome any feature suggestions and will continue improving the tool.',
+    modal_privacy_title:'Privacy Policy & Disclaimer', modal_privacy_h1:'Privacy Policy', modal_privacy_p1:'This website respects user privacy.', modal_privacy_h2:'Cookies & Ads', modal_privacy_h3:'Disclaimer', modal_privacy_p3:'This tool is provided "as is" without any warranties. Users assume all risks.'
+  }
+};
+let currentLang = 'zh-TW';
+
+function setLang(lang, label, el) {
+  currentLang = lang;
+  document.getElementById('lang-btn-label').textContent = '🌐 ' + label;
+  document.querySelectorAll('.lang-item').forEach(e => e.classList.remove('act'));
+  if (el) el.classList.add('act');
+  const m = document.getElementById('lang-menu'); if(m) m.classList.remove('open');
+  const d = I18N[lang] || I18N['en'];
+  document.querySelectorAll('[data-i18n]').forEach(e => {
+    const k = e.getAttribute('data-i18n'); if (!d[k]) return;
+    if (k === 'ph_text') e.innerHTML = d[k]; else e.textContent = d[k];
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(e => {
+    const k = e.getAttribute('data-i18n-placeholder'); if (d[k]) e.placeholder = d[k];
+  });
+  document.querySelectorAll('[data-i18n-opt]').forEach(e => {
+    const k = e.getAttribute('data-i18n-opt'); if (d[k]) e.textContent = d[k];
+  });
+  document.documentElement.lang = lang;
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => el.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); }));
+
+function switchTab(t) {
+  const ds = document.getElementById('datasource-card');
+  if(ds) ds.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', ['paste','file','gsheet'][i] === t));
+  document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+}
+
+function showDownloadHint() {
+  const hint = document.getElementById('dl-hint');
+  if (hint) hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+}
+
+function stepNum(id, delta) {
+  const el = document.getElementById(id); if(!el) return;
+  const curVal = parseInt(el.value) || 0;
+  el.value = Math.max(parseInt(el.min)||0, Math.min(parseInt(el.max)||9999, curVal + delta));
+  if(['row-gap','col-gap','font-size','radius'].includes(id)) scheduleAutoPreview();
+}
+
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobile-menu');
+  if (menu) menu.classList.toggle('open');
+}
+
+document.getElementById('stripe-toggle').addEventListener('change', function() {
+  const el = document.getElementById('stripe-opts');
+  el.style.opacity = this.checked ? '1' : '0.35';
+  el.style.pointerEvents = this.checked ? '' : 'none';
+});
+document.getElementById('stripe-preset').addEventListener('change', function() {
+  if (!this.value) return;
+  const [o, e] = this.value.split('|');
+  document.getElementById('row-odd').value = o; document.getElementById('row-even').value = e;
+  scheduleAutoPreview();
+});
+
+/* ── EXCEL TO JPG LOGIC ── */
+const BUILTIN =[
+  {name:'LINE Seed TW 細體', family:'LINESeedTW-Th', url:'LINESeedTW_TTF_Th.ttf', weight:100},
+  {name:'LINE Seed TW 常規', family:'LINESeedTW-Rg', url:'LINESeedTW_TTF_Rg.ttf', weight:400},
+  {name:'LINE Seed TW 粗體', family:'LINESeedTW-Bd', url:'LINESeedTW_TTF_Bd.ttf', weight:700},
+  {name:'LINE Seed TW 特粗', family:'LINESeedTW-Eb', url:'LINESeedTW_TTF_Eb.ttf', weight:800},
+  {name:'MantouSans 饅頭黑體', family:'MantouSans', url:'https://cdn.jsdelivr.net/gh/about-orca/Mantou-Sans@main/Font/MantouSans-Regular.ttf'},
+  {name:'Noto Sans TC 思源黑體', family:'NotoSansTC', url:'https://fonts.gstatic.com/s/notosanstc/v35/-nFkOG829Oofr2wohFbTp9iFOSsLA_ZJ1g.woff2'},
+  {name:'Noto Serif TC 思源宋體', family:'NotoSerifTC', url:'https://fonts.gstatic.com/s/notoseriftc/v22/XLY9IZb5bJNDGYxLBibeHZ0BhnEESXFtUsM.woff2'},
+  {name:'標楷體 Kaiu', family:'Kaiu', url:null}, {name:'Arial', family:'Arial', url:null}, {name:'Georgia', family:'Georgia', url:null},
+  {name:'Courier New 等寬', family:'Courier New', url:null}, {name:'Trebuchet MS', family:'Trebuchet MS', url:null}, {name:'Verdana', family:'Verdana', url:null}, {name:'Tahoma', family:'Tahoma', url:null},
+];
+let customFonts =[], loadedFamilies = new Set(['Arial','Georgia','Courier New','Trebuchet MS','Verdana','Tahoma']);
+
+function buildFontSelect() {
+  const s = document.getElementById('font-select'); s.innerHTML = '';
+  [...BUILTIN, ...customFonts].forEach(f => {
+    const o = document.createElement('option'); o.value = f.family; o.textContent = f.name; s.appendChild(o);
+  });
+}
+async function ensureFont(family) {
+  if (loadedFamilies.has(family)) return;
+  const info = [...BUILTIN, ...customFonts].find(f => f.family === family);
+  if (!info || !info.url) return;
+  const st = document.getElementById('font-status'); if(st) st.textContent = '載入中…';
+  try {
+    const buf = await (await fetch(info.url)).arrayBuffer();
+    const ff = new FontFace(family, buf, {weight: info.weight ? String(info.weight) : 'normal'});
+    await ff.load(); document.fonts.add(ff); loadedFamilies.add(family);
+    if(st) { st.textContent = '✓'; setTimeout(() => st.textContent = '', 2000); }
+  } catch(e) { if(st) st.textContent = '失敗'; }
+}
+
+const fontUpload = document.getElementById('font-upload-input');
+if(fontUpload) {
+    fontUpload.addEventListener('change', async function() {
+      for (const file of this.files) {
+        const buf = await file.arrayBuffer();
+        const rawName = file.name.replace(/\.[^.]+$/, '');
+        const family = 'CF_' + rawName.replace(/\s+/g,'_') + '_' + Date.now();
+        try {
+          const ff = new FontFace(family, buf); await ff.load();
+          document.fonts.add(ff); loadedFamilies.add(family);
+          customFonts.push({name: rawName + ' ✓', family, url: null});
+          buildFontSelect(); document.getElementById('font-select').value = family;
+        } catch(e) { alert('無法載入：' + file.name); }
+      }
+      this.value = '';
+      scheduleAutoPreview();
+    });
+}
+
+let parsedData =[], workbook = null, currentBlobUrl = null;
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+function setMsg(id, text, type) { 
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = text ? `<div class="msg ${type}">${text}</div>` : ''; 
+}
+function parseCSV(raw) {
+  const lines = raw.trim().split('\n').filter(l => l.trim());
+  const sep = lines[0].includes('\t') ? '\t' : ',';
+  return lines.map(l => {
+    const cols =[]; let cur = '', inQ = false;
+    for (const c of l) { if (c === '"') inQ = !inQ; else if (c === sep && !inQ) { cols.push(cur.trim()); cur = ''; } else cur += c; }
+    cols.push(cur.trim()); return cols;
+  });
+}
+function showPreview(data) {
+  const inner = document.getElementById('data-preview-inner');
+  const previewDiv = document.getElementById('data-preview');
+  if(inner && previewDiv) {
+    inner.textContent = data.slice(0,4).map(r => r.join('\t')).join('\n');
+    previewDiv.style.display = 'block';
+  }
+  scheduleAutoPreview();
+}
+
+window.handleFile = function(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  document.getElementById('file-badge-wrap').innerHTML = `<div class="badge-file">📄 ${file.name}</div>`;
+  setMsg('file-msg', '', '');
+  const reader = new FileReader();
+  if (ext === 'csv') {
+    reader.onload = e => {
+      try { parsedData = parseCSV(e.target.result); showPreview(parsedData); setMsg('file-msg', `已載入 ${parsedData.length} 行`, 'ok'); }
+      catch(err) { setMsg('file-msg', '解析失敗', 'err'); }
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = e => {
+      try {
+        workbook = XLSX.read(e.target.result, {type:'array'});
+        const names = workbook.SheetNames;
+        const ss = document.getElementById('sheet-name');
+        ss.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('');
+        document.getElementById('sheet-select').style.display = 'block';
+        loadSheet(names[0]); ss.onchange = () => loadSheet(ss.value);
+      } catch(err) { setMsg('file-msg', '解析失敗', 'err'); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+const fileUpload = document.getElementById('file-upload');
+if(fileUpload) fileUpload.addEventListener('change', function() { if(this.files[0]) handleFile(this.files[0]); });
+
+function loadSheet(name) {
+  const ws = workbook.Sheets[name];
+  const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+  parsedData = raw.filter(r => r.some(c => String(c).trim())).map(r => r.map(c => String(c)));
+  showPreview(parsedData); setMsg('file-msg', `已載入 ${parsedData.length} 行`, 'ok');
+}
+
+window.loadGSheet = async function() {
+  const raw = document.getElementById('gsheet-url').value.trim(); setMsg('gsheet-msg', '', '');
+  if (!raw) { setMsg('gsheet-msg', '請貼上網址', 'err'); return; }
+  const m = raw.match(/\/d\/([a-zA-Z0-9_-]{10,})/); if (!m) { setMsg('gsheet-msg', '無法解析網址', 'err'); return; }
+  const gidM = raw.match(/[?&]gid=(\d+)/);
+  setMsg('gsheet-msg', '載入中…', 'ok');
+  try {
+    const resp = await fetch(`https://docs.google.com/spreadsheets/d/${m[1]}/export?format=csv&gid=${gidM ? gidM[1] : '0'}`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text(); parsedData = parseCSV(text); showPreview(parsedData);
+    setMsg('gsheet-msg', `成功`, 'ok');
+  } catch(e) { setMsg('gsheet-msg', '失敗', 'err'); }
+}
+
+function getActiveData() {
+  const tabs = document.querySelectorAll('#step2-target .tab');
+  if(tabs.length === 0) return null;
+  const idx = [...tabs].findIndex(el => el.classList.contains('active'));
+  if (idx === 0) { const raw = document.getElementById('csv-input').value; return raw.trim() ? parseCSV(raw) : null; }
+  return parsedData.length ? parsedData : null;
+}
+
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+async function render() {
+  const data = getActiveData(); if (!data || data.length === 0) return;
+  const st = document.getElementById('gen-status'); if(st) st.textContent = '產生中…';
+  const family = document.getElementById('font-select').value; await ensureFont(family);
+  const resVal = document.getElementById('resolution').value;
+  const[outW, outH] = resVal ? resVal.split('|').map(Number) :[1920, 1080];
+  const fontSize = parseInt(document.getElementById('font-size').value) || 24;
+  const theme = document.getElementById('theme').value;
+  const accent = document.getElementById('accent').value;
+  const hTxt = document.getElementById('header-text-color').value;
+  const bTxt = document.getElementById('body-text-color').value;
+  const rowGap = parseInt(document.getElementById('row-gap').value) || 26;
+  const colGap = parseInt(document.getElementById('col-gap').value) || 26;
+  const rad = parseInt(document.getElementById('radius').value) || 20;
+  const tableBg = document.getElementById('bg-color').value;
+  const canvasBg = document.getElementById('canvas-bg').value;
+  const borderClr = document.getElementById('border-color').value;
+  const stripeOn = document.getElementById('stripe-toggle').checked;
+  const rowOdd = document.getElementById('row-odd').value;
+  const rowEven = document.getElementById('row-even').value;
+  const transpBg = document.getElementById('transparent-bg').checked;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const fmt = document.getElementById('fmt').value;
+
+  const hFont = `bold ${fontSize}px "${family}","Noto Sans TC",sans-serif`;
+  const bFont = `${fontSize}px "${family}","Noto Sans TC",sans-serif`;
+  const headers = data[0], rows = data.slice(1);
+  const mc = document.createElement('canvas').getContext('2d');
+  mc.font = hFont;
+  const colW = headers.map(h => mc.measureText(h).width + rowGap*2);
+  rows.forEach(row => { mc.font = bFont; row.forEach((c,i) => { const w = mc.measureText(c).width + rowGap*2; if (w > (colW[i]||0)) colW[i] = w; }); });
+  for (let i = 0; i < colW.length; i++) colW[i] = Math.max(colW[i], 80);
+  const rowH = fontSize + rowGap*2;
+  const tableW = colW.reduce((a,b) => a+b, 0) + colGap * (colW.length - 1);
+  const tableH = rowH * (rows.length + 1);
+
+  const cv = document.getElementById('preview-canvas');
+  cv.width = outW; cv.height = outH;
+  const ctx = cv.getContext('2d');
+
+  if (transpBg) { ctx.clearRect(0,0,outW,outH); }
+  else { ctx.fillStyle = canvasBg; ctx.fillRect(0,0,outW,outH); }
+
+  const tx = Math.round((outW - tableW) / 2);
+  const ty = Math.round((outH - tableH) / 2);
+
+  if (isDark) { ctx.fillStyle = '#1c1c1e'; rrect(ctx,tx,ty,tableW,tableH,rad); ctx.fill(); }
+  else {
+    ctx.fillStyle = tableBg; rrect(ctx,tx,ty,tableW,tableH,rad); ctx.fill();
+    if (theme !== 'minimal') { ctx.strokeStyle = borderClr; ctx.lineWidth = 1; rrect(ctx,tx,ty,tableW,tableH,rad); ctx.stroke(); }
+  }
+
+  ctx.save(); rrect(ctx,tx,ty,tableW,tableH,rad); ctx.clip();
+
+  if (theme === 'gradient') {
+    const g = ctx.createLinearGradient(tx,ty,tx+tableW,ty);
+    g.addColorStop(0, accent); g.addColorStop(1, accent+'99'); ctx.fillStyle = g;
+  } else ctx.fillStyle = accent;
+  ctx.fillRect(tx, ty, tableW, rowH);
+
+  if (theme === 'bordered') {
+    ctx.strokeStyle = borderClr; ctx.lineWidth = 1;
+    let sx = tx; colW.forEach((w,i) => { if (i>0) { ctx.beginPath(); ctx.moveTo(sx,ty); ctx.lineTo(sx,ty+tableH); ctx.stroke(); } sx += w + colGap; });
+  }
+
+  ctx.font = hFont; ctx.fillStyle = hTxt; ctx.textBaseline = 'middle';
+  let cx = tx; headers.forEach((h,i) => { ctx.fillText(h, cx+rowGap, ty+rowH/2); cx += colW[i] + colGap; });
+
+  rows.forEach((row, ri) => {
+    const ry = ty + rowH*(ri+1);
+    const rowBg = isDark ? (ri%2===0 ? '#1c1c1e' : '#2c2c2e') : stripeOn ? (ri%2===0 ? rowOdd : rowEven) : tableBg;
+    ctx.fillStyle = rowBg; ctx.fillRect(tx, ry, tableW, rowH);
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : borderClr; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(tx, ry); ctx.lineTo(tx+tableW, ry); ctx.stroke();
+    if (theme === 'bordered') {
+      let sx2 = tx; colW.forEach((w,ci) => { if (ci>0) { ctx.strokeStyle = borderClr; ctx.beginPath(); ctx.moveTo(sx2,ry); ctx.lineTo(sx2,ry+rowH); ctx.stroke(); } sx2 += w + colGap; });
+    }
+    ctx.font = bFont; ctx.fillStyle = isDark ? '#f5f5f7' : bTxt; ctx.textBaseline = 'middle';
+    let cx2 = tx; row.forEach((cell,ci) => { ctx.fillText(cell, cx2+rowGap, ry+rowH/2); cx2 += (colW[ci] || colW[colW.length-1]) + colGap; });
+  });
+  ctx.restore();
+
+  if (theme === 'minimal') { ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(tx, ty+rowH); ctx.lineTo(tx+tableW, ty+rowH); ctx.stroke(); }
+
+  document.getElementById('placeholder').style.display = 'none';
+  cv.style.display = 'block';
+  document.getElementById('size-badge').textContent = `${outW} × ${outH} px`;
+  if(st){ st.textContent = '✓ 完成'; setTimeout(() => st.textContent = '', 3000); }
+
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  const usePNG = transpBg || fmt === 'png';
+  const mime = usePNG ? 'image/png' : 'image/jpeg';
+  cv.toBlob(blob => {
+    currentBlobUrl = URL.createObjectURL(blob);
+    const fname = `Bin_${outW}x${outH}.${usePNG ? 'png' : 'jpg'}`;
+    const anchor = document.getElementById('dl-anchor');
+    if(anchor) { anchor.href = currentBlobUrl; anchor.download = fname; }
+    document.getElementById('dl-wrap').style.display = 'flex';
+  }, mime, 0.95);
+}
+
+let autoPreviewTimeout = null;
+function scheduleAutoPreview() {
+  clearTimeout(autoPreviewTimeout);
+  autoPreviewTimeout = setTimeout(() => {
+    if (getActiveData()) render();
+  }, 300);
+}
+
+/* ── 硬體估算功能 ── */
+const CPU_DB={'i9-14900KS':0.92,'i9-14900K':0.95,'i7-14700K':1.02,'i5-14600K':1.12,'i9-13900KS':0.95,'i9-13900K':1.0,'i7-13700K':1.05,'i5-13600K':1.15,'i9-12900KS':1.02,'i9-12900K':1.05,'i7-12700K':1.12,'i5-12600K':1.3,'i9-11900K':1.3,'i7-11700K':1.45,'i5-11600K':1.75,'i9-10900K':1.35,'i7-10700K':1.55,'Ryzen 9 9950X':0.95,'Ryzen 9 9900X':1.02,'Ryzen 7 9700X':1.12,'Ryzen 9 7950X':1.0,'Ryzen 9 7900X':1.05,'Ryzen 7 7700X':1.15,'Ryzen 5 7600X':1.35,'Ryzen 9 5950X':1.05,'Ryzen 9 5900X':1.1,'Ryzen 7 5800X':1.3,'Ryzen 5 5600X':1.55,'M4 Max':1.03,'M4 Pro':1.18,'M4':1.35,'M3 Max':1.08,'M3 Pro':1.25,'M3':1.45,'M2 Max':1.2,'M2 Pro':1.4,'M2':1.6,'M1 Max':1.35,'M1 Pro':1.55,'M1':1.8};
+const GPU_DB={'RTX 5090':0.18,'RTX 5080':0.25,'RTX 5070 Ti':0.32,'RTX 5070':0.38,'RTX 4090':0.35,'RTX 4080 Super':0.42,'RTX 4080':0.48,'RTX 4070 Ti Super':0.58,'RTX 4070 Ti':0.65,'RTX 4070 Super':0.72,'RTX 4070':0.78,'RTX 4060 Ti':1.25,'RTX 4060':1.55,'RTX 3090 Ti':0.52,'RTX 3090':0.58,'RTX 3080 Ti':0.65,'RTX 3080':0.70,'RTX 3070 Ti':0.78,'RTX 3070':0.92,'RTX 3060 Ti':1.0,'RTX 3060':1.15,'RTX 3050 Ti':2.0,'RTX 3050':2.35,'RTX 2080 Ti':0.88,'RTX 2080':1.2,'RTX 2070':1.8,'GTX 1660 Ti':2.35,'GTX 1660':2.8,'GTX 1080 Ti':1.25,'GTX 1080':1.4,'GTX 1070':1.85,'GTX 1050 Ti':3.5,'GTX 1050':3.5,'RX 7900 XTX':0.95,'RX 7900 XT':1.1,'RX 7800 XT':1.35,'RX 7700 XT':1.8,'RX 6900 XT':1.5,'RX 6800 XT':1.5,'RX 6700 XT':2.2,'Arc A770':1.3,'Arc A750':2.4,'M3 Max':2.0,'M3 Pro':3.5,'M3':5.0,'M2 Max':2.8,'M2 Pro':4.5,'M2':5.0,'M1 Max':2.8,'M1 Pro':4.5,'M1':5.0};
+
+let currentHardwareFactor = 1.0;
+window.toggleDeviceSelector = function() {
+  const panel = document.getElementById('device-selector-panel');
+  if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+window.updateCPUBrandSelect = function() {
+    const os = document.getElementById('cpu-os-select').value;
+    const typeSel = document.getElementById('cpu-type-select');
+    const modelSel = document.getElementById('cpu-model-select');
+    const brandSel = document.getElementById('cpu-brand-select');
+    brandSel.innerHTML = '<option value="">-- 先選擇 OS --</option>';
+    typeSel.innerHTML = '<option value="">-- 先選擇品牌 --</option>';
+    modelSel.innerHTML = '<option value="">-- 先選擇系列 --</option>';
+    if(os === 'Windows') { brandSel.innerHTML += '<option value="Intel">Intel</option><option value="AMD">AMD</option>'; } 
+    else if (os === 'Mac') { brandSel.innerHTML += '<option value="Apple">Apple Silicon</option>'; }
+}
+window.updateCPUTypeSelect = function() {
+    const brand = document.getElementById('cpu-brand-select').value;
+    const typeSel = document.getElementById('cpu-type-select');
+    typeSel.innerHTML = '<option value="">-- 先選擇品牌 --</option>';
+    if (brand === 'Intel') typeSel.innerHTML += '<option value="core">Core i 系列</option>';
+    if (brand === 'AMD') typeSel.innerHTML += '<option value="ryzen">Ryzen 系列</option>';
+    if (brand === 'Apple') typeSel.innerHTML += '<option value="m">M 系列</option>';
+}
+window.updateCPUModelSelect = function() {
+    const brand = document.getElementById('cpu-brand-select').value;
+    const modelSel = document.getElementById('cpu-model-select');
+    modelSel.innerHTML = '<option value="">-- 先選擇系列 --</option>';
+    if (brand === 'Intel') modelSel.innerHTML += '<option value="i9-14900K">i9-14900K</option><option value="i7-14700K">i7-14700K</option><option value="i5-13600K">i5-13600K</option><option value="i9-10900K">i9-10900K</option>';
+    if (brand === 'AMD') modelSel.innerHTML += '<option value="Ryzen 9 7950X">Ryzen 9 7950X</option><option value="Ryzen 7 7700X">Ryzen 7 7700X</option>';
+    if (brand === 'Apple') modelSel.innerHTML += '<option value="M3 Max">M3 Max</option><option value="M2 Pro">M2 Pro</option>';
+}
+window.updateGPUSeriesSelect = function() {
+    const brand = document.getElementById('gpu-brand-select').value;
+    const seriesSel = document.getElementById('gpu-series-select');
+    seriesSel.innerHTML = '<option value="">-- 先選擇品牌 --</option>';
+    if(brand === 'none') { seriesSel.innerHTML = '<option value="none">無獨立 GPU</option>'; return; }
+    if(brand === 'NVIDIA') seriesSel.innerHTML += '<option value="rtx">RTX/GTX</option>';
+    if(brand === 'AMD') seriesSel.innerHTML += '<option value="rx">Radeon RX</option>';
+    if(brand === 'Apple') seriesSel.innerHTML += '<option value="apple">Apple Silicon</option>';
+}
+window.updateGPUModelSelect = function() {
+    const brand = document.getElementById('gpu-brand-select').value;
+    const modelSel = document.getElementById('gpu-model-select');
+    modelSel.innerHTML = '<option value="">-- 先選擇系列 --</option>';
+    if(brand === 'none') { modelSel.innerHTML = '<option value="none">無獨立 GPU</option>'; return; }
+    if(brand === 'NVIDIA') modelSel.innerHTML += '<option value="RTX 4090">RTX 4090</option><option value="RTX 4070">RTX 4070</option><option value="RTX 3060 Ti">RTX 3060 Ti</option><option value="RTX 3060">RTX 3060</option><option value="GTX 1660">GTX 1660</option>';
+    if(brand === 'AMD') modelSel.innerHTML += '<option value="RX 7900 XTX">RX 7900 XTX</option>';
+    if(brand === 'Apple') modelSel.innerHTML += '<option value="M3 Max">M3 Max</option>';
+}
+window.confirmDeviceSelection = function() {
+    const cpu = document.getElementById('cpu-model-select').value;
+    const gpu = document.getElementById('gpu-model-select').value;
+    if(!cpu && !gpu) { alert('請至少選擇一項 CPU 或 GPU'); return; }
+    
+    let cpuFactor = 1.0, gpuFactor = 1.0;
+    if(cpu && CPU_DB[cpu]) { cpuFactor = CPU_DB[cpu]; document.getElementById('selected-cpu-display').textContent = cpu; }
+    if(gpu && gpu !== 'none' && GPU_DB[gpu]) { gpuFactor = GPU_DB[gpu]; document.getElementById('selected-gpu-display').textContent = gpu; }
+    else if (gpu === 'none') { document.getElementById('selected-gpu-display').textContent = '無獨立 GPU'; }
+    
+    currentHardwareFactor = (gpuFactor * 0.7) + (cpuFactor * 0.3);
+    document.getElementById('hardware-factor-display').textContent = currentHardwareFactor.toFixed(2);
+    toggleDeviceSelector();
+    window.renderEstimator();
+}
+
+window.renderEstimator = function() {
+  const dur = parseInt(document.getElementById('rt-dur').value) || 1;
+  const res = document.getElementById('rt-res').value;
+  const fps = parseInt(document.getElementById('rt-fps').value) || 24;
+  let resMul = res === '8K' ? 4 : res === '4K' ? 1 : 0.25;
+  let fpsMul = fps / 24;
+  let baseMins = dur * 0.75 * resMul * fpsMul * currentHardwareFactor;
+  let storedCalib = localStorage.getItem('renderCalibrationFactor');
+  if(storedCalib) baseMins *= parseFloat(storedCalib);
+
+  let display, range;
+  if (baseMins < 1) {
+    let secs = Math.round(baseMins * 60); display = secs + ' 秒'; range = `（約 ${Math.round(secs*0.8)} – ${Math.round(secs*1.2)} 秒）`;
+  } else if (baseMins < 60) {
+    let m = Math.round(baseMins); display = m + ' 分鐘'; range = `（約 ${Math.round(m*0.8)} – ${Math.round(m*1.2)} 分鐘）`;
+  } else {
+    const h = Math.floor(baseMins/60), m = Math.round(baseMins%60);
+    display = h + ' 小時 ' + (m>0?m+' 分':'');
+    const lo = Math.round(baseMins*0.8), hi = Math.round(baseMins*1.2);
+    range = `（約 ${Math.floor(lo/60)}h${lo%60}m – ${Math.floor(hi/60)}h${hi%60}m）`;
+  }
+  document.getElementById('rt-time').textContent = display;
+  document.getElementById('rt-range').textContent = range;
+}
+
+window.submitCalibration = function() {
+  const p = parseFloat(document.getElementById('predicted-time').value);
+  const a = parseFloat(document.getElementById('actual-time').value);
+  const st = document.getElementById('calibration-status');
+  if(!p || !a || p<=0 || a<=0) { st.textContent = '❌ 請輸入有效數值'; st.style.color = 'var(--danger)'; return; }
+  const factor = a / p;
+  localStorage.setItem('renderCalibrationFactor', factor.toFixed(4));
+  st.textContent = '✓ 已校正！誤差比: ' + factor.toFixed(3);
+  st.style.color = 'var(--success)';
+  setTimeout(() => { document.getElementById('predicted-time').value=''; document.getElementById('actual-time').value=''; st.textContent=''; }, 3000);
+  window.renderEstimator();
+}
+
+/* ── 番茄鐘 ── */
+const POMO_MODES = { standard: { focus: 25, break: 5 }, deep: { focus: 50, break: 10 } };
+const beepAudio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'+Array(10).join('123'));
+let pomoState = { mode: 'standard', status: 'idle', timeLeft: 25 * 60, timerId: null, todayCount: 0 };
+
+function formatTime(s) { return Math.floor(s/60).toString().padStart(2,'0') + ':' + (s%60).toString().padStart(2,'0'); }
+
+function updatePomodoroUI() {
+  const str = formatTime(pomoState.timeLeft);
+  document.getElementById('pomodoro-timer').textContent = str;
+  document.getElementById('focus-timer').textContent = str;
+  document.title = pomoState.status !== 'idle' ? `(${str}) BinTools 時鐘鐘` : 'BinTools 工具頁面';
+  document.getElementById('today-count').textContent = pomoState.todayCount;
+}
+
+window.setPomodoroMode = function(m, btn) {
+  if (pomoState.status !== 'idle' && !confirm('計時器正在運行，確定要切換模式嗎？')) return;
+  window.resetPomodoro(); pomoState.mode = m; pomoState.timeLeft = POMO_MODES[m].focus * 60;
+  document.querySelectorAll('.pomodoro-mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  document.getElementById('mode-badge').textContent = (m==='standard'?'標準模式':'深度學習') + ` (${POMO_MODES[m].focus} 分鐘)`;
+  updatePomodoroUI();
+}
+
+window.startPomodoro = function() {
+  if (pomoState.status === 'idle') {
+    pomoState.status = 'focus'; document.getElementById('pomodoro-status').textContent = '專注中';
+    document.getElementById('focus-mode').classList.add('active'); document.getElementById('focus-status').textContent = '專注時間';
+    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(err=>{});
+  }
+  document.getElementById('start-btn').style.display = 'none'; document.getElementById('pause-btn').style.display = 'inline-block';
+  document.getElementById('focus-start-btn').style.display = 'none'; document.getElementById('focus-pause-btn').style.display = 'inline-block';
+  if (pomoState.timerId) clearInterval(pomoState.timerId);
+  pomoState.timerId = setInterval(tickPomodoro, 1000);
+}
+
+window.pausePomodoro = function() {
+  clearInterval(pomoState.timerId); pomoState.timerId = null;
+  document.getElementById('start-btn').style.display = 'inline-block'; document.getElementById('pause-btn').style.display = 'none';
+  document.getElementById('start-btn').textContent = '▶ 繼續';
+  document.getElementById('focus-start-btn').style.display = 'inline-block'; document.getElementById('focus-pause-btn').style.display = 'none';
+}
+
+window.resetPomodoro = function() {
+  clearInterval(pomoState.timerId); pomoState.timerId = null; pomoState.status = 'idle';
+  pomoState.timeLeft = POMO_MODES[pomoState.mode].focus * 60;
+  document.getElementById('pomodoro-status').textContent = '準備開始';
+  document.getElementById('start-btn').style.display = 'inline-block'; document.getElementById('start-btn').textContent = '▶ 開始';
+  document.getElementById('pause-btn').style.display = 'none';
+  document.getElementById('focus-start-btn').style.display = 'none'; document.getElementById('focus-pause-btn').style.display = 'inline-block';
+  window.exitFocusMode(); updatePomodoroUI();
+}
+
+function tickPomodoro() {
+  if (pomoState.timeLeft > 0) { pomoState.timeLeft--; updatePomodoroUI(); } 
+  else {
+    clearInterval(pomoState.timerId); pomoState.timerId = null; try { beepAudio.play().catch(e=>{}); } catch(e){}
+    if (pomoState.status === 'focus') {
+      pomoState.status = 'break'; pomoState.todayCount++; pomoState.timeLeft = POMO_MODES[pomoState.mode].break * 60;
+      document.getElementById('pomodoro-status').textContent = '休息中'; document.getElementById('focus-status').textContent = '休息時間';
+      document.getElementById('notif-title').textContent = '休息時間到！'; document.getElementById('notif-msg').textContent = '現在可以去休息一下囉！';
+      document.getElementById('pomodoro-notification').classList.add('active');
+      pomoState.timerId = setInterval(tickPomodoro, 1000);
+    } else if (pomoState.status === 'break') {
+      window.resetPomodoro();
+      document.getElementById('notif-title').textContent = '休息結束！'; document.getElementById('notif-msg').textContent = '準備好進入下一個專注階段了嗎？';
+      document.getElementById('pomodoro-notification').classList.add('active');
+    }
+  }
+}
+
+window.exitFocusMode = function() {
+  document.getElementById('focus-mode').classList.remove('active');
+  if (document.exitFullscreen) document.exitFullscreen().catch(err=>{});
+}
+window.dismissNotification = function() { document.getElementById('pomodoro-notification').classList.remove('active'); }
+
+/* ── INITIALIZE BINDINGS ── */
+document.addEventListener('DOMContentLoaded', () => {
+  buildFontSelect(); window.renderEstimator(); updatePomodoroUI();
+  const binds =['csv-input', 'font-select', 'theme', 'resolution', 'fmt', 'stripe-preset', 'header-text-color', 'body-text-color', 'accent', 'bg-color', 'canvas-bg', 'border-color', 'row-odd', 'row-even', 'font-size', 'row-gap', 'col-gap', 'radius'];
+  binds.forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener(el.tagName === 'INPUT' && el.type === 'color' || el.tagName === 'TEXTAREA' ? 'input' : 'change', scheduleAutoPreview); });
+  const toggles =['stripe-toggle', 'transparent-bg'];
+  toggles.forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener('change', scheduleAutoPreview); });
+});
+</script>
+</body>
+</html>
