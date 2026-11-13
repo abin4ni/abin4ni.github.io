@@ -1641,6 +1641,46 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   :root .app-header h1{letter-spacing:-.4px;}
 }
 
+/* ═══ Phase 2-1 · Course card refinements (CSS only) ═══════════════
+   Selectors are intentionally NOT scoped under #course-list: the drag
+   preview is a cloneNode appended to <body> and must look identical.
+   No change to draggable / ondragstart / .is-draggable / touch-action
+   / will-change. */
+.course-card{padding:14px 16px;margin-bottom:10px;}
+.course-card .course-head{margin-bottom:6px;}
+.course-card .course-name{font-size:14px;line-height:1.35;min-width:0;overflow-wrap:anywhere;}
+
+/* Action buttons: always visible, larger hit area, delete set apart */
+.course-card .exam-pen-btn,
+.course-card .del-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:36px;min-height:36px;margin:-6px 0 -6px -4px;padding:0;
+  background:var(--sunken);color:var(--text-2);
+  border-radius:var(--r-btn);font-size:15px;line-height:1;
+}
+.course-card .del-btn{margin-left:8px;font-size:18px;}
+.course-card .exam-pen-btn:hover{background:rgba(var(--accent-rgb),.12);}
+.course-card .del-btn:hover{background:var(--danger-bg);color:var(--danger-c);}
+.course-card .exam-pen-btn:focus-visible,
+.course-card .del-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+@media(pointer:coarse){
+  .course-card .exam-pen-btn,
+  .course-card .del-btn{min-width:40px;min-height:40px;margin-top:-8px;margin-bottom:-8px;}
+  .course-card .del-btn{margin-left:12px;}
+}
+
+/* Chips: only the exam badge keeps a filled pill */
+.course-card .lesson-chip{background:none;padding:0;margin-right:8px;color:var(--text-3);}
+
+/* Progress row */
+.course-card .course-progress-row{gap:12px;margin-top:4px;}
+.course-card .progress-ring-wrap,
+.course-card .progress-ring-wrap svg{width:40px;height:40px;}
+.course-card .progress-ring-wrap svg{display:block;}
+.course-card .progress-ring-pct{font-size:10px;}
+/* the remaining-count <b> carries an inline colour, so one !important is required */
+.course-card .progress-bar-col b{font-size:12px;font-weight:700;color:var(--accent) !important;}
+
 </style>
 <!-- Firebase SDK -->
 <script type="module">
