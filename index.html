@@ -1719,6 +1719,27 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 @media(max-width:767px) and (prefers-reduced-motion:reduce){
   .bottom-nav::before{transition:none;}
 }
+.mobile-page-intro,.day-schedule-entry{display:none;}
+@media(max-width:767px){
+  .mobile-page-intro{display:block;margin:4px 0 18px;}
+  .mobile-page-intro h2{font-size:21px;font-weight:700;color:var(--text);}
+  .mobile-page-intro p{margin-top:4px;font-size:12px;color:var(--text-3);}
+  #panel-l .section{margin-bottom:20px;}
+  #panel-l .section-label{font-weight:600;color:var(--text-2);}
+  .cal-title{font-size:19px;font-weight:700;}
+  .panel-r #day-label{font-size:21px;font-weight:700;color:var(--text);margin:4px 0 12px;}
+  .day-schedule-entry{display:block;margin-bottom:18px;}
+  #day-schedule-form{margin-top:10px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);}
+  #day-schedule-form[hidden]{display:none;}
+  #day-schedule-form label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
+  #day-schedule-form select,#day-schedule-form input{width:100%;min-height:44px;margin-bottom:12px;}
+  .day-schedule-date{font-size:13px;font-weight:600;margin-bottom:12px;}
+  .day-schedule-actions{display:flex;gap:8px;}
+  #day-schedule-message{font-size:13px;color:var(--text-2);margin-bottom:10px;}
+  #day-schedule-message:empty{display:none;}
+  .day-panel-main>.day-panel-title{font-size:16px;color:var(--text);}
+  .day-panel-notes,.day-panel-meta{border-top:1px solid var(--border-lt);padding-top:14px;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -1897,6 +1918,7 @@ onAuthStateChanged(auth,user=>{
   <div class="layout">
 
     <aside class="panel panel-l" id="panel-l">
+      <div class="mobile-page-intro"><h2>課程管理</h2><p>管理課程、查看進度與待排堂次</p></div>
       <div class="section">
         <div class="section-label">快速輸入</div>
         <div class="quick-input-wrap">
@@ -1972,6 +1994,21 @@ onAuthStateChanged(auth,user=>{
     <aside class="panel panel-r" id="panel-r">
       <button class="day-panel-close" id="day-panel-close" onclick="closeDayPanel()" aria-label="Close panel">×</button>
       <div class="section-label" id="day-label">選擇日期</div>
+      <div class="day-schedule-entry">
+        <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-expanded="false" aria-controls="day-schedule-form">＋安排課程</button>
+        <form id="day-schedule-form" hidden onsubmit="submitDaySchedule(event)">
+          <p class="day-schedule-date" id="day-schedule-date"></p>
+          <p id="day-schedule-message" role="status"></p>
+          <label for="day-schedule-course">選擇既有課程</label>
+          <select id="day-schedule-course" required></select>
+          <label for="day-schedule-time">上課時間（可留空）</label>
+          <input id="day-schedule-time" type="time" step="60"/>
+          <div class="day-schedule-actions">
+            <button type="submit" class="btn btn-primary" id="day-schedule-confirm">確認安排一堂</button>
+            <button type="button" class="btn btn-sand" onclick="cancelDaySchedule()">取消</button>
+          </div>
+        </form>
+      </div>
       <div id="day-events"></div>
     </aside>
 
@@ -2818,6 +2855,7 @@ function closeTabletPanel(){
 // 視窗 resize 時重設狀態
 window.addEventListener('resize',()=>{
   if(!isMobile()&&(S.tapCourseId||mobileSchedulePickerOpen))cancelCalendarSchedule();
+  if(!isMobile())cancelDaySchedule();
   if(!isTablet())closeTabletPanel();
   if(!useSlideDayPanel())closeDayPanel();
 });
@@ -2826,6 +2864,7 @@ let currentMobileTab='course';
 function mobileTab(tab){
   if(isTablet())return; // tablet uses FAB overlay instead
   if(tab!=='cal')cancelCalendarSchedule();
+  if(tab!=='day')cancelDaySchedule();
   currentMobileTab=tab;
   document.getElementById('panel-l').classList.toggle('mob-active',tab==='course');
   document.getElementById('panel-cal').classList.toggle('mob-active',tab==='cal');
@@ -3226,7 +3265,55 @@ function submitQuickInput(parsed){
 
 // ── Drag & Drop ───────────────────────────────────────────────────
 // UI override: structured day panel sections (courses / notes / stats).
+// UI-only draft; never included in statePayload or written until confirmed.
+let dayScheduleDate=null;
+function cancelDaySchedule(){
+  dayScheduleDate=null;
+  document.getElementById('day-schedule-form').hidden=true;
+  document.getElementById('day-schedule-open').setAttribute('aria-expanded','false');
+}
+function refreshDayScheduleCourses(){
+  const select=document.getElementById('day-schedule-course');
+  const previous=select.value;
+  select.replaceChildren();
+  const pending=S.courses.filter(c=>remaining(c)>0);
+  pending.forEach(c=>{
+    const option=document.createElement('option');
+    option.value=c.id;option.textContent=c.name+'（剩 '+remaining(c)+' 堂）';
+    select.appendChild(option);
+  });
+  if(pending.some(c=>c.id===previous))select.value=previous;
+  select.disabled=!pending.length;
+  document.getElementById('day-schedule-confirm').disabled=!pending.length;
+  document.getElementById('day-schedule-message').textContent=pending.length?'':(S.courses.length?'所有課程都已排滿，目前沒有可安排的課堂。':'目前沒有可安排的課程，請先到「課程」新增課程。');
+}
+function openDaySchedule(){
+  if(!isMobile())return;
+  dayScheduleDate=S.selectedDate||todayStr;
+  document.getElementById('day-schedule-date').textContent='安排日期：'+fmtDate(dayScheduleDate);
+  document.getElementById('day-schedule-time').value='';
+  refreshDayScheduleCourses();
+  document.getElementById('day-schedule-form').hidden=false;
+  document.getElementById('day-schedule-open').setAttribute('aria-expanded','true');
+}
+function submitDaySchedule(event){
+  event.preventDefault();
+  if(!isMobile()||!dayScheduleDate)return;
+  const c=course(document.getElementById('day-schedule-course').value);
+  if(!c||remaining(c)<=0){refreshDayScheduleCourses();return;}
+  const date=dayScheduleDate;
+  const time=document.getElementById('day-schedule-time').value;
+  cancelDaySchedule(); // consume once, including repeated submit events
+  addEvent(date,c.id,time);
+  S.selectedDate=date;
+  saveState();render();
+  toast('已安排一堂課程','success');
+}
 function renderDayPanel(){
+  if(dayScheduleDate){
+    if((S.selectedDate||todayStr)!==dayScheduleDate)cancelDaySchedule();
+    else refreshDayScheduleCourses();
+  }
   const label=document.getElementById('day-label');
   const el=document.getElementById('day-events');
   const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -3235,7 +3322,7 @@ function renderDayPanel(){
     label.textContent='選擇日期';
     el.innerHTML=`<div class="day-panel-shell">
       <section class="day-panel-section day-panel-main">
-        <h3 class="day-panel-title">📚 今日課程</h3>
+        <h3 class="day-panel-title">📚 ${isMobile()?'當日課程':'今日課程'}</h3>
         <div class="empty-state"><div class="empty-icon">📅</div><p>點選行事曆日期後，這裡會顯示可操作課程。</p></div>
       </section>
       <section class="day-panel-section day-panel-notes">
@@ -3346,12 +3433,12 @@ function renderDayPanel(){
   });
 
   if(!courseHtml){
-    courseHtml=`<div class="empty-state"><div class="empty-icon">✨</div><p>${isMobile()?'點選「行事曆」標籤選課堂':'從左側拖曳課堂到這個日期'}</p></div>`;
+    courseHtml=`<div class="empty-state"><div class="empty-icon">✨</div><p>${isMobile()?'這天還沒有課堂，點「＋安排課程」開始安排。':'從左側拖曳課堂到這個日期'}</p></div>`;
   }
 
   el.innerHTML=`<div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
-      <h3 class="day-panel-title">📚 今日課程</h3>
+      <h3 class="day-panel-title">📚 ${isMobile()?'當日課程':'今日課程'}</h3>
       <div class="day-course-list">${courseHtml}</div>
     </section>
     <section class="day-panel-section day-panel-notes">
