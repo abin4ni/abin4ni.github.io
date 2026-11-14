@@ -969,25 +969,6 @@ input:focus,select:focus{
 .day-course-list .day-group{
   margin-bottom:0;
 }
-.day-memo-input{
-  width:100%;
-  min-height:118px;
-  border:none;
-  outline:none;
-  resize:vertical;
-  border-radius:22px;
-  padding:12px 14px;
-  font-family:var(--sans);
-  font-size:13px;
-  line-height:1.6;
-  color:var(--text);
-  background:rgba(255,255,255,.58);
-  backdrop-filter:saturate(180%) blur(12px);
-  -webkit-backdrop-filter:saturate(180%) blur(12px);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.32);
-}
-.day-memo-input::placeholder{color:var(--text-3);}
-.day-memo-input[readonly]{cursor:default;}
 .day-panel-stats{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -1117,7 +1098,7 @@ input:focus,select:focus{
   box-shadow:var(--shadow-sm);
   transition:box-shadow .2s var(--ease), transform .2s var(--ease), border-color .15s;
   min-height:80px;display:flex;flex-direction:column;gap:5px;
-  user-select:none;
+  user-select:none;min-width:0;width:100%;text-align:left;color:var(--text);font:inherit;
 }
 .memo-card:hover{
   border-color:rgba(0,0,0,.2);
@@ -1131,62 +1112,54 @@ input:focus,select:focus{
   font-size:11px;font-weight:700;flex:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px;
 }
-.memo-card-preview{
-  font-size:10px;color:var(--text-3);line-height:1.5;
-  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
-  flex:1;
+.memo-card-summary{font-size:11px;color:var(--text-2);margin-top:auto;}
+.memo-preview,.memo-checklist{list-style:none;margin:0;padding:0;}
+.memo-preview-row{display:flex;gap:6px;align-items:baseline;min-width:0;font-size:12px;}
+.memo-preview-row span:last-child{min-width:0;overflow-wrap:anywhere;white-space:pre-wrap;}
+.memo-card .memo-preview-row span:last-child{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden;
 }
-.memo-card-preview.empty{color:rgba(0,0,0,.2);font-style:italic;}
-.memo-del-btn{
-  background:none;border:none;cursor:pointer;
-  color:var(--text-3);font-size:13px;padding:0 2px;line-height:1;
-  flex-shrink:0;opacity:0;transition:opacity .15s;
-}
-.memo-card:hover .memo-del-btn{opacity:1;}
-.memo-del-btn:hover{color:var(--danger-c);}
-.memo-ta{display:none;}
+.memo-preview .is-done,.memo-row.is-done .memo-item-text{color:var(--text-2);}
+.memo-preview-row.is-done span:last-child,.memo-row.is-done .memo-item-text{text-decoration:line-through;}
 
-/* ── Memo modal ── */
-#memo-modal-backdrop{
-  display:none;position:fixed;inset:0;z-index:150;
-  background:rgba(0,0,0,.3);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  align-items:center;justify-content:center;padding:24px;
-}
-#memo-modal-backdrop.open{display:flex;}
+/* ── Memo checklist ── */
 #memo-modal{
-  background:var(--glass-bg);
-  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-  border:1px solid var(--glass-border);
-  border-radius:var(--r-xl);padding:22px;
-  width:100%;max-width:360px;
-  box-shadow:var(--shadow-lg);
-  display:flex;flex-direction:column;gap:14px;
+  position:fixed;inset:0;margin:auto;width:min(480px,calc(100% - 24px));
+  max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - env(safe-area-inset-bottom,0px));
+  overflow:auto;overscroll-behavior:contain;padding:16px;
+  color:var(--text);background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
 }
-.memo-modal-head{display:flex;align-items:center;gap:9px;}
-.memo-modal-title{font-family:var(--serif);font-size:16px;font-weight:600;flex:1;letter-spacing:-.3px;}
-.memo-modal-close{
-  background:rgba(0,0,0,.07);border:none;cursor:pointer;
-  color:var(--text-2);font-size:16px;padding:0;line-height:1;
-  border-radius:50%;width:28px;height:28px;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;
+#memo-modal::backdrop{background:var(--scrim);}
+.memo-modal-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.memo-modal-title{font-size:17px;flex:1;min-width:0;overflow-wrap:anywhere;}
+.memo-row{
+  display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:start;
+  gap:4px;border-bottom:1px solid var(--border-lt);
 }
-.memo-modal-close:hover{background:rgba(0,0,0,.12);color:var(--text);}
-#memo-modal-ta{
-  width:100%;min-height:140px;resize:vertical;
-  font-family:var(--sans);font-size:13px;line-height:1.65;
-  color:var(--text);padding:11px 13px;
-  border:1px solid rgba(0,0,0,.14);border-radius:var(--r);
-  background:rgba(255,255,255,.7);outline:none;
-  transition:border-color .15s,box-shadow .15s;
+.memo-row button,#memo-modal .btn,.day-memo-title .btn{min-height:44px;}
+.memo-check,.memo-item-text,.memo-delete{
+  font:inherit;border:0;background:transparent;color:var(--text);cursor:pointer;
 }
-#memo-modal-ta:focus{
-  border-color:var(--accent-2);
-  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.18);
+.memo-check{width:44px;display:grid;place-items:center;}
+.memo-check span{
+  display:grid;place-items:center;width:22px;height:22px;border:1.5px solid var(--text-2);
+  border-radius:50%;font-size:14px;line-height:1;
 }
-#memo-modal-ta::placeholder{color:var(--text-3);}
-.memo-modal-footer{display:flex;justify-content:flex-end;gap:8px;}
+.memo-check[aria-pressed="true"] span{background:var(--done-bg);color:var(--done-c);border-color:var(--done-c);}
+.memo-item-text{padding:8px 2px;text-align:left;overflow-wrap:anywhere;white-space:pre-wrap;}
+.memo-delete{min-width:44px;color:var(--danger-c);font-size:12px;padding-inline:4px;}
+.memo-empty{font-size:13px;color:var(--text-2);margin:8px 0;}
+#memo-add,#memo-item-form{margin-top:12px;}
+#memo-item-form label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
+#memo-item-input{
+  display:block;width:100%;min-height:68px;resize:vertical;padding:8px 10px;
+  background:var(--card);color:var(--text);border:1px solid var(--border);
+  border-radius:var(--r-sm);font:inherit;font-size:16px;margin-bottom:8px;
+}
+.memo-form-actions{display:flex;flex-wrap:wrap;gap:8px;}
+#memo-item-message{margin:0 0 8px;font-size:13px;color:var(--danger-c);}
+#memo-item-message:empty{display:none;}
 
 /* ── FAB 管理按鈕（平板專用）── */
 .fab-manage{
@@ -1238,27 +1211,16 @@ input:focus,select:focus{
 .day-panel-close:hover{background:rgba(0,0,0,.12);color:var(--text);}
 
 .day-memo-wrap{
-  margin-bottom:10px;
-  background:var(--card);
-  border:1px solid var(--border-lt);
-  border-radius:var(--r);
-  padding:10px 12px;
-  box-shadow:var(--shadow-sm);
+  background:var(--card);border:1px solid var(--border-lt);
+  border-radius:var(--r);padding:8px 10px;margin-bottom:8px;
 }
 .day-memo-title{
-  font-size:11px;
-  font-weight:600;
-  color:var(--text-3);
-  letter-spacing:.2px;
-  margin-bottom:6px;
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  font-size:13px;font-weight:600;margin-bottom:6px;
 }
-.day-memo-item{
-  font-size:12px;
-  line-height:1.6;
-  color:var(--text-2);
-  margin-bottom:4px;
-}
-.day-memo-item:last-child{margin-bottom:0;}
+.day-memo-title span{min-width:0;overflow-wrap:anywhere;}
+.day-memo-title .btn{flex-shrink:0;}
+
 @keyframes slideInLeft{
   from{transform:translateX(-100%);opacity:.5;}
   to{transform:translateX(0);opacity:1;}
@@ -1529,20 +1491,19 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .app-header h1,.modal h2,#confirm-dialog h3,#sync-popover h3{letter-spacing:0;}
 .hstat-val,.dts-val,.progress-ring-pct,.day-group-name,.memo-card-name,.day-label-today-badge{font-weight:600;}
 .hstat-val,.dts-val,.date-num,.wch-date,.progress-ring-pct,.cal-tag-time{font-variant-numeric:tabular-nums;}
-.section-label,.memo-area-title,.cal-lbl,.quick-input-hint,.memo-card-preview,.dts-lbl,.exam-badge,.lesson-chip{font-size:11px;}
+.section-label,.memo-area-title,.cal-lbl,.quick-input-hint,.dts-lbl,.exam-badge,.lesson-chip{font-size:11px;}
 
 /* ── Glass → solid surfaces ── */
-.course-card,.todo-card,.cal-cell,.day-card,.day-group,.day-memo-input,.memo-area,.memo-card,.day-memo-wrap,.day-today-stat{
+.course-card,.todo-card,.cal-cell,.day-card,.day-group,.memo-area,.memo-card,.day-memo-wrap,.day-today-stat{
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
 .course-card,.todo-card,.day-card,.day-group,.cal-cell{background:var(--card);}
 .day-group-head{background:var(--card-2);}
 .memo-area{background:var(--card-2);border-radius:var(--r);box-shadow:none;}
-.day-memo-input{background:var(--card-2);border:1px solid var(--border-lt);box-shadow:none;}
 .app-header,.bottom-nav{background:var(--header-bg);}
 
 /* ── Radius unification ── */
-.course-card,.todo-card,.day-card,.day-group,.memo-card,.day-memo-wrap,.day-today-stat,.day-memo-input{border-radius:var(--r);}
+.course-card,.todo-card,.day-card,.day-group,.memo-card,.day-memo-wrap,.day-today-stat{border-radius:var(--r);}
 .cal-cell{border-radius:var(--r-sm);}
 .panel-l,.cal-panel,.panel-r{border-radius:var(--r-lg);}
 
@@ -1587,8 +1548,7 @@ input[type=text],input[type=number],input[type=date],select:not(.time-sel),#quic
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);transform:none;}
 #quick-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
 .time-sel{border:1px solid var(--border);border-radius:var(--r-xs);background-color:var(--card-2);}
-.modal textarea,#memo-modal-ta{border-color:var(--border);border-radius:var(--r-sm);background:var(--card);}
-#memo-modal-ta:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
+.modal textarea{border-color:var(--border);border-radius:var(--r-sm);background:var(--card);}
 #edit-name,#edit-total{border-radius:var(--r-sm) !important;border-color:var(--border) !important;}
 
 /* ── Tags / badges / chips ── */
@@ -1601,11 +1561,11 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .done-check{border-color:var(--border-strong);}
 
 /* ── Overlays, dialogs, popovers ── */
-.modal-backdrop,#confirm-backdrop,#memo-modal-backdrop,.tablet-overlay{
+.modal-backdrop,#confirm-backdrop,.tablet-overlay{
   background:var(--scrim);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
 }
 .day-panel-overlay{background:var(--scrim-lt);-webkit-backdrop-filter:none;backdrop-filter:none;}
-.modal,#confirm-dialog,#memo-modal,#sync-popover,#exam-popover{
+.modal,#confirm-dialog,#sync-popover,#exam-popover{
   background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--shadow-pop);
 }
 .toast,#drag-ghost{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--shadow-pop);}
@@ -2203,20 +2163,25 @@ onAuthStateChanged(auth,user=>{
   </form>
 </dialog>
 
-<!-- Memo edit modal -->
-<div id="memo-modal-backdrop" onclick="closeMemoModal(event)">
-  <div id="memo-modal">
-    <div class="memo-modal-head">
-      <span class="dot" id="memo-modal-dot"></span>
-      <span class="memo-modal-title" id="memo-modal-title"></span>
-      <button class="memo-modal-close" onclick="closeMemoModal()">×</button>
-    </div>
-    <textarea id="memo-modal-ta" rows="6" placeholder="輸入備忘錄內容…" oninput="updateMemoFromModal(this.value)"></textarea>
-    <div class="memo-modal-footer">
-      <button class="btn btn-sand btn-xs" onclick="closeMemoModal()">完成</button>
-    </div>
+<!-- Course memo checklist -->
+<dialog id="memo-modal" aria-labelledby="memo-modal-title">
+  <div class="memo-modal-head">
+    <span class="dot" id="memo-modal-dot"></span>
+    <h2 class="memo-modal-title" id="memo-modal-title"></h2>
+    <button type="button" class="btn btn-sand btn-xs" id="memo-close" autofocus>關閉</button>
   </div>
-</div>
+  <div id="memo-items"></div>
+  <button type="button" class="btn btn-sand" id="memo-add">＋新增事項</button>
+  <form id="memo-item-form" hidden>
+    <label for="memo-item-input" id="memo-item-label"></label>
+    <textarea id="memo-item-input" rows="2" aria-describedby="memo-item-message"></textarea>
+    <p id="memo-item-message" role="alert"></p>
+    <div class="memo-form-actions">
+      <button type="submit" class="btn btn-primary" id="memo-item-submit"></button>
+      <button type="button" class="btn btn-sand" id="memo-item-cancel">取消</button>
+    </div>
+  </form>
+</dialog>
 
 <!-- PWA Install Banner -->
 <div id="install-banner">
@@ -2452,7 +2417,7 @@ const S={
   year:new Date().getFullYear(),month:new Date().getMonth(),
   selectedDate:null,view:'month',weekStart:null,
   dragCourseId:null,tapCourseId:null,cid:1,eid:1,
-  notes:{},          // {courseId: text}
+  notes:{},          // {courseId: legacy string or ordered checklist items}
   courseListExpanded:false,
 };
 const today=new Date();
@@ -2497,11 +2462,6 @@ const WDAYS=['日','一','二','三','四','五','六'];
 const MONTHS=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 const HOURS=Array.from({length:16},(_,i)=>i+7);
 function fmtDate(s){const[y,m,d]=s.split('-').map(Number);return`${m}月${d}日（週${WDAYS[new Date(y,m-1,d).getDay()]}）`;}
-
-// ── Debounce ──────────────────────────────────────────────────────
-function debounce(fn,delay){
-  let t;return function(...args){clearTimeout(t);t=setTimeout(()=>fn.apply(this,args),delay);}
-}
 
 // ── Toast notifications ───────────────────────────────────────────
 function toast(msg,type='',duration=2800){
@@ -2752,7 +2712,6 @@ function addCourse(event){
   const examDate=document.getElementById('inp-exam').value||'';
   const id=`c${S.cid++}`;
   S.courses.push({id,name,total,color:PALETTE[colorCursor++%PALETTE.length],examDate,lessonStart,lessonEnd});
-  S.notes[id]='';
   event.currentTarget.reset();
   updateNewCourseRange();
   nameInput.focus();
@@ -2781,61 +2740,213 @@ function deleteCourse(id){
   );
 }
 
-// ── Memo ─────────────────────────────────────────────────────────
-const _saveMemoDebounced=debounce((cid,val)=>{S.notes[cid]=val;saveState();},600);
-function updateMemo(cid,val){
-  // Write immediately to state for UI, debounce the expensive saveState
-  S.notes[cid]=val;
-  _saveMemoDebounced(cid,val);
+// ── Course memo checklist ───────────────────────────────────────
+const memoDialog=document.getElementById('memo-modal');
+const memoItems=document.getElementById('memo-items');
+const memoForm=document.getElementById('memo-item-form');
+const memoInput=document.getElementById('memo-item-input');
+const memoMessage=document.getElementById('memo-item-message');
+const memoAdd=document.getElementById('memo-add');
+let memoRenderedItems='';
+let memoCourseId=null;
+let memoOpener=null;
+let memoDraft=null;
+
+function courseMemoItems(cid){
+  const note=S.notes[cid];
+  if(Array.isArray(note))return note;
+  if(typeof note!=='string')return [];
+  // Keep the original text until a checklist action is saved.
+  return note.split(/\r\n|\n|\r/).flatMap((text,index)=>text.trim() ? [{id:'legacy-'+index,text,done:false}] : []);
 }
-function deleteMemo(cid){
-  S.notes[cid]=''; // clear content but keep key so card stays visible
-  saveState();renderMemo();
-  toast('備忘錄已清除');
+function memoPreview(items,compact=false){
+  if(!items.length)return compact?'<span class="memo-empty">尚無事項</span>':'<p class="memo-empty">尚無事項</p>';
+  const tag=compact?'span':'li';
+  return (compact?'<span class="memo-preview">':'<ul class="memo-preview">')+items.map(item=>
+    `<${tag} class="memo-preview-row ${item.done?'is-done':''}"><span role="img" aria-label="${item.done?'已完成':'未完成'}">${item.done?'✓':'○'}</span><span>${esc(item.text)}</span></${tag}>`
+  ).join('')+(compact?'</span>':'</ul>');
 }
 function renderMemo(){
   const area=document.getElementById('memo-area');
-  const grid=document.getElementById('memo-grid');
-  if(!area||!grid)return;
-  if(!S.courses.length){area.style.display='none';return;}
-  area.style.display='block';
-  grid.innerHTML=S.courses.map(c=>{
-    const txt=S.notes[c.id]??'';
-    const hasNote=txt.trim().length>0;
-    const preview=hasNote?txt:'輸入備忘…';
-    return`<div class="memo-card${hasNote?' has-note':''}" onclick="openMemoModal('${c.id}')">
-      <div class="memo-card-head">
+  area.style.display=S.courses.length?'block':'none';
+  document.getElementById('memo-grid').innerHTML=S.courses.map(c=>{
+    const items=courseMemoItems(c.id);
+    const done=items.filter(item=>item.done).length;
+    return `<button type="button" class="memo-card${items.length?' has-note':''}" data-memo-course="${esc(c.id)}">
+      <span class="memo-card-head">
         <span class="dot" style="background:${c.color}"></span>
         <span class="memo-card-name">${esc(c.name)}</span>
-        <button class="memo-del-btn" onclick="event.stopPropagation();deleteMemo('${c.id}')" title="清除備忘錄">×</button>
-      </div>
-      <div class="memo-card-preview${hasNote?'':' empty'}">${esc(preview)}</div>
-    </div>`;
+      </span>
+      ${memoPreview(items.slice(0,2),true)}
+      ${items.length?`<span class="memo-card-summary">完成 ${done}/${items.length}</span>`:''}
+    </button>`;
   }).join('');
+  if(memoDialog.open)renderMemoEditor();
 }
-
-// ── Memo Modal ────────────────────────────────────────────────────
-let _memoCid=null;
-function openMemoModal(cid){
-  const c=course(cid);if(!c)return;
-  _memoCid=cid;
+function renderDayMemo(){
+  const panel=document.getElementById('day-course-memos');
+  if(!panel)return;
+  const lessons=S.calendar[S.selectedDate]||[];
+  const courses=[...new Set(lessons.map(lesson=>lesson.courseId))].map(course).filter(Boolean);
+  panel.innerHTML=courses.length ? courses.map(c=>`
+    <div class="day-memo-wrap">
+      <div class="day-memo-title">
+        <span>${esc(c.name)}</span>
+        <button type="button" class="btn btn-sand btn-xs" data-memo-course="${esc(c.id)}" aria-label="開啟 ${esc(c.name)} 的備忘錄">開啟備忘錄</button>
+      </div>
+      ${memoPreview(courseMemoItems(c.id))}
+    </div>`).join('') : '<p class="memo-empty">當天沒有課程備忘錄。</p>';
+}
+function renderMemoEditor(){
+  const c=course(memoCourseId);
+  if(!c){closeMemoModal();return;}
   document.getElementById('memo-modal-dot').style.background=c.color;
   document.getElementById('memo-modal-title').textContent=c.name+' 備忘錄';
-  document.getElementById('memo-modal-ta').value=S.notes[cid]??'';
-  document.getElementById('memo-modal-backdrop').classList.add('open');
-  setTimeout(()=>document.getElementById('memo-modal-ta').focus(),80);
+  const items=courseMemoItems(c.id);
+  const markup=items.length ? '<ul class="memo-checklist">'+items.map(item=>`
+    <li class="memo-row${item.done?' is-done':''}" data-memo-item="${esc(item.id)}">
+      <button type="button" class="memo-check" data-memo-action="toggle" aria-label="完成：${esc(item.text)}" aria-pressed="${item.done}"><span aria-hidden="true">${item.done?'✓':''}</span></button>
+      <button type="button" class="memo-item-text" data-memo-action="edit">${esc(item.text)}</button>
+      <button type="button" class="memo-delete" data-memo-action="delete" aria-label="刪除：${esc(item.text)}">刪除</button>
+    </li>`).join('')+'</ul>' : '<p class="memo-empty">尚無事項</p>';
+  const focused=memoItems.contains(document.activeElement)?document.activeElement:null;
+  if(memoRenderedItems!==markup){
+    memoRenderedItems=markup;
+    memoItems.innerHTML=markup;
+    if(focused)focusMemoItem(focused.closest('[data-memo-item]').dataset.memoItem,focused.dataset.memoAction);
+  }
 }
-function closeMemoModal(e){
-  if(e&&e.target!==document.getElementById('memo-modal-backdrop'))return;
-  document.getElementById('memo-modal-backdrop').classList.remove('open');
-  _memoCid=null;
+function focusMemoItem(id,action){
+  const row=[...memoItems.querySelectorAll('[data-memo-item]')].find(el=>el.dataset.memoItem===id);
+  const target=row?.querySelector('[data-memo-action="'+action+'"]');
+  (target||(memoForm.hidden?memoAdd:memoInput)).focus();
+}
+function resetMemoDraft(){
+  memoDraft=null;
+  memoForm.hidden=true;
+  memoAdd.hidden=false;
+  memoInput.value='';
+  memoInput.removeAttribute('aria-invalid');
+  memoMessage.textContent='';
+}
+function openMemoModal(cid,opener){
+  if(!course(cid))return;
+  memoCourseId=cid;
+  memoOpener=opener;
+  resetMemoDraft();
+  renderMemoEditor();
+  memoDialog.showModal();
+  memoDialog.scrollTop=0;
+}
+function closeMemoModal(){
+  if(!memoDialog.open)return;
+  memoDialog.close();
+  const cid=memoCourseId;
+  const scope=memoOpener?.closest('#day-events')?'#day-events':'#memo-grid';
+  const opener=memoOpener?.isConnected ? memoOpener :
+    [...document.querySelectorAll(scope+' [data-memo-course]')].find(el=>el.dataset.memoCourse===cid);
+  memoCourseId=null;
+  memoOpener=null;
+  resetMemoDraft();
+  opener?.focus();
+}
+function openMemoDraft(item){
+  memoDraft={id:item?.id,text:item?.text};
+  memoMessage.textContent='';
+  memoInput.removeAttribute('aria-invalid');
+  document.getElementById('memo-item-label').textContent=item?'編輯事項':'新增事項';
+  document.getElementById('memo-item-submit').textContent=item?'儲存':'新增';
+  memoInput.value=item?.text??'';
+  memoAdd.hidden=true;
+  memoForm.hidden=false;
+  memoInput.focus();
+}
+function saveCourseMemo(items){
+  S.notes[memoCourseId]=items;
+  saveState();
   renderMemo();
+  renderDayMemo();
 }
-function updateMemoFromModal(val){
-  if(!_memoCid)return;
-  S.notes[_memoCid]=val;
-  _saveMemoDebounced(_memoCid,val);
+function submitMemoDraft(event){
+  event.preventDefault();
+  if(!memoDraft||!course(memoCourseId))return;
+  const text=memoInput.value;
+  if(!text.trim()){
+    memoInput.setAttribute('aria-invalid','true');
+    memoMessage.textContent='請輸入事項文字。';
+    memoInput.focus();
+    return;
+  }
+  const items=courseMemoItems(memoCourseId);
+  const {id, text:originalText}=memoDraft;
+  const current=items.find(item=>item.id===id);
+  if(id&&current?.text!==originalText){
+    memoMessage.textContent='這個事項已在其他地方更新或刪除，請取消後重新選擇。';
+    return;
+  }
+  resetMemoDraft();
+  if(!id){
+    const itemId=Array.from(crypto.getRandomValues(new Uint32Array(4)),part=>part.toString(16).padStart(8,'0')).join('');
+    saveCourseMemo([...items,{id:itemId,text,done:false}]);
+    memoAdd.focus();
+    return;
+  }
+  if(text!==originalText)saveCourseMemo(items.map(item=>item.id===id?{...item,text}:item));
+  focusMemoItem(id,'edit');
 }
+
+for(const container of ['memo-grid','day-events']){
+  document.getElementById(container).addEventListener('click',event=>{
+    const opener=event.target.closest('button[data-memo-course]');
+    if(opener)openMemoModal(opener.dataset.memoCourse,opener);
+  });
+}
+memoItems.addEventListener('click',event=>{
+  const button=event.target.closest('[data-memo-action]');
+  if(!button)return;
+  const {memoItem:id}=button.closest('[data-memo-item]').dataset;
+  const items=courseMemoItems(memoCourseId);
+  const index=items.findIndex(item=>item.id===id);
+  if(index<0)return;
+  const item=items[index];
+  switch(button.dataset.memoAction){
+    case 'toggle':
+      saveCourseMemo(items.map(task=>task.id===id?{...task,done:!task.done}:task));
+      focusMemoItem(id,'toggle');
+      break;
+    case 'edit':
+      openMemoDraft(item);
+      break;
+    case 'delete':
+      if(memoDraft?.id===id)resetMemoDraft();
+      saveCourseMemo(items.filter(task=>task.id!==id));
+      focusMemoItem((items[index+1]||items[index-1])?.id,'delete');
+  }
+});
+memoAdd.addEventListener('click',()=>openMemoDraft());
+memoForm.addEventListener('submit',submitMemoDraft);
+memoInput.addEventListener('keydown',event=>{
+  if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){
+    event.preventDefault();
+    memoForm.requestSubmit();
+  }
+});
+memoInput.addEventListener('input',()=>{
+  memoInput.removeAttribute('aria-invalid');
+  memoMessage.textContent='';
+});
+document.getElementById('memo-item-cancel').addEventListener('click',()=>{
+  const id=memoDraft?.id;
+  resetMemoDraft();
+  focusMemoItem(id,'edit');
+});
+document.getElementById('memo-close').addEventListener('click',closeMemoModal);
+memoDialog.addEventListener('cancel',event=>{
+  event.preventDefault();
+  closeMemoModal();
+});
+memoDialog.addEventListener('keydown',event=>event.stopPropagation());
+
 // ── Course inline edit ────────────────────────────────────────────
 function editCourse(id){
   const c=course(id); if(!c) return;
@@ -3509,7 +3620,6 @@ function submitQuickInput(parsed){
   const id=`c${S.cid++}`;
   const color=PALETTE[colorCursor++%PALETTE.length];
   S.courses.push({id,name:parsed.name,total:parsed.total,color,examDate:'',lessonStart:1,lessonEnd:parsed.total});
-  S.notes[id]='';
 
   // If weekday specified, auto-schedule from today
   if(parsed.wday!=null){
@@ -3885,7 +3995,7 @@ function renderDayPanel(){
       </section>
       <section class="day-panel-section day-panel-notes">
         <h3 class="day-panel-title">📝 備忘錄</h3>
-        <textarea class="day-memo-input" readonly placeholder="在主畫面「課程備忘錄」輸入內容後，會顯示於此。"></textarea>
+        <p class="memo-empty">請選擇日期查看當天課程的備忘錄。</p>
       </section>
       <section class="day-panel-section day-panel-meta">
         <h3 class="day-panel-title">✅ 完成狀態</h3>
@@ -3910,11 +4020,6 @@ function renderDayPanel(){
   const dayTotal=allEvts.length;
   const dayDone=allEvts.filter(e=>e.done).length;
   const dayRate=dayTotal>0?Math.round(dayDone/dayTotal*100):0;
-
-  const memoLines=[...new Set(allEvts.map(ev=>ev.courseId))]
-    .map(cid=>({c:course(cid),note:(S.notes[cid]||'').trim()}))
-    .filter(it=>it.c&&it.note);
-  const memoText=memoLines.map(it=>`${it.c.name}\n${it.note}`).join('\n\n');
 
   const timed=allEvts.filter(e=>e.time).slice().sort((a,b)=>a.time.localeCompare(b.time));
   const untimed=allEvts.filter(e=>!e.time);
@@ -4005,7 +4110,7 @@ function renderDayPanel(){
     </section>
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">📝 備忘錄</h3>
-      <textarea class="day-memo-input" readonly placeholder="在主畫面「課程備忘錄」輸入內容後，會顯示於此。">${esc(memoText)}</textarea>
+      <div id="day-course-memos"></div>
     </section>
     <section class="day-panel-section day-panel-meta">
       <h3 class="day-panel-title">✅ 完成狀態</h3>
@@ -4016,6 +4121,7 @@ function renderDayPanel(){
       </div>
     </section>
   </div>`;
+  renderDayMemo();
 }
 
 const ghost=document.getElementById('drag-ghost');
@@ -4274,12 +4380,6 @@ window.onerror=function(msg,src,line,col,err){
 window.onunhandledrejection=function(e){
   console.error('[UnhandledPromise]',e.reason);
 };
-// 離開頁面時立即寫入本機，避免備忘錄 debounce 期間關閉分頁而遺失
-['pagehide','visibilitychange'].forEach(ev=>window.addEventListener(ev,()=>{
-  if(ev==='visibilitychange'&&document.visibilityState!=='hidden')return;
-  try{localStorage.setItem(LS,JSON.stringify(statePayload()));}catch(e){}
-}));
-
 // ── 登入入口（帶 _fb 就緒防呆）────────────────────────────────────
 function doSignIn(){
   if(window._fbInitError){
@@ -4371,11 +4471,6 @@ function init(){
   document.getElementById('panel-l').classList.add('mob-active');
 
   loadState();
-
-  // 遷移舊課程資料（補 notes key）
-  S.courses.forEach(c => {
-    if (!(c.id in S.notes)) S.notes[c.id] = '';
-  });
 
   render();
   initDayPanelGesture();
