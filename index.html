@@ -1778,6 +1778,8 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .course-plan-message{margin:7px 0 0;font-size:12px;color:var(--text-2);}
 .course-plan-message:empty{display:none;}
 .course-plan-message.is-error{color:var(--danger-c);}
+/* Keep the keyboard-focusable weekday input inside its scrollable panel. */
+#repeat-schedule-form .wday-wrap > div{position:relative;}
 #repeat-schedule-form .wday-cb{
   display:block;position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);
 }
