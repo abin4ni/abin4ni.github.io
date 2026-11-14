@@ -2086,7 +2086,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 /* ── Tablet ── */
 @media(min-width:768px) and (width < 1200px){
   .panel-l.tablet-open .course-card{border:1px solid var(--border-lt);}
-  .panel-r #day-label{font-size:clamp(20px,2.8vw,26px);}
   #day-schedule-open{width:100%;}
   .cal-cell{min-height:72px;}
 }
@@ -2103,6 +2102,86 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .course-planning-form .fold-head{pointer-events:none;}
 }
 
+/* Date details use the same typography and controls at every panel width. */
+#panel-r .day-heading{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px;
+}
+#panel-r #day-label{
+  font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-.02em;color:var(--text);
+  margin:0;min-width:0;overflow-wrap:anywhere;
+}
+#panel-r .day-label-today-badge{
+  background:var(--accent-tint);color:var(--accent-h);padding:3px 7px;white-space:nowrap;letter-spacing:0;
+}
+#panel-r .day-panel-close{flex-shrink:0;width:44px;height:44px;margin:0;}
+#panel-r .day-schedule-entry{margin:0 0 16px;}
+#panel-r #day-schedule-open{width:100%;min-height:44px;border-radius:var(--r-pill);font-size:15px;}
+#panel-r .day-panel-shell{gap:20px;padding-bottom:8px;}
+#panel-r .day-panel-section{gap:8px;}
+#panel-r .day-panel-title{margin:0;font-size:17px;line-height:1.35;font-weight:700;color:var(--text);letter-spacing:-.01em;}
+#panel-r .day-panel-meta{order:-1;position:relative;padding:0;border:0;}
+#panel-r .day-panel-meta .day-panel-title{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;}
+#panel-r .day-panel-stats{gap:0;border:1px solid var(--border-lt);background:var(--card-2);border-radius:var(--r);}
+#panel-r .day-today-stat{border:0;border-radius:0;background:none;box-shadow:none;padding:8px 4px;}
+#panel-r .day-today-stat+.day-today-stat{border-inline-start:1px solid var(--border-lt);}
+#panel-r .dts-val{font-size:17px;line-height:1.15;font-variant-numeric:tabular-nums;}
+#panel-r .dts-lbl{font-size:12px;}
+#panel-r .day-completed-count{color:var(--done-c);}
+#panel-r .day-progress-count{color:var(--accent-h);}
+#panel-r .day-course-list{gap:0;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);padding-inline:10px;min-width:0;}
+#panel-r .day-card,#panel-r .day-group{
+  padding:8px 0;margin:0;border:0;border-radius:0;box-shadow:none;background:none;transform:none;
+}
+#panel-r .day-course-list>*+*{border-top:1px solid var(--border-lt);}
+#panel-r .day-card-head{
+  display:grid;grid-template-columns:44px 8px minmax(0,1fr);align-items:center;
+  gap:6px;margin:0;
+}
+#panel-r .day-name,#panel-r .day-group-name{
+  font-size:16px;line-height:1.4;color:var(--text);min-width:0;overflow-wrap:anywhere;
+}
+#panel-r .day-name.is-done,#panel-r .dgi-label.crossed{color:var(--text-3);opacity:1;}
+#panel-r .day-card-tools{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px 8px;
+  padding-inline-start:6px;
+}
+#panel-r .time-wrap,#panel-r .time-selects{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0;}
+#panel-r .time-lbl,#panel-r .day-group-count{font-size:12px;color:var(--text-2);}
+#panel-r .time-sel{min-height:44px;width:auto;min-width:54px;font-size:16px;font-variant-numeric:tabular-nums;}
+#panel-r .day-actions,#panel-r .dgi-actions{display:flex;gap:2px;flex-shrink:0;}
+#panel-r .act-btn,#panel-r .time-clear{
+  background:none;color:var(--accent-h);font-size:13px;font-weight:600;
+  border-radius:var(--r-sm);padding:0 7px;min-height:44px;min-width:44px;
+}
+#panel-r .act-btn[onclick^="removeEvent"]{color:var(--text-3);}
+#panel-r :is(.act-btn,.time-clear,.day-panel-close,.day-memo-title button):active{background:var(--sunken-h);}
+#panel-r #day-schedule-open:active{background:var(--accent-h);}
+#panel-r .day-group-head{border:0;background:var(--card-2);border-radius:var(--r-sm);padding:6px 8px;}
+#panel-r .day-group-item{align-items:flex-start;padding:4px 0;background:none;}
+#panel-r .day-group-content{flex:1;min-width:0;}
+#panel-r .day-group-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0 8px;}
+#panel-r .day-group-count{white-space:nowrap;}
+#panel-r .day-actions,#panel-r .dgi-actions{margin-inline-start:auto;}
+#panel-r #day-events .done-check{
+  position:relative;isolation:isolate;width:44px;height:44px;border:0;
+  background:transparent;color:transparent;transform:none;
+}
+#panel-r #day-events .done-check::before{
+  content:'';position:absolute;inset:11px;border:2px solid var(--border-strong);border-radius:50%;z-index:-1;
+}
+#panel-r #day-events .done-check.checked{color:#fff;font-size:13px;}
+#panel-r #day-events .done-check.checked::before{background:var(--done-c);border-color:var(--done-c);}
+#panel-r #day-events .done-check:active::before{inset:13px;}
+#panel-r .day-panel-notes{padding:0;border:0;}
+#panel-r .day-memo-wrap{padding:8px 10px;border-radius:var(--r);box-shadow:none;}
+#panel-r .day-memo-title{align-items:center;font-size:14px;line-height:1.4;}
+#panel-r .day-memo-title .btn{min-height:44px;min-width:44px;padding-inline:8px;font-size:13px;}
+#panel-r .day-memo-wrap .memo-preview-row{font-size:14px;padding-block:3px;}
+#panel-r .empty-state{padding:18px 8px;text-align:left;}
+#panel-r .empty-state p{font-size:14px;color:var(--text-2);}
+@media(prefers-reduced-motion:reduce){
+  #panel-r #day-events .done-check{animation:none;transition:none;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -2398,8 +2477,10 @@ onAuthStateChanged(auth,user=>{
     </main>
 
     <aside class="panel panel-r" id="panel-r">
-      <button class="day-panel-close" id="day-panel-close" onclick="closeDayPanel()" aria-label="Close panel">×</button>
-      <div class="section-label" id="day-label">選擇日期</div>
+      <div class="day-heading">
+        <h2 id="day-label">選擇日期</h2>
+        <button type="button" class="day-panel-close" id="day-panel-close" onclick="closeDayPanel()" aria-label="關閉日期詳情">×</button>
+      </div>
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
         <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-expanded="false" aria-controls="day-schedule-form">＋安排課程</button>
@@ -4521,19 +4602,19 @@ function renderDayPanel(){
     label.textContent='選擇日期';
     el.innerHTML=`<div class="day-panel-shell">
       <section class="day-panel-section day-panel-main">
-        <h3 class="day-panel-title">📚 ${isMobile()?'當日課程':'今日課程'}</h3>
-        <div class="empty-state"><div class="empty-icon">📅</div><p>點選行事曆日期後，這裡會顯示可操作課程。</p></div>
+        <h3 class="day-panel-title">${isMobile()?'當日課程':'今日課程'}</h3>
+        <div class="empty-state"><p>點選行事曆日期後，這裡會顯示可操作課程。</p></div>
       </section>
       <section class="day-panel-section day-panel-notes">
-        <h3 class="day-panel-title">📝 備忘錄</h3>
+        <h3 class="day-panel-title">提醒事項</h3>
         <p class="memo-empty">請選擇日期查看當天課程的備忘錄。</p>
       </section>
       <section class="day-panel-section day-panel-meta">
-        <h3 class="day-panel-title">✅ 完成狀態</h3>
+        <h3 class="day-panel-title">完成狀態</h3>
         <div class="day-panel-stats">
           <div class="day-today-stat"><div class="dts-val">0</div><div class="dts-lbl">課堂</div></div>
-          <div class="day-today-stat"><div class="dts-val" style="color:#34c759">0</div><div class="dts-lbl">完成</div></div>
-          <div class="day-today-stat"><div class="dts-val" style="color:var(--accent)">0%</div><div class="dts-lbl">進度</div></div>
+          <div class="day-today-stat"><div class="dts-val day-completed-count">0</div><div class="dts-lbl">完成</div></div>
+          <div class="day-today-stat"><div class="dts-val day-progress-count">0%</div><div class="dts-lbl">進度</div></div>
         </div>
       </section>
     </div>`;
@@ -4571,17 +4652,19 @@ function renderDayPanel(){
         <button type="button" class="done-check ${ev.done?'checked':''}" onclick="toggleDone('${S.selectedDate}','${ev.id}')" aria-label="完成課堂" aria-pressed="${ev.done}">${ev.done?'✓':''}</button>
         <span class="dot" style="background:${c.color}"></span>
         <span class="day-name${ev.done?' is-done':''}">${esc(c.name)}</span>
+      </div>
+      <div class="day-card-tools">
+        <div class="time-wrap">
+          <div class="time-selects">
+            <select class="time-sel" aria-label="小時" onchange="setTimeParts('${S.selectedDate}','${ev.id}',this.value,null)">${hourOpts}</select>
+            <span>:</span>
+            <select class="time-sel" aria-label="分鐘" onchange="setTimeParts('${S.selectedDate}','${ev.id}',null,this.value)">${minOpts}</select>
+            <button type="button" class="time-clear" onclick="setTime('${S.selectedDate}','${ev.id}','')">清空</button>
+          </div>
+        </div>
         <div class="day-actions">
           <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${esc(ev.id)}">改期</button>
           <button class="act-btn" onclick="removeEvent('${S.selectedDate}','${ev.id}')">刪除</button>
-        </div>
-      </div>
-      <div class="time-wrap"><span class="time-lbl">時間</span>
-        <div class="time-selects">
-          <select class="time-sel" onchange="setTimeParts('${S.selectedDate}','${ev.id}',this.value,null)">${hourOpts}</select>
-          <span>:</span>
-          <select class="time-sel" onchange="setTimeParts('${S.selectedDate}','${ev.id}',null,this.value)">${minOpts}</select>
-          <button class="time-clear" onclick="setTime('${S.selectedDate}','${ev.id}','')">清空</button>
         </div>
       </div>
     </div>`;
@@ -4601,8 +4684,8 @@ function renderDayPanel(){
       const hourOpts=Array.from({length:24},(_,i)=>`<option value="${i}">${String(i).padStart(2,'0')}</option>`).join('');
       return`<div class="day-group-item ${ev.done?'is-done':''}">
         <button type="button" class="done-check ${ev.done?'checked':''}" onclick="toggleDone('${S.selectedDate}','${ev.id}')" aria-label="完成課堂" aria-pressed="${ev.done}">${ev.done?'✓':''}</button>
-        <div style="flex:1;margin-left:8px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div class="day-group-content">
+          <div class="day-group-controls">
             <span class="dgi-label ${ev.done?'crossed':''}">課次 ${lessonNo}</span>
             <div class="dgi-actions">
               <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${esc(ev.id)}">改期</button>
@@ -4610,11 +4693,11 @@ function renderDayPanel(){
             </div>
           </div>
           <div class="time-wrap" style="margin-top:0;">
-            <span class="time-lbl">安排時間</span>
+            <span class="time-lbl">未定時</span>
             <div class="time-selects">
-              <select class="time-sel" onchange="setTimeParts('${S.selectedDate}','${ev.id}',this.value,null)">${hourOpts}</select>
+              <select class="time-sel" aria-label="小時" onchange="setTimeParts('${S.selectedDate}','${ev.id}',this.value,null)">${hourOpts}</select>
               <span class="time-colon">:</span>
-              <select class="time-sel" onchange="setTimeParts('${S.selectedDate}','${ev.id}',null,this.value)">${minOpts}</select>
+              <select class="time-sel" aria-label="分鐘" onchange="setTimeParts('${S.selectedDate}','${ev.id}',null,this.value)">${minOpts}</select>
             </div>
           </div>
         </div>
@@ -4631,24 +4714,24 @@ function renderDayPanel(){
   });
 
   if(!courseHtml){
-    courseHtml=`<div class="empty-state"><div class="empty-icon">✨</div><p>這天還沒有課堂，點「＋安排課程」開始安排。</p></div>`;
+    courseHtml=`<div class="empty-state"><p>這天還沒有課堂，點「＋安排課程」開始安排。</p></div>`;
   }
 
   el.innerHTML=`<div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
-      <h3 class="day-panel-title">📚 ${S.selectedDate===todayStr?'今日課程':'當日課程'}</h3>
+      <h3 class="day-panel-title">${S.selectedDate===todayStr?'今日課程':'當日課程'}</h3>
       <div class="day-course-list">${courseHtml}</div>
     </section>
     <section class="day-panel-section day-panel-notes">
-      <h3 class="day-panel-title">📝 備忘錄</h3>
+      <h3 class="day-panel-title">提醒事項</h3>
       <div id="day-course-memos"></div>
     </section>
     <section class="day-panel-section day-panel-meta">
-      <h3 class="day-panel-title">✅ 完成狀態</h3>
+      <h3 class="day-panel-title">完成狀態</h3>
       <div class="day-panel-stats">
         <div class="day-today-stat"><div class="dts-val">${dayTotal}</div><div class="dts-lbl">課堂</div></div>
-        <div class="day-today-stat"><div class="dts-val" style="color:#34c759">${dayDone}</div><div class="dts-lbl">完成</div></div>
-        <div class="day-today-stat"><div class="dts-val" style="color:var(--accent)">${dayRate}%</div><div class="dts-lbl">進度</div></div>
+        <div class="day-today-stat"><div class="dts-val day-completed-count">${dayDone}</div><div class="dts-lbl">完成</div></div>
+        <div class="day-today-stat"><div class="dts-val day-progress-count">${dayRate}%</div><div class="dts-lbl">進度</div></div>
       </div>
     </section>
   </div>`;
