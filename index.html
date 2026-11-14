@@ -1719,7 +1719,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 @media(max-width:767px) and (prefers-reduced-motion:reduce){
   .bottom-nav::before{transition:none;}
 }
-.mobile-page-intro,.day-schedule-entry{display:none;}
+.mobile-page-intro{display:none;}
 @media(max-width:767px){
   .mobile-page-intro{display:block;margin:4px 0 18px;}
   .mobile-page-intro h2{font-size:21px;font-weight:700;color:var(--text);}
@@ -1728,7 +1728,12 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   #panel-l .section-label{font-weight:600;color:var(--text-2);}
   .cal-title{font-size:19px;font-weight:700;}
   .panel-r #day-label{font-size:21px;font-weight:700;color:var(--text);margin:4px 0 12px;}
-  .day-schedule-entry{display:block;margin-bottom:18px;}
+  .day-panel-main>.day-panel-title{font-size:16px;color:var(--text);}
+  .day-panel-notes,.day-panel-meta{border-top:1px solid var(--border-lt);padding-top:14px;}
+}
+
+/* Date-detail scheduling is available at every viewport width. */
+.day-schedule-entry{display:block;margin-bottom:18px;}
   #day-schedule-form{margin-top:10px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);}
   #day-schedule-form[hidden]{display:none;}
   #day-schedule-form label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
@@ -1737,9 +1742,12 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .day-schedule-actions{display:flex;gap:8px;}
   #day-schedule-message{font-size:13px;color:var(--text-2);margin-bottom:10px;}
   #day-schedule-message:empty{display:none;}
-  .day-panel-main>.day-panel-title{font-size:16px;color:var(--text);}
-  .day-panel-notes,.day-panel-meta{border-top:1px solid var(--border-lt);padding-top:14px;}
-}
+.day-schedule-entry,#day-schedule-form{min-width:0;max-width:100%;}
+#day-schedule-form{overflow-wrap:anywhere;}
+#day-schedule-form select,#day-schedule-form input{display:block;min-width:0;max-width:100%;box-sizing:border-box;}
+#day-schedule-course{text-overflow:ellipsis;}
+.day-schedule-actions{flex-wrap:wrap;}
+.day-schedule-actions .btn{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;min-height:44px;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -2790,6 +2798,7 @@ function openDayPanel(){
   overlay?.classList.add('open');
 }
 function closeDayPanel(){
+  cancelDaySchedule();
   _resetDayPanelGestureStyles();
   document.getElementById('panel-r')?.classList.remove('open');
   document.getElementById('day-panel-overlay')?.classList.remove('open');
@@ -2855,9 +2864,8 @@ function closeTabletPanel(){
 // 視窗 resize 時重設狀態
 window.addEventListener('resize',()=>{
   if(!isMobile()&&(S.tapCourseId||mobileSchedulePickerOpen))cancelCalendarSchedule();
-  if(!isMobile())cancelDaySchedule();
   if(!isTablet())closeTabletPanel();
-  if(!useSlideDayPanel())closeDayPanel();
+  if(!useSlideDayPanel()&&document.getElementById('panel-r')?.classList.contains('open'))closeDayPanel();
 });
 let mobileSchedulePickerOpen=false;
 let currentMobileTab='course';
@@ -3269,6 +3277,9 @@ function submitQuickInput(parsed){
 let dayScheduleDate=null;
 function cancelDaySchedule(){
   dayScheduleDate=null;
+  document.getElementById('day-schedule-form').reset();
+  document.getElementById('day-schedule-date').textContent='';
+  document.getElementById('day-schedule-message').textContent='';
   document.getElementById('day-schedule-form').hidden=true;
   document.getElementById('day-schedule-open').setAttribute('aria-expanded','false');
 }
@@ -3288,7 +3299,6 @@ function refreshDayScheduleCourses(){
   document.getElementById('day-schedule-message').textContent=pending.length?'':(S.courses.length?'所有課程都已排滿，目前沒有可安排的課堂。':'目前沒有可安排的課程，請先到「課程」新增課程。');
 }
 function openDaySchedule(){
-  if(!isMobile())return;
   dayScheduleDate=S.selectedDate||todayStr;
   document.getElementById('day-schedule-date').textContent='安排日期：'+fmtDate(dayScheduleDate);
   document.getElementById('day-schedule-time').value='';
@@ -3298,7 +3308,8 @@ function openDaySchedule(){
 }
 function submitDaySchedule(event){
   event.preventDefault();
-  if(!isMobile()||!dayScheduleDate)return;
+  if(!dayScheduleDate)return;
+  if((S.selectedDate||todayStr)!==dayScheduleDate){cancelDaySchedule();return;}
   const c=course(document.getElementById('day-schedule-course').value);
   if(!c||remaining(c)<=0){refreshDayScheduleCourses();return;}
   const date=dayScheduleDate;
