@@ -1755,16 +1755,16 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 #day-schedule-course{text-overflow:ellipsis;}
 .day-schedule-actions{flex-wrap:wrap;}
 .day-schedule-actions .btn{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;min-height:44px;}
-#day-time-picker{margin-bottom:12px;}
-#day-time-picker [hidden],#day-schedule-time[type="hidden"]{display:none;}
-#day-time-trigger{
+.schedule-time-picker{margin-bottom:12px;}
+.schedule-time-picker [hidden],.schedule-time-picker input[type="hidden"]{display:none;}
+.schedule-time-trigger{
   display:block;width:100%;min-height:44px;padding:8px 12px;text-align:left;
   font:inherit;font-size:14px;font-variant-numeric:tabular-nums;color:var(--text);
   background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);
   cursor:pointer;touch-action:manipulation;
 }
-#day-time-trigger[aria-expanded="true"]{border-color:var(--accent);}
-#day-time-editor{
+.schedule-time-trigger[aria-expanded="true"]{border-color:var(--accent);}
+.schedule-time-editor{
   margin-top:6px;padding:10px;background:var(--surface);
   border:1px solid var(--border);border-radius:var(--r-sm);
 }
@@ -1786,11 +1786,29 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .day-time-list [role="option"][aria-selected="true"]{
   background:var(--accent-tint);color:var(--accent);font-weight:700;
 }
-#day-time-manual-input{font-size:16px;}
-#day-time-error{margin-bottom:8px;color:var(--danger-c);font-size:12px;}
-#day-time-error:empty{display:none;}
+.schedule-time-manual-input{font-size:16px;}
+.schedule-time-error{margin-bottom:8px;color:var(--danger-c);font-size:12px;}
+.schedule-time-error:empty{display:none;}
 .day-time-actions{display:flex;flex-wrap:wrap;gap:6px;}
 .day-time-actions .btn{min-width:0;min-height:44px;padding-inline:10px;white-space:normal;}
+
+/* Keep each lesson's actions available even in the narrow day panel. */
+.day-card-head .day-name{min-width:0;overflow-wrap:anywhere;}
+.day-actions,.dgi-actions{flex-shrink:0;}
+.day-reschedule-button{min-width:44px;min-height:44px;white-space:nowrap;}
+#reschedule-dialog{
+  position:fixed;inset:0;margin:auto;width:min(440px,calc(100% - 24px));
+  max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - env(safe-area-inset-bottom,0px));
+  overflow:auto;overscroll-behavior:contain;padding:16px;
+  color:var(--text);background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
+}
+#reschedule-dialog::backdrop{background:var(--scrim);}
+#reschedule-title{font-size:18px;margin-bottom:8px;}
+#reschedule-original{font-size:13px;color:var(--text-2);overflow-wrap:anywhere;margin-bottom:12px;}
+#reschedule-form label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
+#reschedule-form input[type="date"],#reschedule-form input[type="text"]{min-height:44px;min-width:0;margin-bottom:12px;}
+#reschedule-message:not(:empty){margin:0 0 8px;}
 /* Course creation and repeat scheduling share the course panel. */
 .course-planning-form .form-label{display:block;}
 .course-planning-form input:not([type="checkbox"]),.course-planning-form select,.course-planning-form .btn{
@@ -2084,41 +2102,7 @@ onAuthStateChanged(auth,user=>{
           <p id="day-schedule-message" role="status"></p>
           <label for="day-schedule-course">選擇既有課程</label>
           <select id="day-schedule-course" required></select>
-          <div id="day-time-picker">
-            <label id="day-time-label" for="day-time-trigger">上課時間（可留空）</label>
-            <button type="button" id="day-time-trigger" aria-labelledby="day-time-label day-time-value"
-              aria-controls="day-time-editor" aria-expanded="false"><span id="day-time-value">未定時間</span></button>
-            <input id="day-schedule-time" type="hidden" value=""/>
-            <div id="day-time-editor" hidden>
-              <div id="day-time-options">
-                <p class="day-time-hint" id="day-time-list-hint">滑動或點選數字，也可用方向鍵調整。</p>
-                <div class="day-time-columns">
-                  <div class="day-time-column">
-                    <span id="day-time-hour-label">小時</span>
-                    <div class="day-time-list" id="day-time-hour" role="listbox" tabindex="0"
-                      aria-labelledby="day-time-hour-label" aria-describedby="day-time-list-hint"></div>
-                  </div>
-                  <div class="day-time-column">
-                    <span id="day-time-minute-label">分鐘</span>
-                    <div class="day-time-list" id="day-time-minute" role="listbox" tabindex="0"
-                      aria-labelledby="day-time-minute-label" aria-describedby="day-time-list-hint"></div>
-                  </div>
-                </div>
-              </div>
-              <div id="day-time-manual" hidden>
-                <label for="day-time-manual-input">手動輸入時間</label>
-                <input id="day-time-manual-input" type="text" placeholder="09:05" autocomplete="off"
-                  autocapitalize="off" spellcheck="false" aria-describedby="day-time-error"/>
-                <p id="day-time-error" role="alert"></p>
-              </div>
-              <div class="day-time-actions">
-                <button type="button" class="btn btn-sand" id="day-time-manual-open">手動輸入</button>
-                <button type="button" class="btn btn-primary" id="day-time-apply">套用時間</button>
-                <button type="button" class="btn btn-sand" id="day-time-clear">清除時間</button>
-                <button type="button" class="btn btn-sand" id="day-time-cancel">取消</button>
-              </div>
-            </div>
-          </div>
+          <div id="day-time-slot"></div>
           <div class="day-schedule-actions">
             <button type="submit" class="btn btn-primary" id="day-schedule-confirm">確認安排一堂</button>
             <button type="button" class="btn btn-sand" onclick="cancelDaySchedule()">取消</button>
@@ -2130,6 +2114,59 @@ onAuthStateChanged(auth,user=>{
 
   </div>
 </div>
+
+<template id="schedule-time-template">
+  <div id="day-time-picker" class="schedule-time-picker">
+    <label id="day-time-label" for="day-time-trigger">上課時間（可留空）</label>
+    <button type="button" id="day-time-trigger" class="schedule-time-trigger" aria-labelledby="day-time-label day-time-value"
+      aria-controls="day-time-editor" aria-expanded="false"><span id="day-time-value">未定時間</span></button>
+    <input id="day-schedule-time" type="hidden" value=""/>
+    <div id="day-time-editor" class="schedule-time-editor" hidden>
+      <div id="day-time-options">
+        <p class="day-time-hint" id="day-time-list-hint">滑動或點選數字，也可用方向鍵調整。</p>
+        <div class="day-time-columns">
+          <div class="day-time-column">
+            <span id="day-time-hour-label">小時</span>
+            <div class="day-time-list" id="day-time-hour" role="listbox" tabindex="0"
+              aria-labelledby="day-time-hour-label" aria-describedby="day-time-list-hint"></div>
+          </div>
+          <div class="day-time-column">
+            <span id="day-time-minute-label">分鐘</span>
+            <div class="day-time-list" id="day-time-minute" role="listbox" tabindex="0"
+              aria-labelledby="day-time-minute-label" aria-describedby="day-time-list-hint"></div>
+          </div>
+        </div>
+      </div>
+      <div id="day-time-manual" hidden>
+        <label for="day-time-manual-input">手動輸入時間</label>
+        <input id="day-time-manual-input" class="schedule-time-manual-input" type="text" placeholder="09:05" autocomplete="off"
+          autocapitalize="off" spellcheck="false" aria-describedby="day-time-error"/>
+        <p id="day-time-error" class="schedule-time-error" role="alert"></p>
+      </div>
+      <div class="day-time-actions">
+        <button type="button" class="btn btn-sand" id="day-time-manual-open">手動輸入</button>
+        <button type="button" class="btn btn-primary" id="day-time-apply">套用時間</button>
+        <button type="button" class="btn btn-sand" id="day-time-clear">清除時間</button>
+        <button type="button" class="btn btn-sand" id="day-time-cancel">取消</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<dialog id="reschedule-dialog" aria-labelledby="reschedule-title">
+  <form id="reschedule-form" novalidate onsubmit="submitLessonReschedule(event)">
+    <h2 id="reschedule-title">改期</h2>
+    <p id="reschedule-original"></p>
+    <label for="reschedule-date">新日期</label>
+    <input type="date" id="reschedule-date" required autofocus aria-describedby="reschedule-message"/>
+    <div id="reschedule-time-slot"></div>
+    <p class="course-plan-message is-error" id="reschedule-message" role="alert"></p>
+    <div class="day-schedule-actions">
+      <button type="submit" class="btn btn-primary" id="reschedule-confirm">確認改期</button>
+      <button type="button" class="btn btn-sand" id="reschedule-cancel">取消</button>
+    </div>
+  </form>
+</dialog>
 
 <!-- Memo edit modal -->
 <div id="memo-modal-backdrop" onclick="closeMemoModal(event)">
@@ -3436,19 +3473,31 @@ function submitQuickInput(parsed){
 // UI override: structured day panel sections (courses / notes / stats).
 // UI-only draft; never included in statePayload or written until confirmed.
 
-function initDayScheduleTime(){
-  const picker=document.getElementById('day-time-picker');
-  const trigger=document.getElementById('day-time-trigger');
-  const display=document.getElementById('day-time-value');
-  const value=document.getElementById('day-schedule-time');
-  const editor=document.getElementById('day-time-editor');
-  const options=document.getElementById('day-time-options');
-  const hour=document.getElementById('day-time-hour');
-  const minute=document.getElementById('day-time-minute');
-  const manual=document.getElementById('day-time-manual');
-  const input=document.getElementById('day-time-manual-input');
-  const error=document.getElementById('day-time-error');
-  const manualButton=document.getElementById('day-time-manual-open');
+function initScheduleTime(prefix,onTimeEdit){
+  const template=document.getElementById('schedule-time-template');
+  const content=template.content.cloneNode(true);
+  if(prefix!=='day'){
+    for(const element of content.querySelectorAll('[id],[for],[aria-labelledby],[aria-controls],[aria-describedby]')){
+      for(const attribute of ['id','for','aria-labelledby','aria-controls','aria-describedby']){
+        if(element.hasAttribute(attribute)){
+          element.setAttribute(attribute,element.getAttribute(attribute).replaceAll('day-',prefix+'-'));
+        }
+      }
+    }
+  }
+  document.getElementById(prefix+'-time-slot').replaceWith(content);
+  const picker=document.getElementById(prefix+'-time-picker');
+  const trigger=document.getElementById(prefix+'-time-trigger');
+  const display=document.getElementById(prefix+'-time-value');
+  const value=document.getElementById(prefix+'-schedule-time');
+  const editor=document.getElementById(prefix+'-time-editor');
+  const options=document.getElementById(prefix+'-time-options');
+  const hour=document.getElementById(prefix+'-time-hour');
+  const minute=document.getElementById(prefix+'-time-minute');
+  const manual=document.getElementById(prefix+'-time-manual');
+  const input=document.getElementById(prefix+'-time-manual-input');
+  const error=document.getElementById(prefix+'-time-error');
+  const manualButton=document.getElementById(prefix+'-time-manual-open');
   const doubleTapInterval=400;
   let lastTap=-Infinity;
   let revealTimer;
@@ -3548,6 +3597,7 @@ function initDayScheduleTime(){
       }
       setValue(time[1].padStart(2,'0')+':'+time[2]);
     }
+    onTimeEdit?.();
     closeEditor(true);
   }
 
@@ -3574,10 +3624,11 @@ function initDayScheduleTime(){
   editor.addEventListener('pointerdown',()=>clearTimeout(revealTimer));
   manualButton.addEventListener('click',openManual);
   input.addEventListener('input',clearError);
-  document.getElementById('day-time-apply').addEventListener('click',apply);
-  document.getElementById('day-time-cancel').addEventListener('click',()=>closeEditor(true));
-  document.getElementById('day-time-clear').addEventListener('click',()=>{
+  document.getElementById(prefix+'-time-apply').addEventListener('click',apply);
+  document.getElementById(prefix+'-time-cancel').addEventListener('click',()=>closeEditor(true));
+  document.getElementById(prefix+'-time-clear').addEventListener('click',()=>{
     setValue('');
+    onTimeEdit?.();
     closeEditor(true);
   });
   picker.addEventListener('keydown',event=>{
@@ -3593,7 +3644,9 @@ function initDayScheduleTime(){
       if(!event.isComposing)apply();
     }
   });
-  document.addEventListener('keydown',event=>{
+  const dialog=picker.closest('dialog');
+  (dialog||document).addEventListener('keydown',event=>{
+    if(!dialog&&document.querySelector('dialog[open]'))return;
     if(event.key==='Escape'&&!editor.hidden&&!event.isComposing){
       event.preventDefault();
       event.stopPropagation();
@@ -3602,12 +3655,15 @@ function initDayScheduleTime(){
   },true);
   picker.addEventListener('touchstart',event=>event.stopPropagation(),{passive:true});
 
-  return ()=>{
+  return (initialTime='')=>{
     closeEditor(false);
-    setValue('');
+    setValue(initialTime);
   };
 }
-const resetDayScheduleTime=initDayScheduleTime();
+const resetDayScheduleTime=initScheduleTime('day');
+const resetRescheduleTime=initScheduleTime('reschedule',()=>{
+  if(rescheduleDraft)rescheduleDraft.timeEdited=true;
+});
 
 let dayScheduleDate=null;
 function cancelDaySchedule(){
@@ -3656,6 +3712,96 @@ function submitDaySchedule(event){
   saveState();render();
   toast('已安排一堂課程','success');
 }
+const rescheduleDialog=document.getElementById('reschedule-dialog');
+const rescheduleDate=document.getElementById('reschedule-date');
+const rescheduleMessage=document.getElementById('reschedule-message');
+const rescheduleConfirm=document.getElementById('reschedule-confirm');
+let rescheduleDraft=null;
+
+function rescheduleButton(id){
+  return [...document.querySelectorAll('#day-events [data-reschedule-event]')]
+    .find(button=>button.dataset.rescheduleEvent===id);
+}
+function closeLessonReschedule(restoreFocus=true){
+  const id=rescheduleDraft?.id;
+  rescheduleDraft=null;
+  resetRescheduleTime();
+  rescheduleDialog.close();
+  if(restoreFocus)(rescheduleButton(id)||document.getElementById('day-schedule-open')).focus();
+}
+function openLessonReschedule(id){
+  const date=S.selectedDate;
+  const lesson=S.calendar[date]?.find(item=>item.id===id);
+  if(!lesson){toast('找不到原課堂，請重新選擇。','warn');return;}
+  const time=lesson.time||'';
+  rescheduleDraft={date,id,timeEdited:false};
+  rescheduleDate.value=date;
+  rescheduleDate.removeAttribute('aria-invalid');
+  rescheduleMessage.textContent='';
+  rescheduleConfirm.disabled=false;
+  document.getElementById('reschedule-original').textContent='原日期 '+date+' · '+(time||'未定時間');
+  resetRescheduleTime(time);
+  rescheduleDialog.showModal();
+}
+function submitLessonReschedule(event){
+  event.preventDefault();
+  if(!rescheduleDraft)return;
+  const {date,id,timeEdited}=rescheduleDraft;
+  const source=S.calendar[date];
+  const index=source?.findIndex(item=>item.id===id)??-1;
+  if(index<0){
+    rescheduleMessage.textContent='原日期已找不到這堂課，可能已被刪除或改期。';
+    rescheduleConfirm.disabled=true;
+    document.getElementById('reschedule-cancel').focus();
+    return;
+  }
+  if(!rescheduleDate.value||!rescheduleDate.validity.valid){
+    rescheduleDate.setAttribute('aria-invalid','true');
+    rescheduleMessage.textContent='請選擇有效的新日期。';
+    rescheduleDate.focus();
+    return;
+  }
+  const lesson=source[index];
+  const newDate=rescheduleDate.value;
+  const chosenTime=document.getElementById('reschedule-schedule-time').value;
+  // If time was left alone, keep the current value even if sync changed it.
+  const currentTime=lesson.time||'';
+  const time=timeEdited ? chosenTime : currentTime;
+  if(newDate===date&&time===currentTime){closeLessonReschedule();return;}
+
+  closeLessonReschedule(false);
+  if(newDate!==date){
+    source.splice(index,1);
+    if(!source.length)delete S.calendar[date];
+    (S.calendar[newDate]??=[]).push(lesson);
+  }
+  if(time!==currentTime)lesson.time=time;
+  invalidateEntriesCache();
+  saveState();
+
+  const [year,month]=newDate.split('-').map(Number);
+  S.year=year;
+  S.month=month-1;
+  selectDate(newDate);
+  if(isMobile())mobileTab('day');
+  rescheduleButton(id)?.focus();
+  toast('已改期','success');
+}
+rescheduleDate.addEventListener('input',()=>{
+  rescheduleDate.removeAttribute('aria-invalid');
+  if(!rescheduleConfirm.disabled)rescheduleMessage.textContent='';
+});
+rescheduleDialog.addEventListener('cancel',event=>{
+  event.preventDefault();
+  closeLessonReschedule();
+});
+rescheduleDialog.addEventListener('keydown',event=>event.stopPropagation());
+document.getElementById('reschedule-cancel').addEventListener('click',()=>closeLessonReschedule());
+document.getElementById('day-events').addEventListener('click',event=>{
+  const button=event.target.closest('[data-reschedule-event]');
+  if(button)openLessonReschedule(button.dataset.rescheduleEvent);
+});
+
 function renderDayPanel(){
   if(dayScheduleDate){
     if((S.selectedDate||todayStr)!==dayScheduleDate)cancelDaySchedule();
@@ -3663,7 +3809,6 @@ function renderDayPanel(){
   }
   const label=document.getElementById('day-label');
   const el=document.getElementById('day-events');
-  const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   if(!S.selectedDate){
     label.textContent='選擇日期';
@@ -3716,13 +3861,16 @@ function renderDayPanel(){
     const c=course(ev.courseId);if(!c)return;
     const[hh,mm]=ev.time?ev.time.split(':').map(Number):[0,0];
     const hourOpts=Array.from({length:24},(_,i)=>`<option value="${i}" ${i===hh?'selected':''}>${String(i).padStart(2,'0')}</option>`).join('');
-    const minOpts=[0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<option value="${m}" ${m===mm?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('');
+    const minutes=[0,5,10,15,20,25,30,35,40,45,50,55];
+    if(Number.isInteger(mm)&&!minutes.includes(mm))minutes.push(mm);
+    const minOpts=minutes.sort((a,b)=>a-b).map(m=>`<option value="${m}" ${m===mm?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('');
     courseHtml+=`<div class="day-card ${ev.done?'is-done':''}">
       <div class="day-card-head">
         <div class="done-check ${ev.done?'checked':''}" onclick="toggleDone('${S.selectedDate}','${ev.id}')" title="${ev.done?'標記為未完成':'標記為完成'}">${ev.done?'✓':''}</div>
         <span class="dot" style="background:${c.color}"></span>
         <span class="day-name" style="${ev.done?'text-decoration:line-through;opacity:.5':''}">${esc(c.name)}</span>
         <div class="day-actions">
+          <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${esc(ev.id)}">改期</button>
           <button class="act-btn" onclick="removeEvent('${S.selectedDate}','${ev.id}')">刪除</button>
         </div>
       </div>
@@ -3755,6 +3903,7 @@ function renderDayPanel(){
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <span class="dgi-label ${ev.done?'crossed':''}">課次 ${lessonNo}</span>
             <div class="dgi-actions">
+              <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${esc(ev.id)}">改期</button>
               <button class="act-btn" onclick="removeEvent('${S.selectedDate}','${ev.id}')">刪除</button>
             </div>
           </div>
