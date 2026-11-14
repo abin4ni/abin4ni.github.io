@@ -1730,14 +1730,14 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .day-card-head .day-name{min-width:0;overflow-wrap:anywhere;}
 .day-actions,.dgi-actions{flex-shrink:0;}
 .day-reschedule-button{min-width:44px;min-height:44px;white-space:nowrap;}
-#reschedule-dialog,#repeat-preview,#makeup-dialog{
+#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{
   position:fixed;inset:0;margin:auto;width:min(440px,calc(100% - 24px));
   max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - env(safe-area-inset-bottom,0px));
   overflow:auto;overscroll-behavior:contain;padding:16px;
   color:var(--text);background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
 }
-#reschedule-dialog::backdrop,#repeat-preview::backdrop,#makeup-dialog::backdrop{background:var(--scrim);}
+#reschedule-dialog::backdrop,#repeat-preview::backdrop,#makeup-dialog::backdrop,#exam-progress-dialog::backdrop{background:var(--scrim);}
 #repeat-preview[open]{display:flex;flex-direction:column;gap:12px;overflow:hidden;}
 #repeat-preview-title{font-size:18px;}
 #repeat-preview-notice{font-size:13px;color:var(--text-2);}
@@ -2390,16 +2390,16 @@ input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focu
 #repeat-preview-body{padding:var(--sp-3);background:var(--card-2);border-radius:var(--r-sm);}
 #repeat-preview-dates li{border-bottom:1px solid var(--border-lt);}
 #repeat-preview .day-schedule-actions{margin-top:4px;}
-.modal,#confirm-dialog,#exam-popover,#sync-popover,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog{
+.modal,#confirm-dialog,#exam-popover,#sync-popover,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{
   border:1px solid var(--border-lt);border-radius:var(--r-xl);box-shadow:var(--shadow-pop);
 }
-.modal,#confirm-dialog,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog{padding:clamp(16px,3vw,24px);}
+.modal,#confirm-dialog,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{padding:clamp(16px,3vw,24px);}
 .modal,#confirm-dialog{max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;}
-.modal h2,#confirm-title,#memo-modal-title,#reschedule-title,#repeat-preview-title,#makeup-title{
+.modal h2,#confirm-title,#memo-modal-title,#reschedule-title,#repeat-preview-title,#makeup-title,#exam-progress-title{
   color:var(--text);font-size:1.25rem;font-weight:600;line-height:1.3;letter-spacing:-.02em;
 }
 :is(.modal,#exam-popover,#memo-modal,#reschedule-dialog,#repeat-preview) .btn{border-radius:var(--r-pill);}
-.modal-backdrop:not([style*="display:none"]) .modal,#memo-modal[open],#reschedule-dialog[open],#repeat-preview[open],#makeup-dialog[open]{
+.modal-backdrop:not([style*="display:none"]) .modal,#memo-modal[open],#reschedule-dialog[open],#repeat-preview[open],#makeup-dialog[open],#exam-progress-dialog[open]{
   animation:panel-appear 160ms var(--ease-ios);
 }
 @keyframes panel-appear{from{opacity:0;translate:0 5px;}to{opacity:1;translate:0 0;}}
@@ -2554,6 +2554,26 @@ input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focu
 .makeup-actions [data-makeup-action=done]{background:var(--accent-tint);color:var(--accent-h);}
 .makeup-actions [data-makeup-action=done]:hover{background:var(--nav-sel);}
 @media(width < 1200px){.makeup-entry{padding-inline:var(--sp-3);}}
+
+.course-card .exam-progress{
+  grid-column:1/-1;grid-row:3;min-height:44px;width:100%;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;
+  padding:6px 9px;border:0;border-radius:var(--r-sm);background:var(--accent-tint);
+  color:var(--accent-h);text-align:left;font:inherit;font-size:var(--ui-caption);cursor:pointer;
+}
+.exam-progress>span{min-width:0;display:flex;flex-wrap:wrap;gap:0 8px;}
+.exam-progress strong{font-weight:600;}
+.exam-progress:hover,.exam-progress:active{background:var(--nav-sel);}
+.exam-progress .ui-icon{width:14px;height:14px;}
+#exam-progress-dialog[open]{display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+#exam-progress-course{color:var(--text-2);font-size:var(--ui-label);overflow-wrap:anywhere;margin:0;}
+#exam-progress-body{min-height:0;overflow:auto;overscroll-behavior:contain;}
+.exam-detail-group{padding:8px 0;border-top:1px solid var(--border-lt);}
+.exam-detail-group h3{margin:0;font-size:var(--ui-label);font-weight:600;}
+.exam-detail-count{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.exam-detail-group.is-outside h3{color:var(--accent-h);}
+.exam-detail-group .btn{margin-top:4px;max-width:100%;white-space:normal;text-align:left;}
+.exam-detail-dates{list-style:none;margin:0;padding:0;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -2945,6 +2965,15 @@ onAuthStateChanged(auth,user=>{
     <button type="button" class="btn btn-sand" id="repeat-preview-cancel" autofocus>取消</button>
     <button type="button" class="btn btn-primary" id="repeat-preview-confirm">確認排課</button>
   </div>
+</dialog>
+
+<dialog id="exam-progress-dialog" aria-labelledby="exam-progress-title" aria-describedby="exam-progress-course">
+  <div class="makeup-head">
+    <h2 id="exam-progress-title">考前排課明細</h2>
+    <button type="button" class="btn btn-sand" id="exam-progress-close" autofocus>關閉</button>
+  </div>
+  <p id="exam-progress-course"></p>
+  <div id="exam-progress-body"></div>
 </dialog>
 
 <dialog id="makeup-dialog" aria-labelledby="makeup-title">
@@ -4057,14 +4086,124 @@ repeatDialog.addEventListener('cancel',event=>{
 });
 
 // ── Exam Badge ────────────────────────────────────────────────────
-function examBadge(c){
-  if(!c.examDate)return'';
-  const days=daysBetween(todayStr,c.examDate),rem=remaining(c);
-  if(days<0)return`<span class="exam-badge danger">考試已過期</span>`;
-  if(days===0)return`<span class="exam-badge danger">今天考試！</span>`;
-  const cls=rem===0?'ok':rem>days*2?'danger':rem>days?'warn':'ok';
-  return`<span class="exam-badge ${cls}">考試還有 ${days} 天${rem>0?` · 剩 ${rem} 堂`:' ✓'}</span>`;
+function localDateKey(now=new Date()){
+  return ds(now.getFullYear(),now.getMonth(),now.getDate());
 }
+
+function getExamPlans(localToday){
+  const plans=new Map();
+  for(const c of S.courses){
+    if(c.examDate>localToday){
+      plans.set(c.id,{deadline:c.examDate,past:0,before:0,after:0,unscheduled:remaining(c),dates:new Map()});
+    }
+  }
+  if(!plans.size)return plans;
+  for(const [date,lessons] of Object.entries(S.calendar)){
+    for(const lesson of lessons){
+      const plan=plans.get(lesson.courseId);
+      if(!plan||lesson.done)continue;
+      if(date<localToday)plan.past++;
+      else if(date<plan.deadline)plan.before++;
+      else{
+        plan.after++;
+        plan.dates.set(date,(plan.dates.get(date)||0)+1);
+      }
+    }
+  }
+  return plans;
+}
+
+function examBadge(c,localToday,plan){
+  if(!c.examDate)return '';
+  if(c.examDate<localToday)return '<span class="exam-badge danger">考試已過期</span>';
+  if(c.examDate===localToday)return '<span class="exam-badge danger">今天考試</span>';
+  const days=daysBetween(localToday,c.examDate);
+  return `<button type="button" class="exam-progress" data-exam-progress="${esc(c.id)}" aria-haspopup="dialog" aria-controls="exam-progress-dialog">
+    <span><strong>距考試 ${days} 天</strong><span>考前尚未安排 ${plan.after+plan.unscheduled} 堂</span></span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg>
+  </button>`;
+}
+
+const examProgressDialog=document.getElementById('exam-progress-dialog');
+const examProgressBody=document.getElementById('exam-progress-body');
+const examProgressClose=document.getElementById('exam-progress-close');
+let examProgressCourseId=null;
+
+function focusExamProgress(id){
+  const button=[...document.querySelectorAll('[data-exam-progress]')].find(el=>el.dataset.examProgress===id);
+  (button||document.querySelector('#course-list .exam-pen-btn')||document.getElementById('quick-input')).focus({preventScroll:true});
+}
+
+function renderExamProgressDetail(plan){
+  if(!examProgressDialog.open)return;
+  const c=course(examProgressCourseId);
+  if(!c||!plan){examProgressDialog.close();return;}
+  document.getElementById('exam-progress-course').textContent=c.name+' · 考試 '+plan.deadline;
+  const dates=[...plan.dates].sort(([a],[b])=>a.localeCompare(b)).map(([date,count])=>
+    `<li><button type="button" class="btn btn-sand" data-exam-date="${esc(date)}">${esc(date)} · ${count} 堂 · 查看日期詳情</button></li>`
+  ).join('');
+  const groups=[
+    ['已過日期',plan.past,plan.past?'<button type="button" class="btn btn-sand" data-exam-action="makeup">開啟補課清單</button>':''],
+    ['今天至考試前已排',plan.before,''],
+    ['考試當天或之後已排',plan.after,dates?'<ul class="exam-detail-dates">'+dates+'</ul>':''],
+    ['尚未排課',plan.unscheduled,plan.unscheduled?'<button type="button" class="btn btn-sand" data-exam-action="schedule">前往重複排課</button>':'']
+  ];
+  const content=groups.map(([label,count,actions],index)=>
+    `<section class="exam-detail-group${index>=2?' is-outside':''}"><h3>${label} <span class="exam-detail-count">${count} 堂</span></h3>${actions}</section>`
+  ).join('');
+  if(examProgressBody.innerHTML!==content){
+    const hadFocus=examProgressBody.contains(document.activeElement);
+    examProgressBody.innerHTML=content;
+    if(hadFocus)examProgressClose.focus({preventScroll:true});
+  }
+}
+
+document.getElementById('course-list').addEventListener('click',event=>{
+  const button=event.target.closest('[data-exam-progress]');
+  if(!button)return;
+  const id=button.dataset.examProgress;
+  const plan=getExamPlans(localDateKey()).get(id);
+  if(!plan){renderCourses();return;}
+  examProgressCourseId=id;
+  examProgressDialog.showModal();
+  renderExamProgressDetail(plan);
+  examProgressBody.scrollTop=0;
+});
+examProgressClose.addEventListener('click',()=>examProgressDialog.close());
+examProgressDialog.addEventListener('keydown',event=>event.stopPropagation());
+examProgressDialog.addEventListener('close',()=>{
+  if(examProgressCourseId!==null)focusExamProgress(examProgressCourseId);
+  examProgressCourseId=null;
+});
+examProgressBody.addEventListener('click',event=>{
+  const button=event.target.closest('[data-exam-action],[data-exam-date]');
+  if(!button)return;
+  const id=examProgressCourseId;
+  examProgressCourseId=null;
+  examProgressDialog.close();
+  if(button.dataset.examAction==='makeup'){
+    openMakeupList(()=>focusExamProgress(id));
+  }else if(button.dataset.examAction==='schedule'){
+    const select=document.getElementById('rep-course');
+    const form=select.form;
+    if(isMobile()&&!form.classList.contains('is-open'))toggleFold(form.querySelector('.fold-head'));
+    select.value=id;
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+    select.focus();
+  }else{
+    const date=button.dataset.examDate;
+    if(isTablet())closeTabletPanel();
+    const [year,month]=date.split('-').map(Number);
+    S.year=year;S.month=month-1;
+    selectDate(date);
+    if(isMobile())mobileTab('day');
+    const panel=document.getElementById('panel-r');
+    panel.scrollTop=0;
+    if(useSlideDayPanel()){
+      dayPanelReturnFocus=()=>focusExamProgress(id);
+      document.getElementById('day-panel-close').focus({preventScroll:true});
+    }else document.getElementById('day-schedule-open').focus({preventScroll:true});
+  }
+});
 
 // ── Tablet panel toggle ───────────────────────────────────────────
 function isTablet(){return window.innerWidth>=768&&window.innerWidth<1200;}
@@ -4332,9 +4471,12 @@ function renderCourseSummary(){
 function renderCourses(){
   renderCourseSummary();
   const el=document.getElementById('course-list');
+  const localToday=localDateKey();
+  const plans=getExamPlans(localToday);
+  renderExamProgressDetail(plans.get(examProgressCourseId));
   if(!S.courses.length){el.innerHTML='<div class="muted">尚未新增課程</div>';return;}
   const show=S.courseListExpanded?S.courses:S.courses.slice(0,COURSE_PREVIEW);
-  const hidden=S.courses.length-COURSE_PREVIEW;
+  const focusedExamId=document.activeElement?.dataset.examProgress;
 
   const cards=show.map(c=>{
     const done=completed(c),arr=allEntries(c.id).length,rem=remaining(c),pct=Math.min(100,Math.round(done/c.total*100));
@@ -4346,7 +4488,7 @@ function renderCourses(){
         <span class="dot" style="background:${c.color}"></span>
         <span class="course-name">${esc(c.name)}</span>
       </div>
-      ${lessonChip}${examBadge(c)}
+      ${lessonChip}${examBadge(c,localToday,plans.get(c.id))}
       <div class="course-progress-row">
         <div class="course-stat"><span class="course-meta">完成 ${done}／${c.total}</span><span class="course-meta">${pct}%</span></div>
         <div class="progress-wrap" role="progressbar" aria-label="課程完成進度" aria-valuenow="${pct}">
@@ -4371,6 +4513,7 @@ function renderCourses(){
     </div>`;
   }
   el.innerHTML=cards+footer;
+  if(focusedExamId)focusExamProgress(focusedExamId);
 }
 function renderRepeatSelect(){
   const sel=document.getElementById('rep-course'),prev=sel.value;
@@ -4532,7 +4675,7 @@ let weekProgressRollover;
 
 function renderCalendarProgress(){
   const now=new Date();
-  const localToday=ds(now.getFullYear(),now.getMonth(),now.getDate());
+  const localToday=localDateKey(now);
   renderWeekProgress(localToday,now.getDay());
   renderMakeupList(localToday);
 }
@@ -4628,21 +4771,27 @@ function focusMakeupAction(id,action){
   (row?.querySelector('[data-makeup-action="'+action+'"]')||makeupClose).focus();
 }
 
-makeupOpen.addEventListener('click',()=>{
+let makeupReturnFocus=null;
+function openMakeupList(returnFocus=null){
+  makeupReturnFocus=returnFocus;
   makeupDialog.showModal();
   renderCalendarProgress();
   makeupList.scrollTop=0;
-});
+}
+makeupOpen.addEventListener('click',()=>openMakeupList());
 makeupClose.addEventListener('click',()=>makeupDialog.close());
-makeupDialog.addEventListener('close',()=>makeupOpen.focus({preventScroll:true}));
+makeupDialog.addEventListener('close',()=>{
+  if(makeupReturnFocus)makeupReturnFocus();
+  else makeupOpen.focus({preventScroll:true});
+  makeupReturnFocus=null;
+});
 makeupDialog.addEventListener('keydown',event=>event.stopPropagation());
 makeupList.addEventListener('click',event=>{
   const button=event.target.closest('[data-makeup-action]');
   const row=button?.closest('[data-makeup-id]');
   if(!row)return;
   const {makeupDate:date,makeupId:id}=row.dataset;
-  const now=new Date();
-  const localToday=ds(now.getFullYear(),now.getMonth(),now.getDate());
+  const localToday=localDateKey();
   if(date>=localToday||!S.calendar[date]?.some(lesson=>lesson.id===id&&!lesson.done)){
     renderCalendarProgress();
     return;
@@ -4651,10 +4800,16 @@ makeupList.addEventListener('click',event=>{
   else openLessonReschedule(id,date,()=>focusMakeupAction(id,'move'));
 });
 
+let progressClockDate=localDateKey();
 function refreshWeekProgressClock(){
   clearTimeout(weekProgressRollover);
   renderCalendarProgress();
   const nextDay=new Date();
+  const localToday=localDateKey(nextDay);
+  if(localToday!==progressClockDate){
+    progressClockDate=localToday;
+    renderCourses();
+  }
   nextDay.setHours(24,0,0,0);
   weekProgressRollover=setTimeout(refreshWeekProgressClock,Math.max(0,nextDay.getTime()-Date.now())+50);
 }
