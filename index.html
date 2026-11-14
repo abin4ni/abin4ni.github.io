@@ -268,6 +268,14 @@ body{
   font-size:12px;color:var(--accent-2);line-height:1.5;
 }
 .quick-parse-preview.show{display:block;}
+.quick-parse-preview dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 10px;}
+.quick-parse-preview dt{color:var(--text-2);}
+.quick-parse-preview dd{margin:0;color:var(--text);overflow-wrap:anywhere;}
+#quick-plan{margin:8px 0 0;overflow-wrap:anywhere;color:var(--text);}
+#quick-error{color:var(--danger-c);font-size:13px;margin:6px 0 0;}
+#quick-error:empty{display:none;}
+#quick-submit{margin-top:8px;min-height:44px;width:100%;}
+#quick-submit:disabled{opacity:.55;cursor:default;}
 
 /* ── Card enter animation ── */
 @keyframes cardIn{
@@ -2283,11 +2291,21 @@ onAuthStateChanged(auth,user=>{
       <div class="section quick-course-section">
         <div class="section-label">快速輸入</div>
         <div class="quick-input-wrap">
-          <input type="text" id="quick-input"
-            placeholder="例：英文 週三 19:00 30堂"
+          <input type="text" id="quick-input" aria-label="快速輸入課程"
+            placeholder="例：英文 週三 19:00 30堂" aria-describedby="quick-hint quick-error"
             autocomplete="off" autocapitalize="off" spellcheck="false"/>
-          <div class="quick-input-hint">輸入<b>科目名</b>＋<b>週幾</b>＋<b>時間</b>＋<b>堂數</b>，按 Enter 快速建立</div>
-          <div class="quick-parse-preview" id="quick-preview"></div>
+          <div class="quick-input-hint" id="quick-hint">輸入科目名稱。星期、時間和堂數可省略，堂數預設為 1。按 Enter 或下方按鈕送出。</div>
+          <div class="quick-parse-preview" id="quick-preview" aria-live="polite">
+            <dl>
+              <dt>科目</dt><dd id="quick-course-name"></dd>
+              <dt>星期</dt><dd id="quick-weekday"></dd>
+              <dt>時間</dt><dd id="quick-time"></dd>
+              <dt>總堂數</dt><dd id="quick-total"></dd>
+            </dl>
+            <p id="quick-plan"></p>
+          </div>
+          <p id="quick-error" role="status"></p>
+          <button type="button" class="btn btn-primary" id="quick-submit" disabled>建立課程</button>
         </div>
       </div>
       <form class="section course-planning-form fold-card" id="new-course-form" novalidate onsubmit="addCourse(event)">
@@ -4032,77 +4050,118 @@ const WDAY_IDX={'日':0,'天':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6}
 function parseQuickInput(raw){
   const s=raw.trim();
   if(!s)return null;
-  let name='',wday=null,time='',total=0;
 
-  // Extract total lessons: e.g. "30堂" or "30節"
-  const totalMatch=s.match(/(\d+)\s*[堂節]/);
-  if(totalMatch)total=parseInt(totalMatch[1]);
+  const totals=[...s.matchAll(/([+-]?\d+(?:\.\d+)?)\s*[堂節]/g)];
+  if(totals.length>1)return {error:'請只輸入一個總堂數。'};
+  const total=totals.length ? Number(totals[0][1]) : 1;
+  if(!Number.isSafeInteger(total)||total<1)return {error:'總堂數須為正整數，例如 30堂。'};
+  if(!totals.length&&/(?:^|\s)[堂節](?=\s|$)/.test(s))return {error:'請在「堂」或「節」前填入堂數。'};
 
-  // Extract time: HH:MM or HH點
-  const timeMatch=s.match(/(\d{1,2})[:\uff1a點](\d{0,2})/);
-  if(timeMatch){
-    const h=String(parseInt(timeMatch[1])).padStart(2,'0');
-    const m=String(parseInt(timeMatch[2]||'0')).padStart(2,'0');
-    time=`${h}:${m}`;
+  // Preserve the supported colons and the hour-only 點 shorthand.
+  const times=[...s.matchAll(/(\d+)([:：點])(\d*)/g)];
+  if(times.length>1)return {error:'請只輸入一個上課時間。'};
+  let time='';
+  if(times.length){
+    const [token,h,separator,m]=times[0];
+    const next=s[times[0].index+token.length];
+    const negativeTime=/(?:^|\s)-$/.test(s.slice(0,times[0].index));
+    if(negativeTime||h.length>2||Number(h)>23||m.length>2||Number(m)>59||
+       (!m&&separator!=='點')||next===':'||next==='：'){
+      return {error:'請修正上課時間。小時為 0–23，分鐘為 0–59，例如 19:00。'};
+    }
+    time=h.padStart(2,'0')+':'+(m||'0').padStart(2,'0');
   }
 
-  // Extract weekday
-  const wm=s.match(WDAY_RE);
-  if(wm)wday=WDAY_IDX[wm[1]];
-
-  // Name = remaining after stripping known patterns
-  name=s
-    .replace(/(\d+)\s*[堂節]/g,'')
-    .replace(/(\d{1,2})[:\uff1a點]\d{0,2}/g,'')
+  const weekdays=[...s.matchAll(new RegExp(WDAY_RE.source,'g'))];
+  if(weekdays.length>1)return {error:'請只輸入一個上課星期。'};
+  if(/(?:週|周|星期|禮拜|礼拜)(?:[0-9０-９八九十]|(?=\s|$))/.test(s)){
+    return {error:'請修正上課星期，例如 週三 或 星期日。'};
+  }
+  const wday=weekdays.length ? WDAY_IDX[weekdays[0][1]] : null;
+  const name=s.replace(/([+-]?\d+(?:\.\d+)?)\s*[堂節]/g,'')
+    .replace(/\d+[:：點]\d*/g,'')
     .replace(/[（(].*?[）)]/g,'')
     .replace(new RegExp(WDAY_RE.source,'g'),'')
-    .replace(/\s+/g,' ')
-    .trim();
-
-  if(!name)return null;
-  if(!total)total=1; // default 1 lesson
-
-  return{name,wday,time,total};
+    .replace(/\s+/g,' ').trim();
+  if(!name)return {error:'請輸入科目名稱，例如 英文。'};
+  return {name,wday,time,total};
 }
 
-function handleQuickInput(e){
-  const val=e.target.value;
-  const parsed=parseQuickInput(val);
-  const preview=document.getElementById('quick-preview');
-  if(!parsed||!val.trim()){preview.classList.remove('show');return;}
-
-  const wdayName=parsed.wday!=null?['日','一','二','三','四','五','六'][parsed.wday]:null;
-  let desc=`科目：${parsed.name}　堂數：${parsed.total}`;
-  if(wdayName)desc+=`　每週${wdayName}`;
-  if(parsed.time)desc+=`　${parsed.time}`;
-  preview.textContent=desc;
-  preview.classList.add('show');
-
-  if(e.key==='Enter'){
-    e.preventDefault();
-    submitQuickInput(parsed);
-    e.target.value='';
-    preview.classList.remove('show');
+function quickScheduleDates({wday,total}){
+  const dates=[];
+  if(wday===null)return dates;
+  let date=todayStr;
+  for(let i=0;i<365&&dates.length<total;i++){
+    const [year,month,day]=date.split('-').map(Number);
+    if(new Date(year,month-1,day).getDay()===wday)dates.push(date);
+    date=addDays(date,1);
   }
+  return dates;
 }
 
-function submitQuickInput(parsed){
+function initQuickInput(){
+  const input=document.getElementById('quick-input');
+  const preview=document.getElementById('quick-preview');
+  const error=document.getElementById('quick-error');
+  const button=document.getElementById('quick-submit');
+  let composing=false;
+
+  function refresh(){
+    const parsed=composing ? null : parseQuickInput(input.value);
+    const valid=parsed&&!parsed.error;
+    preview.classList.toggle('show',!!valid);
+    error.textContent=parsed?.error||'';
+    if(parsed?.error)input.setAttribute('aria-invalid','true');
+    else input.removeAttribute('aria-invalid');
+    button.disabled=!valid;
+    button.textContent='建立課程';
+    if(!valid)return;
+
+    const dates=quickScheduleDates(parsed);
+    document.getElementById('quick-course-name').textContent=parsed.name;
+    document.getElementById('quick-weekday').textContent=parsed.wday===null?'未指定':'每週'+WDAYS[parsed.wday];
+    document.getElementById('quick-time').textContent=parsed.time||'未指定';
+    document.getElementById('quick-total').textContent=parsed.total+' 堂';
+    document.getElementById('quick-plan').textContent=dates.length
+      ? '建立並排課 · 新增 '+dates.length+' 堂 · '+dates[0]+(dates.length>1?' 至 '+dates.at(-1):'')+
+        (dates.length<parsed.total?' · 剩餘 '+(parsed.total-dates.length)+' 堂未排':'')
+      : '只建立課程 · 不新增課堂'+(parsed.time?'，所填時間不會排入行事曆。':'。');
+    if(dates.length)button.textContent='建立並排課';
+    return {parsed,dates};
+  }
+  function create(){
+    const plan=refresh();
+    if(!plan)return;
+    // Consume the input before saving so repeated activation can't create it twice.
+    input.value='';
+    refresh();
+    submitQuickInput(plan.parsed,plan.dates);
+  }
+  input.addEventListener('input',event=>{if(!event.isComposing)refresh();});
+  input.addEventListener('compositionstart',()=>{composing=true;refresh();});
+  input.addEventListener('compositionend',()=>{composing=false;refresh();});
+  input.addEventListener('keydown',event=>{
+    if(composing||event.isComposing||event.keyCode===229)return;
+    if(event.key==='Enter'){
+      event.preventDefault();
+      if(!event.repeat)create();
+    }else if(event.key==='Escape'){
+      input.value='';
+      refresh();
+    }
+  });
+  button.addEventListener('click',create);
+  refresh();
+}
+
+function submitQuickInput(parsed,dates){
   const id=`c${S.cid++}`;
   const color=PALETTE[colorCursor++%PALETTE.length];
   S.courses.push({id,name:parsed.name,total:parsed.total,color,examDate:'',lessonStart:1,lessonEnd:parsed.total});
 
-  // If weekday specified, auto-schedule from today
-  if(parsed.wday!=null){
-    let cur=todayStr,added=0,rem=parsed.total;
-    for(let i=0;i<365&&rem>0;i++){
-      const[y,m,d]=cur.split('-').map(Number);
-      if(new Date(y,m-1,d).getDay()===parsed.wday){
-        addEvent(cur,id,parsed.time||'');rem--;added++;
-      }
-      cur=addDays(cur,1);
-    }
-    if(added)toast(calendarScheduleMessage(`「${parsed.name}」已排入 ${added} 堂（每週${['日','一','二','三','四','五','六'][parsed.wday]}）`,id),'success',3500);
-    else toast(`已新增「${parsed.name}」`,'success');
+  for(const date of dates)addEvent(date,id,parsed.time);
+  if(dates.length){
+    toast(calendarScheduleMessage(`「${parsed.name}」已排入 ${dates.length} 堂（每週${WDAYS[parsed.wday]}）`,id),'success',3500);
   }else{
     toast(`已新增「${parsed.name}」（${parsed.total} 堂）`,'success');
   }
@@ -4917,23 +4976,7 @@ function init(){
   });
   document.getElementById('rep-start').value=todayStr;
 
-  // Quick input
-  const qi=document.getElementById('quick-input');
-  if(qi){
-    qi.addEventListener('input',handleQuickInput);
-    qi.addEventListener('keydown',e=>{
-      if(e.key==='Enter'){
-        const parsed=parseQuickInput(qi.value);
-        if(parsed){
-          e.preventDefault();
-          submitQuickInput(parsed);
-          qi.value='';
-          document.getElementById('quick-preview').classList.remove('show');
-        }
-      }
-      if(e.key==='Escape'){qi.value='';document.getElementById('quick-preview').classList.remove('show');}
-    });
-  }
+  initQuickInput();
 
   for(const [field,next] of [['inp-name','inp-total'],['inp-total','inp-ls'],['inp-ls','inp-exam']]){
     document.getElementById(field).addEventListener('keydown',event=>{
