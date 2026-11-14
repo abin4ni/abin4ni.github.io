@@ -1657,35 +1657,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .mobile-course-options{display:grid;gap:8px;max-height:30vh;overflow:auto;margin-top:8px;}
   .mobile-course-options button{white-space:normal;text-align:left;min-height:44px;}
 }
-/* Phone floating navigation: only the selection background moves. */
-@media(max-width:767px){
-  :root{--bot-h:calc(88px + env(safe-area-inset-bottom,0px));}
-  .app-shell{padding-bottom:var(--bot-h);}
-  .layout{height:100%;min-height:0;}
-  .bottom-nav{
-    left:16px;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
-    width:auto;max-width:420px;margin:0 auto;height:64px;padding:6px;
-    border:1px solid var(--border-strong);border-radius:999px;
-    background:var(--surface);box-shadow:0 4px 18px rgba(43,42,39,.12);
-    -webkit-backdrop-filter:none;backdrop-filter:none;filter:none;
-    isolation:isolate;--active-tab:0;
-  }
-  .bottom-nav::before{
-    content:'';position:absolute;left:6px;top:6px;bottom:6px;
-    width:calc((100% - 12px)/3);border-radius:999px;
-    background:var(--sunken);pointer-events:none;z-index:0;
-    transform:translateX(calc(var(--active-tab)*100%));
-    transition:transform 260ms cubic-bezier(.22,1,.36,1);
-  }
-  .bottom-nav .bn-btn{
-    position:relative;z-index:1;min-width:0;min-height:44px;
-    border-radius:999px;font-size:11px;transition:none;transform:none;
-  }
-  .bottom-nav .bn-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
-}
-@media(max-width:767px) and (prefers-reduced-motion:reduce){
-  .bottom-nav::before{transition:none;}
-}
 .mobile-page-intro{display:none;}
 @media(max-width:767px){
   .mobile-page-intro{display:block;margin:4px 0 18px;}
@@ -1957,12 +1928,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .cal-grid .cal-tag-name{font-size:10px;}
   .cal-grid .cal-overflow{font-size:10px;}
   .panel-l [draggable="true"]{touch-action:pan-y;}
-  .bottom-nav{border-color:var(--border);box-shadow:var(--shadow-md);}
-  .bottom-nav::before{background:var(--accent-tint);border-radius:var(--r-pill);}
-  .bottom-nav .bn-btn{font-size:12px;gap:2px;}
-  .bottom-nav .bn-btn.active{font-weight:700;color:var(--accent-h);}
-  .bottom-nav .bn-btn:active{opacity:.65;}
-  .bottom-nav .bn-icon{font-size:18px;}
 }
 @media(max-width:359px){
   .day-card-head{grid-template-columns:44px 9px minmax(0,1fr);}
@@ -2007,6 +1972,118 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 }
 @media(width < 1200px) and (prefers-reduced-motion:reduce){
   .cal-grid,.course-card,.todo-card,.done-check,.progress-ring-fill{animation:none!important;transition:none!important;}
+}
+
+/* ═══ StudyOS UI v2 · navigation, folds, density (cross-device) ═══ */
+:root{--nav-bg:#fdfcfa;--nav-sel:#dcebe8;}
+
+/* ── Phone floating tab bar (single authoritative block) ── */
+@media(max-width:767px){
+  :root{--bot-h:calc(84px + env(safe-area-inset-bottom,0px));}
+  .app-shell{padding-bottom:var(--bot-h);}
+  .layout{height:100%;min-height:0;}
+  .panel-l,.panel-r{padding-bottom:28px;}
+  .bottom-nav{
+    display:flex !important;left:16px;right:16px;top:auto;
+    bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    width:auto;max-width:400px;margin:0 auto;height:60px;padding:5px;gap:0;
+    border:1px solid var(--border-lt);border-radius:999px;background:var(--nav-bg);
+    box-shadow:0 1px 2px rgba(43,42,39,.05),0 6px 20px rgba(43,42,39,.08);
+    -webkit-backdrop-filter:none;backdrop-filter:none;filter:none;
+    isolation:isolate;--active-tab:0;z-index:20;
+  }
+  .bottom-nav::before{
+    content:'';position:absolute;left:5px;top:5px;bottom:5px;
+    width:calc((100% - 10px)/3);border-radius:999px;background:var(--nav-sel);
+    pointer-events:none;z-index:0;
+    transform:translateX(calc(var(--active-tab)*100%));
+    transition:transform 260ms cubic-bezier(.22,1,.36,1);
+  }
+  .bottom-nav .bn-btn{
+    position:relative;z-index:1;flex:1 1 0;min-width:0;min-height:44px;gap:3px;
+    border-radius:999px;font-size:11px;line-height:1.1;font-weight:600;letter-spacing:.01em;
+    color:var(--text-3);-webkit-tap-highlight-color:transparent;transition:color 160ms ease;transform:none;
+  }
+  .bottom-nav .bn-btn.active{color:var(--accent-h);font-weight:600;}
+  .bottom-nav .bn-icon{display:block;width:22px;height:22px;font-size:0;line-height:0;}
+  .bottom-nav .bn-icon svg{display:block;width:22px;height:22px;}
+  .bottom-nav .bn-btn:active .bn-icon,.bottom-nav .bn-btn:active .bn-label{opacity:.6;}
+  .bottom-nav .bn-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+}
+@media(max-width:767px) and (prefers-reduced-motion:reduce){
+  .bottom-nav::before,.bottom-nav .bn-btn{transition:none;}
+}
+
+/* ── Fold blocks ── */
+.fold-head{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:default;}
+.fold-head .section-label{margin:0;}
+.fold-head:disabled{opacity:1;color:inherit;}
+.fold-card>.fold-head{margin-bottom:10px;}
+.fold-chev{display:none;}
+
+/* ── Shared: text hierarchy over boxed cards ── */
+@media(width < 1200px){
+  .course-planning-form{border:0;border-top:1px solid var(--border-lt);border-radius:0;background:none;padding:14px 0 0;}
+  .quick-course-section{border:0;background:var(--accent-tint);border-radius:var(--r);padding:12px 14px;}
+  .quick-course-section .section-label{margin-bottom:8px;}
+  .day-card,.day-group{background:none;border:0;border-bottom:1px solid var(--border-lt);border-radius:0;padding:10px 0;}
+  .day-card:hover,.day-group:hover{box-shadow:none;transform:none;}
+}
+
+/* ── Phone ── */
+@media(max-width:767px){
+  .mobile-page-intro{margin:2px 0 14px;}
+  .mobile-page-intro h2{font-size:24px;line-height:1.2;letter-spacing:-.02em;}
+  .mobile-page-intro p{font-size:13px;margin-top:4px;color:var(--text-3);}
+  .fold-head{min-height:48px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .fold-chev{display:block;flex-shrink:0;width:8px;height:8px;margin:-3px 4px 0 0;border:solid var(--text-3);border-width:0 2px 2px 0;transform:rotate(45deg);transition:transform .2s ease;}
+  .fold-card.is-open .fold-chev{transform:rotate(-135deg);margin-top:3px;}
+  .fold-card:not(.is-open) .fold-body{display:none;}
+  .fold-card:not(.is-open)>.fold-head{margin-bottom:0;}
+  .course-planning-form{padding-top:4px;}
+
+  /* compact course card: name · meta · progress + actions on one row */
+  .course-card{display:grid;grid-template-columns:9px minmax(0,1fr) auto auto auto;column-gap:6px;row-gap:2px;align-items:center;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border-lt);box-shadow:none;}
+  .course-card .course-head{display:contents;}
+  .course-card .course-head .dot{grid-column:1;grid-row:1;align-self:start;margin-top:7px;}
+  .course-card .course-head .course-name{grid-column:2/-1;grid-row:1;font-size:16px;}
+  .course-card .lesson-chip{grid-column:2/-1;grid-row:2;justify-self:start;margin:0;}
+  .course-card .exam-badge{grid-column:2/-1;grid-row:3;justify-self:start;margin:2px 0;}
+  .course-card .course-progress-row{grid-column:1/3;grid-row:4;margin-top:4px;min-width:0;}
+  .course-card .course-head>.exam-pen-btn,.course-card .course-head>.del-btn{grid-row:4;margin:4px 0 0;min-height:44px;min-width:44px;}
+  .course-card .course-head>.exam-pen-btn:nth-of-type(1){grid-column:3;}
+  .course-card .course-head>.exam-pen-btn:nth-of-type(2){grid-column:4;}
+  .course-card .course-head>.del-btn{grid-column:5;}
+
+  /* 今日 */
+  .panel-r #day-label{font-size:26px;line-height:1.2;margin:0 0 12px;letter-spacing:-.02em;}
+  .day-schedule-entry{margin-bottom:12px;}
+  #day-schedule-open{width:100%;min-height:48px;font-size:15px;}
+  .day-panel-stats{gap:8px;}
+  .day-panel-stats .day-today-stat{padding:6px 4px;background:var(--sunken);}
+  .day-panel-stats .dts-val{font-size:18px;}
+  .day-panel-stats .dts-lbl{font-size:11px;}
+  .day-panel-main>.day-panel-title{font-size:15px;margin-bottom:2px;}
+}
+
+/* ── Tablet ── */
+@media(min-width:768px) and (width < 1200px){
+  .panel-l.tablet-open .course-card{border:1px solid var(--border-lt);}
+  .panel-r #day-label{font-size:clamp(20px,2.8vw,26px);}
+  #day-schedule-open{width:100%;}
+  .cal-cell{min-height:72px;}
+}
+
+/* ── Desktop: the calendar is the focus ── */
+@media(min-width:1200px){
+  .layout{grid-template-columns:minmax(20px,1fr) 296px minmax(0,1040px) minmax(20px,1fr);column-gap:24px;}
+  .panel-l{width:296px;min-width:296px;max-width:296px;background:transparent;border-color:transparent;box-shadow:none;padding:6px 4px 16px 0;}
+  .cal-panel{max-width:1040px;background:var(--surface);border-color:var(--border-lt);box-shadow:var(--shadow-sm);}
+  .cal-cell{min-height:96px;border-radius:12px;}
+  .course-planning-form,.quick-course-section{padding:12px 0 0;border:0;background:none;}
+  .quick-course-section{padding-top:0;}
+  .course-planning-form{border-top:1px solid var(--border-lt);}
+  .course-planning-form .fold-head{pointer-events:none;}
 }
 
 </style>
@@ -2187,7 +2264,7 @@ onAuthStateChanged(auth,user=>{
   <div class="layout">
 
     <aside class="panel panel-l" id="panel-l">
-      <div class="mobile-page-intro"><h2>課程管理</h2></div>
+      <div class="mobile-page-intro"><h2>我的課程</h2><p id="course-summary"></p></div>
       <div class="tablet-course-heading">
         <h2>課程管理</h2>
         <button type="button" class="btn btn-sand" id="tablet-course-close" onclick="closeTabletPanel()">關閉</button>
@@ -2206,8 +2283,9 @@ onAuthStateChanged(auth,user=>{
           <div class="quick-parse-preview" id="quick-preview"></div>
         </div>
       </div>
-      <form class="section course-planning-form" id="new-course-form" novalidate onsubmit="addCourse(event)">
-        <div class="section-label">新增課程</div>
+      <form class="section course-planning-form fold-card" id="new-course-form" novalidate onsubmit="addCourse(event)">
+        <button type="button" class="fold-head" aria-expanded="false" aria-controls="fold-add" onclick="toggleFold(this)"><span class="section-label">新增課程</span><span class="fold-chev" aria-hidden="true"></span></button>
+        <div class="fold-body" id="fold-add">
         <div class="form-group"><input type="text" id="inp-name" aria-label="科目名稱" placeholder="科目名稱（例：化學）" required/></div>
         <div class="form-group">
           <input type="number" id="inp-total" aria-label="總堂數" aria-describedby="course-number-message" placeholder="總堂數" min="1" step="1" required/>
@@ -2224,9 +2302,11 @@ onAuthStateChanged(auth,user=>{
           <input type="date" id="inp-exam"/>
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:2px;">新增課程</button>
+        </div>
       </form>
-      <form class="section course-planning-form" id="repeat-schedule-form" novalidate onsubmit="openRepeatPreview(event)">
-        <div class="section-label">重複排課</div>
+      <form class="section course-planning-form fold-card" id="repeat-schedule-form" novalidate onsubmit="openRepeatPreview(event)">
+        <button type="button" class="fold-head" aria-expanded="false" aria-controls="fold-repeat" onclick="toggleFold(this)"><span class="section-label">重複排課</span><span class="fold-chev" aria-hidden="true"></span></button>
+        <div class="fold-body" id="fold-repeat">
         <div class="form-group">
           <select id="rep-course" aria-label="排課科目" required><option value="">選擇科目…</option></select>
         </div>
@@ -2246,6 +2326,7 @@ onAuthStateChanged(auth,user=>{
         </div>
         <button type="submit" id="rep-submit" class="btn btn-sand" style="width:100%;" aria-haspopup="dialog">預覽排課</button>
         <p class="course-plan-message" id="repeat-schedule-message" role="status"></p>
+        </div>
       </form>
       <div class="section">
         <div class="section-label">待排課堂</div>
@@ -2421,13 +2502,13 @@ onAuthStateChanged(auth,user=>{
 <!-- Bottom nav (mobile) -->
 <nav class="bottom-nav" aria-label="主要導覽">
   <button class="bn-btn active" id="bn-course" aria-current="page" onclick="mobileTab('course')">
-    <span class="bn-icon">📚</span>課程
+    <span class="bn-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Z"/><path d="M12 6.5v12.4"/></svg></span><span class="bn-label">課程</span>
   </button>
   <button class="bn-btn" id="bn-cal" onclick="mobileTab('cal')">
-    <span class="bn-icon">📅</span>行事曆
+    <span class="bn-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><rect x="4" y="5.5" width="16" height="14.5" rx="3"/><path d="M4 10.2h16M8.5 3.5v3.6M15.5 3.5v3.6"/></svg></span><span class="bn-label">行事曆</span>
   </button>
   <button class="bn-btn" id="bn-day" onclick="mobileTab('day')">
-    <span class="bn-icon">📋</span>今日
+    <span class="bn-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="12" cy="12" r="8"/><path d="m8.3 12.3 2.6 2.6 4.8-5.3"/></svg></span><span class="bn-label">今日</span>
   </button>
 </nav>
 
@@ -3487,6 +3568,7 @@ function closeTabletPanel(){
 }
 // 視窗 resize 時重設狀態
 window.addEventListener('resize',()=>{
+  syncFolds();
   if(!isMobile()&&(S.tapCourseId||mobileSchedulePickerOpen))cancelCalendarSchedule();
   if(!isTablet()||window.innerWidth>=1120)closeTabletPanel();
   if(!useSlideDayPanel()&&document.getElementById('panel-r')?.classList.contains('open'))closeDayPanel();
@@ -3637,7 +3719,28 @@ function renderDashboard(){
 const COURSE_PREVIEW=3;
 function toggleCourseList(){S.courseListExpanded=!S.courseListExpanded;renderCourses();}
 
+function toggleFold(btn){
+  if(!isMobile())return;
+  const card=btn.closest('.fold-card');
+  const open=!card.classList.contains('is-open');
+  card.classList.toggle('is-open',open);
+  btn.setAttribute('aria-expanded',String(open));
+}
+function syncFolds(){
+  const m=isMobile();
+  document.querySelectorAll('.fold-card').forEach(card=>{
+    const h=card.querySelector('.fold-head');
+    h.disabled=!m;
+    h.setAttribute('aria-expanded',m?String(card.classList.contains('is-open')):'true');
+  });
+}
+function renderCourseSummary(){
+  const el=document.getElementById('course-summary');if(!el)return;
+  const n=S.courses.length,rem=S.courses.reduce((t,c)=>t+remaining(c),0);
+  el.textContent=n?`${n} 門課 · 尚有 ${rem} 堂未安排`:'還沒有課程，用下方快速輸入建立第一門';
+}
 function renderCourses(){
+  renderCourseSummary();
   const el=document.getElementById('course-list');
   if(!S.courses.length){el.innerHTML='<div class="muted">尚未新增課程</div>';return;}
   const show=S.courseListExpanded?S.courses:S.courses.slice(0,COURSE_PREVIEW);
@@ -4763,6 +4866,7 @@ function init(){
   }
   updateNewCourseRange();
 
+  syncFolds();
   // Keep the initial mobile tab ready when a wider window narrows.
   document.getElementById('panel-l').classList.add('mob-active');
 
