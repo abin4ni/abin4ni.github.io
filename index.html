@@ -1384,7 +1384,7 @@ input:focus,select:focus{
   }
   .layout{
     display:grid !important;
-    grid-template-columns:minmax(20px,1fr) 320px minmax(640px,900px) minmax(20px,1fr);
+    grid-template-columns:minmax(20px,1fr) 320px minmax(0,900px) minmax(20px,1fr);
     column-gap:28px;
     align-items:start;
     height:auto;
@@ -1827,6 +1827,34 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 #repeat-schedule-form .wday-label{min-width:34px;min-height:44px;}
 #repeat-schedule-form .wday-cb:focus-visible+.wday-label{outline:2px solid var(--accent);outline-offset:2px;}
 #repeat-schedule-form .btn:disabled{cursor:default;opacity:.6;}
+/* Calendar toolbar keeps the navigation on its own row in narrower panels. */
+.cal-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;column-gap:8px;}
+.cal-head .cal-title{min-width:0;overflow-wrap:anywhere;}
+.cal-course-filter{
+  grid-column:1/-1;display:flex;align-items:center;gap:8px;
+  min-width:0;color:var(--text-2);font-size:12px;
+}
+.cal-course-filter label{flex-shrink:0;}
+.cal-course-select{flex:1;min-width:0;position:relative;}
+.cal-course-select::after{
+  content:'';position:absolute;right:14px;top:calc(50% - 5px);
+  width:7px;height:7px;border:solid currentColor;border-width:0 1px 1px 0;
+  transform:rotate(45deg);pointer-events:none;
+}
+#cal-course-filter{width:100%;min-width:0;min-height:44px;padding-inline-end:30px;text-overflow:ellipsis;}
+#day-calendar-filter{
+  margin:0 0 10px;padding:8px 10px;border-radius:var(--r-sm);
+  background:var(--accent-tint);color:var(--text-2);font-size:12px;overflow-wrap:anywhere;
+}
+#toast-container .toast-success{overflow-wrap:anywhere;}
+@media(max-width:767px){
+  .cal-panel.mob-active{overflow-y:auto;}
+  .cal-body{flex-shrink:0;}
+}
+@media(min-width:1200px){
+  .cal-head{grid-template-columns:minmax(0,1fr) auto auto minmax(0,190px);}
+  .cal-course-filter{grid-column:auto;margin-inline-start:4px;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -2080,6 +2108,12 @@ onAuthStateChanged(auth,user=>{
           <button onclick="jumpToday()" style="width:auto;padding:0 8px;font-size:11px;font-weight:700;">今</button>
           <button onclick="navNext()">›</button>
         </div>
+        <div class="cal-course-filter">
+          <label for="cal-course-filter">科目</label>
+          <div class="cal-course-select">
+            <select id="cal-course-filter"><option value="">全部課程</option></select>
+          </div>
+        </div>
       </div>
       <div class="mobile-schedule" id="mobile-schedule" aria-live="polite"></div>
       <div class="cal-body" id="cal-body"></div>
@@ -2096,6 +2130,7 @@ onAuthStateChanged(auth,user=>{
       <button class="day-panel-close" id="day-panel-close" onclick="closeDayPanel()" aria-label="Close panel">×</button>
       <div class="section-label" id="day-label">選擇日期</div>
       <div class="day-schedule-entry">
+        <p id="day-calendar-filter" role="status" hidden></p>
         <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-expanded="false" aria-controls="day-schedule-form">＋安排課程</button>
         <form id="day-schedule-form" hidden onsubmit="submitDaySchedule(event)">
           <p class="day-schedule-date" id="day-schedule-date"></p>
@@ -2926,7 +2961,7 @@ function showRepeatScheduleMessage(message,isError=false){
 function updateRepeatScheduleForm(form){
   const completed=JSON.stringify(readRepeatPlan(form))===lastRepeatBatch?.key;
   form.elements['rep-submit'].disabled=completed;
-  showRepeatScheduleMessage(completed ? lastRepeatBatch.message : '');
+  showRepeatScheduleMessage(completed ? calendarScheduleMessage(lastRepeatBatch.message,lastRepeatBatch.courseId) : '');
 }
 function repeatSchedule(event){
   event.preventDefault();
@@ -2960,10 +2995,10 @@ function repeatSchedule(event){
   }
   if(!added){showRepeatScheduleMessage('這段期間沒有符合所選星期的上課日。',true);return;}
   const message='本次安排 '+added+' 堂，剩餘 '+(available-added)+' 堂未排';
-  lastRepeatBatch={key,message};
+  lastRepeatBatch={key,message,courseId};
   form.elements['rep-submit'].disabled=true;
   saveState();render();
-  showRepeatScheduleMessage(message);
+  updateRepeatScheduleForm(form);
 }
 
 // ── Exam Badge ────────────────────────────────────────────────────
@@ -3146,6 +3181,7 @@ function tapCell(date){
   S.tapCourseId=null; // consume the selection before saving or rendering
   addEvent(date,c.id,'');S.selectedDate=date;
   saveState();render();mobileTab('day');
+  if(isCalendarCourseHidden(c.id))toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
   return true;
 }
 
@@ -3287,6 +3323,34 @@ function renderTodo(){
   }).join('');
 }
 
+// Calendar display only; never part of the saved payload.
+let calendarCourseId='';
+function renderCalendarCourseFilter(){
+  const selected=course(calendarCourseId);
+  if(!selected)calendarCourseId='';
+
+  const select=document.getElementById('cal-course-filter');
+  const options=select.options;
+  if(options.length!==S.courses.length+1||S.courses.some((c,i)=>options[i+1].value!==c.id||options[i+1].text!==c.name)){
+    select.replaceChildren(new Option('全部課程',''),...S.courses.map(c=>new Option(c.name,c.id)));
+  }
+  select.value=calendarCourseId;
+  const note=document.getElementById('day-calendar-filter');
+  note.textContent=selected ? '行事曆只顯示：'+selected.name : '';
+  note.hidden=!selected;
+}
+function isCalendarCourseHidden(courseId){
+  return calendarCourseId!==''&&calendarCourseId!==courseId;
+}
+function calendarLessonsForDate(date){
+  const lessons=S.calendar[date]||[];
+  return calendarCourseId ? lessons.filter(lesson=>lesson.courseId===calendarCourseId) : lessons;
+}
+function calendarScheduleMessage(message,courseId){
+  if(!isCalendarCourseHidden(courseId))return message;
+  return message+'。行事曆篩選目前隱藏「'+(course(courseId)?.name||'此科目')+'」。';
+}
+
 // ── Month View ────────────────────────────────────────────────────
 function renderMonthView(){
   const{year:y,month:m}=S;
@@ -3295,10 +3359,10 @@ function renderMonthView(){
   let html=WDAYS.map(l=>`<div class="cal-lbl">${l}</div>`).join('');
   for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
   for(let d=1;d<=days;d++){
-    const s=ds(y,m,d),evts=S.calendar[s]||[];
+    const s=ds(y,m,d),evts=calendarLessonsForDate(s);
     const isTap=!!S.tapCourseId;
     // empty-day = has no events and is not in the past for quick-add hint
-    const isEmpty=evts.length===0;
+    const isEmpty=!S.calendar[s]?.length;
     const cls=['cal-cell',
       s===todayStr?'today':'',
       s===S.selectedDate?'selected':'',
@@ -3331,6 +3395,7 @@ function renderMonthView(){
 // ── Week View ─────────────────────────────────────────────────────
 function renderWeekView(){
   const weekDays=Array.from({length:7},(_,i)=>addDays(S.weekStart,i));
+  const lessonsByDay=weekDays.map(calendarLessonsForDate);
   const[sy,sm,sd]=weekDays[0].split('-').map(Number);
   const[,em,ed]=weekDays[6].split('-').map(Number);
   document.getElementById('cal-title').textContent=`${sy}年${sm}月${sd}日–${em}月${ed}日`;
@@ -3338,8 +3403,8 @@ function renderWeekView(){
   let headHtml=`<div class="wch-spacer"></div>`;
   weekDays.forEach((s,i)=>{const[,m,d]=s.split('-').map(Number);headHtml+=`<div class="wch-day ${s===todayStr?'today-col':''}">${WDAYS[i]}<span class="wch-date">${d}</span></div>`;});
   let unHtml=`<div class="unsched-lbl">未定時</div>`;
-  weekDays.forEach(s=>{
-    const evts=(S.calendar[s]||[]).filter(e=>!e.time);
+  weekDays.forEach((s,i)=>{
+    const evts=lessonsByDay[i].filter(e=>!e.time);
     const cls=['week-slot-unsched',s===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
     unHtml+=`<div class="${cls}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
   });
@@ -3347,8 +3412,8 @@ function renderWeekView(){
   HOURS.forEach(h=>{
     const t=String(h).padStart(2,'0')+':00';
     rowsHtml+=`<div class="wt-label">${t}</div>`;
-    weekDays.forEach(s=>{
-      const evts=(S.calendar[s]||[]).filter(e=>e.time&&parseInt(e.time)===h);
+    weekDays.forEach((s,i)=>{
+      const evts=lessonsByDay[i].filter(e=>e.time&&parseInt(e.time)===h);
       const cls=['week-slot',s===todayStr?'today-slot':'',s===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
       rowsHtml+=`<div class="${cls}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','${t}')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
     });
@@ -3371,6 +3436,7 @@ function handleCellClick(date){
 }
 
 function renderCalendar(){
+  renderCalendarCourseFilter();
   renderMobileSchedule();
   document.getElementById('vt-month').className='vt-btn'+(S.view==='month'?' active':'');
   document.getElementById('vt-week').className='vt-btn'+(S.view==='week'?' active':'');
@@ -3455,7 +3521,7 @@ function submitQuickInput(parsed){
       }
       cur=addDays(cur,1);
     }
-    if(added)toast(`「${parsed.name}」已排入 ${added} 堂（每週${['日','一','二','三','四','五','六'][parsed.wday]}）`,'success',3500);
+    if(added)toast(calendarScheduleMessage(`「${parsed.name}」已排入 ${added} 堂（每週${['日','一','二','三','四','五','六'][parsed.wday]}）`,id),'success',3500);
     else toast(`已新增「${parsed.name}」`,'success');
   }else{
     toast(`已新增「${parsed.name}」（${parsed.total} 堂）`,'success');
@@ -3710,7 +3776,7 @@ function submitDaySchedule(event){
   addEvent(date,c.id,time);
   S.selectedDate=date;
   saveState();render();
-  toast('已安排一堂課程','success');
+  toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
 }
 const rescheduleDialog=document.getElementById('reschedule-dialog');
 const rescheduleDate=document.getElementById('reschedule-date');
@@ -3785,7 +3851,7 @@ function submitLessonReschedule(event){
   selectDate(newDate);
   if(isMobile())mobileTab('day');
   rescheduleButton(id)?.focus();
-  toast('已改期','success');
+  toast(calendarScheduleMessage('已改期',lesson.courseId),'success');
 }
 rescheduleDate.addEventListener('input',()=>{
   rescheduleDate.removeAttribute('aria-invalid');
@@ -3984,6 +4050,7 @@ function drop(e,date,time=''){
   const c=course(S.dragCourseId);if(!c||remaining(c)<=0)return;
   addEvent(date,c.id,time);S.selectedDate=date;saveState();render();
   if(useSlideDayPanel())openDayPanel();
+  if(isCalendarCourseHidden(c.id))toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
 }
 
 // ── Pointer Events drag：iPad / 平板觸控支援（升級版）──────────────
@@ -4110,6 +4177,10 @@ function dropWithAnimation(cellEl,date,time){
   S.selectedDate=date;
   saveState();render();
   if(useSlideDayPanel())openDayPanel();
+  if(isCalendarCourseHidden(c.id)){
+    toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
+    return;
+  }
 
   // 最新 tag 淡入
   requestAnimationFrame(()=>{
@@ -4255,6 +4326,12 @@ function init(){
     ww.appendChild(wrap);
   });
 
+  document.getElementById('cal-course-filter').addEventListener('change',event=>{
+    calendarCourseId=event.currentTarget.value;
+    renderCalendar();
+    const repeatForm=document.getElementById('repeat-schedule-form');
+    if(repeatForm.elements['rep-submit'].disabled)updateRepeatScheduleForm(repeatForm);
+  });
   document.getElementById('rep-start').value=todayStr;
   const repeatForm=document.getElementById('repeat-schedule-form');
   repeatForm.addEventListener('input',()=>updateRepeatScheduleForm(repeatForm));
