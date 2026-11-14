@@ -1756,14 +1756,28 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .day-card-head .day-name{min-width:0;overflow-wrap:anywhere;}
 .day-actions,.dgi-actions{flex-shrink:0;}
 .day-reschedule-button{min-width:44px;min-height:44px;white-space:nowrap;}
-#reschedule-dialog{
+#reschedule-dialog,#repeat-preview{
   position:fixed;inset:0;margin:auto;width:min(440px,calc(100% - 24px));
   max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - env(safe-area-inset-bottom,0px));
   overflow:auto;overscroll-behavior:contain;padding:16px;
   color:var(--text);background:var(--surface);border:1px solid var(--border);
   border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
 }
-#reschedule-dialog::backdrop{background:var(--scrim);}
+#reschedule-dialog::backdrop,#repeat-preview::backdrop{background:var(--scrim);}
+#repeat-preview[open]{display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+#repeat-preview-title{font-size:18px;}
+#repeat-preview-notice{font-size:13px;color:var(--text-2);}
+#repeat-preview-notice:empty{display:none;}
+#repeat-preview-body{min-height:0;overflow:auto;overscroll-behavior:contain;padding:4px;}
+#repeat-preview-body:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+#repeat-preview-course{font-weight:600;overflow-wrap:anywhere;}
+#repeat-preview-summary{font-size:13px;color:var(--text-2);margin:4px 0 8px;}
+#repeat-preview-dates{list-style:none;margin:0;padding:0;}
+#repeat-preview-dates li{
+  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:8px 0;border-top:1px solid var(--border-lt);font-variant-numeric:tabular-nums;
+}
+#repeat-preview .day-schedule-actions{flex-shrink:0;}
 #reschedule-title{font-size:18px;margin-bottom:8px;}
 #reschedule-original{font-size:13px;color:var(--text-2);overflow-wrap:anywhere;margin-bottom:12px;}
 #reschedule-form label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
@@ -2027,7 +2041,7 @@ onAuthStateChanged(auth,user=>{
         <div class="section-label">我的課程</div>
         <div id="course-list"></div>
       </div>
-      <form class="section course-planning-form" id="repeat-schedule-form" novalidate onsubmit="repeatSchedule(event)">
+      <form class="section course-planning-form" id="repeat-schedule-form" novalidate onsubmit="openRepeatPreview(event)">
         <div class="section-label">重複排課</div>
         <div class="form-group">
           <select id="rep-course" aria-label="排課科目" required><option value="">選擇科目…</option></select>
@@ -2046,7 +2060,7 @@ onAuthStateChanged(auth,user=>{
           <label class="form-label" for="rep-end">排課結束日期（必填）</label>
           <input type="date" id="rep-end" required/>
         </div>
-        <button type="submit" id="rep-submit" class="btn btn-sand" style="width:100%;">自動排課</button>
+        <button type="submit" id="rep-submit" class="btn btn-sand" style="width:100%;" aria-haspopup="dialog">預覽排課</button>
         <p class="course-plan-message" id="repeat-schedule-message" role="status"></p>
       </form>
       <div class="section">
@@ -2147,6 +2161,20 @@ onAuthStateChanged(auth,user=>{
     </div>
   </div>
 </template>
+
+<dialog id="repeat-preview" aria-labelledby="repeat-preview-title">
+  <h2 id="repeat-preview-title">預覽排課</h2>
+  <p id="repeat-preview-notice" role="status"></p>
+  <div id="repeat-preview-body" role="region" aria-label="排課結果" tabindex="0">
+    <p id="repeat-preview-course"></p>
+    <p id="repeat-preview-summary"></p>
+    <ul id="repeat-preview-dates"></ul>
+  </div>
+  <div class="day-schedule-actions">
+    <button type="button" class="btn btn-sand" id="repeat-preview-cancel" autofocus>取消</button>
+    <button type="button" class="btn btn-primary" id="repeat-preview-confirm">確認排課</button>
+  </div>
+</dialog>
 
 <dialog id="reschedule-dialog" aria-labelledby="reschedule-title">
   <form id="reschedule-form" novalidate onsubmit="submitLessonReschedule(event)">
@@ -3055,6 +3083,10 @@ function setTimeParts(date,eid,h,m){
 
 // ── Repeat Schedule ───────────────────────────────────────────────
 let lastRepeatBatch=null;
+let repeatPreview=null;
+const repeatForm=document.getElementById('repeat-schedule-form');
+const repeatDialog=document.getElementById('repeat-preview');
+const repeatConfirm=document.getElementById('repeat-preview-confirm');
 function readRepeatPlan(form){
   return {
     courseId:form.elements['rep-course'].value,
@@ -3074,43 +3106,105 @@ function updateRepeatScheduleForm(form){
   form.elements['rep-submit'].disabled=completed;
   showRepeatScheduleMessage(completed ? calendarScheduleMessage(lastRepeatBatch.message,lastRepeatBatch.courseId) : '');
 }
-function repeatSchedule(event){
-  event.preventDefault();
-  const form=event.currentTarget;
-  const plan=readRepeatPlan(form);
-  const key=JSON.stringify(plan);
-  if(key===lastRepeatBatch?.key)return;
-  const {courseId,days,perDay,start,end}=plan;
+function calculateRepeatBatch({courseId,days,perDay,start,end}){
   const selectedCourse=course(courseId);
-  if(!selectedCourse){showRepeatScheduleMessage('請先選擇科目。',true);return;}
-  if(!days.length){showRepeatScheduleMessage('請選擇至少一個上課日。',true);return;}
-  if(!perDay){showRepeatScheduleMessage('每個上課日的堂數須為正整數。',true);return;}
+  if(!selectedCourse)return {error:'請先選擇科目。'};
+  if(!days.length)return {error:'請選擇至少一個上課日。'};
+  if(!perDay)return {error:'每個上課日的堂數須為正整數。'};
   if(!Number.isFinite(start)||!Number.isFinite(end)){
-    showRepeatScheduleMessage('請填寫有效的排課開始日期與結束日期。',true);return;
+    return {error:'請填寫有效的排課開始日期與結束日期。'};
   }
-  if(end<start){showRepeatScheduleMessage('排課結束日期不得早於開始日期。',true);return;}
+  if(end<start)return {error:'排課結束日期不得早於開始日期。'};
 
   const available=Math.floor(remaining(selectedCourse));
-  if(!(available>0)){showRepeatScheduleMessage('這門課程已無未排堂次。',true);return;}
-  const dayMs=86400000;
+  const dates=[];
   let added=0;
   // Date inputs provide UTC midnight, so weekday steps are stable across time zones and DST.
-  for(let timestamp=start;timestamp<=end&&added<available;timestamp+=dayMs){
+  for(let timestamp=start;timestamp<=end&&added<available;timestamp+=86400000){
     const date=new Date(timestamp);
     if(!days.includes(date.getUTCDay()))continue;
     const year=String(date.getUTCFullYear()).padStart(4,'0');
-    const dateKey=ds(year,date.getUTCMonth(),date.getUTCDate());
     const count=Math.min(perDay,available-added);
-    for(let i=0;i<count;i++)addEvent(dateKey,courseId);
+    dates.push({date:ds(year,date.getUTCMonth(),date.getUTCDate()),count});
     added+=count;
   }
-  if(!added){showRepeatScheduleMessage('這段期間沒有符合所選星期的上課日。',true);return;}
-  const message='本次安排 '+added+' 堂，剩餘 '+(available-added)+' 堂未排';
-  lastRepeatBatch={key,message,courseId};
-  form.elements['rep-submit'].disabled=true;
-  saveState();render();
-  updateRepeatScheduleForm(form);
+  const reason=!available ? '這門課程已無未排堂次。' :
+    !added ? '這段期間沒有符合所選星期的上課日。' : '';
+  return {name:selectedCourse.name,available,dates,added,remaining:available-added,reason};
 }
+function repeatBatchSummary(batch){
+  return '本次安排 '+batch.added+' 堂，剩餘 '+batch.remaining+' 堂未排';
+}
+function renderRepeatPreview(batch,notice=''){
+  document.getElementById('repeat-preview-notice').textContent=notice;
+  document.getElementById('repeat-preview-course').textContent=batch.name||'';
+  document.getElementById('repeat-preview-summary').textContent=batch.error||
+    repeatBatchSummary(batch)+(batch.reason?'。'+batch.reason:'');
+  document.getElementById('repeat-preview-dates').innerHTML=(batch.dates||[]).map(({date,count})=>
+    '<li><time datetime="'+date+'">'+date+'</time><span>新增 '+count+' 堂</span></li>'
+  ).join('');
+  document.getElementById('repeat-preview-body').scrollTop=0;
+  repeatConfirm.disabled=!batch.added;
+}
+function openRepeatPreview(event){
+  event.preventDefault();
+  const plan=readRepeatPlan(repeatForm);
+  const key=JSON.stringify(plan);
+  if(key===lastRepeatBatch?.key||repeatDialog.open)return;
+  const batch=calculateRepeatBatch(plan);
+  if(batch.error){showRepeatScheduleMessage(batch.error,true);return;}
+  showRepeatScheduleMessage('');
+  repeatPreview={key,batch};
+  renderRepeatPreview(batch);
+  repeatDialog.showModal();
+}
+function closeRepeatPreview(){
+  repeatPreview=null;
+  repeatDialog.close();
+}
+function confirmRepeatSchedule(event){
+  if(!repeatPreview||!repeatDialog.open||repeatConfirm.disabled)return;
+  // A rapid second tap on a refreshed preview must not commit the changed batch.
+  if(event.detail>1||(event.detail>0&&performance.now()<repeatPreview.pointerConfirmAfter))return;
+  const plan=readRepeatPlan(repeatForm);
+  const key=JSON.stringify(plan);
+  if(key===lastRepeatBatch?.key){closeRepeatPreview();return;}
+  if(key!==repeatPreview.key){
+    closeRepeatPreview();
+    showRepeatScheduleMessage('排課條件已變更，請重新預覽。',true);
+    return;
+  }
+  const batch=calculateRepeatBatch(plan);
+  if(JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch)){
+    repeatPreview={key,batch,pointerConfirmAfter:performance.now()+400};
+    renderRepeatPreview(batch,batch.added?'排課結果已更新，請重新確認。':'排課結果已更新。');
+    document.getElementById('repeat-preview-body').focus();
+    return;
+  }
+
+  repeatConfirm.disabled=true;
+  lastRepeatBatch={key,message:repeatBatchSummary(batch),courseId:plan.courseId};
+  repeatForm.elements['rep-submit'].disabled=true;
+  closeRepeatPreview();
+  for(const {date,count} of batch.dates){
+    for(let i=0;i<count;i++)addEvent(date,plan.courseId);
+  }
+  saveState();render();
+  updateRepeatScheduleForm(repeatForm);
+}
+repeatForm.addEventListener('input',()=>{
+  const wasPreviewing=!!repeatPreview;
+  if(wasPreviewing)closeRepeatPreview();
+  updateRepeatScheduleForm(repeatForm);
+  if(wasPreviewing)showRepeatScheduleMessage('排課條件已變更，請重新預覽。',true);
+});
+repeatDialog.addEventListener('keydown',event=>event.stopPropagation());
+repeatConfirm.addEventListener('click',confirmRepeatSchedule);
+document.getElementById('repeat-preview-cancel').addEventListener('click',closeRepeatPreview);
+repeatDialog.addEventListener('cancel',event=>{
+  event.preventDefault();
+  closeRepeatPreview();
+});
 
 // ── Exam Badge ────────────────────────────────────────────────────
 function examBadge(c){
@@ -4429,12 +4523,9 @@ function init(){
   document.getElementById('cal-course-filter').addEventListener('change',event=>{
     calendarCourseId=event.currentTarget.value;
     renderCalendar();
-    const repeatForm=document.getElementById('repeat-schedule-form');
     if(repeatForm.elements['rep-submit'].disabled)updateRepeatScheduleForm(repeatForm);
   });
   document.getElementById('rep-start').value=todayStr;
-  const repeatForm=document.getElementById('repeat-schedule-form');
-  repeatForm.addEventListener('input',()=>updateRepeatScheduleForm(repeatForm));
 
   // Quick input
   const qi=document.getElementById('quick-input');
