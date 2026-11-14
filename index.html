@@ -1776,6 +1776,9 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 #repeat-schedule-form .wday-label{min-width:34px;min-height:44px;}
 #repeat-schedule-form .wday-cb:focus-visible+.wday-label{outline:2px solid var(--accent);outline-offset:2px;}
 #repeat-schedule-form .btn:disabled{cursor:default;opacity:.6;}
+#repeat-schedule-result{margin-top:10px;padding:10px;background:var(--accent-tint);border-radius:var(--r-sm);}
+#repeat-schedule-result p{margin:0;color:var(--text);overflow-wrap:anywhere;}
+#repeat-undo{margin-top:8px;min-width:64px;}
 /* Calendar toolbar keeps the navigation on its own row in narrower panels. */
 .cal-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;column-gap:8px;}
 .cal-head .cal-title{min-width:0;overflow-wrap:anywhere;}
@@ -2329,7 +2332,11 @@ onAuthStateChanged(auth,user=>{
           <input type="date" id="rep-end" required/>
         </div>
         <button type="submit" id="rep-submit" class="btn btn-sand" style="width:100%;" aria-haspopup="dialog">預覽排課</button>
-        <p class="course-plan-message" id="repeat-schedule-message" role="status"></p>
+        <p class="course-plan-message is-error" id="repeat-schedule-error" role="status"></p>
+        <div id="repeat-schedule-result" hidden>
+          <p class="course-plan-message" id="repeat-schedule-message" role="status" tabindex="-1"></p>
+          <button type="button" class="btn btn-sand" id="repeat-undo" hidden>復原</button>
+        </div>
         </div>
       </form>
       <div class="section">
@@ -2813,9 +2820,11 @@ function applyPayload(d){
   if(d.colorCursor!=null)colorCursor=d.colorCursor;
   if(d.notes)S.notes=d.notes;
   invalidateEntriesCache();
+  checkRepeatUndoLessons();
 }
 
 function saveState(){
+  checkRepeatUndoLessons();
   // 永遠先存本機
   try { localStorage.setItem(LS, JSON.stringify(statePayload())); } catch(e) {}
 
@@ -2942,7 +2951,10 @@ function showImport(){
         const d=JSON.parse(txt);
         if(!d.courses)throw new Error('格式錯誤');
         showConfirm('確認匯入','目前所有資料將被覆蓋，確定繼續？',()=>{
+          lastRepeatBatch=null;
           S.courses=d.courses||[];S.calendar=d.calendar||{};
+          updateRepeatScheduleForm(repeatForm);
+          renderRepeatScheduleResult();
           S.notes=d.notes||{};
           S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
           invalidateEntriesCache();
@@ -3315,8 +3327,10 @@ function clearExamDate(){
 // ── Event Actions ─────────────────────────────────────────────────
 function addEvent(date,courseId,time=''){
   if(!S.calendar[date])S.calendar[date]=[];
-  S.calendar[date].push({id:`e${S.eid++}`,courseId,time,done:false});
+  const lesson={id:`e${S.eid++}`,courseId,time,done:false};
+  S.calendar[date].push(lesson);
   invalidateEntriesCache();
+  return lesson;
 }
 function removeEvent(date,eid){
   S.calendar[date]=S.calendar[date].filter(e=>e.id!==eid);
@@ -3365,15 +3379,61 @@ function readRepeatPlan(form){
     end:form.elements['rep-end'].valueAsNumber
   };
 }
-function showRepeatScheduleMessage(message,isError=false){
-  const status=document.getElementById('repeat-schedule-message');
-  status.classList.toggle('is-error',isError);
-  status.textContent=message;
+function showRepeatScheduleError(message){
+  document.getElementById('repeat-schedule-error').textContent=message;
 }
 function updateRepeatScheduleForm(form){
-  const completed=JSON.stringify(readRepeatPlan(form))===lastRepeatBatch?.key;
-  form.elements['rep-submit'].disabled=completed;
-  showRepeatScheduleMessage(completed ? calendarScheduleMessage(lastRepeatBatch.message,lastRepeatBatch.courseId) : '');
+  form.elements['rep-submit'].disabled=JSON.stringify(readRepeatPlan(form))===lastRepeatBatch?.key;
+}
+function renderRepeatScheduleResult(){
+  const result=document.getElementById('repeat-schedule-result');
+  const status=document.getElementById('repeat-schedule-message');
+  const batch=lastRepeatBatch;
+  result.hidden=!batch;
+  status.textContent=batch ? (batch.lessons?calendarScheduleMessage(batch.message,batch.courseId):batch.message) : '';
+  document.getElementById('repeat-undo').hidden=!batch?.lessons;
+}
+function matchesRepeatLesson(lesson,original){
+  return original&&lesson.courseId===original.courseId&&lesson.time===original.time&&lesson.done===original.done;
+}
+function checkRepeatUndoLessons(){
+  const recorded=lastRepeatBatch?.lessons;
+  if(!recorded)return;
+  // Once a change has been observed, that lesson is no longer eligible for undo.
+  for(const [date,originals] of recorded){
+    const unchanged=new Set();
+    for(const lesson of S.calendar[date]||[]){
+      if(!originals.has(lesson.id))continue;
+      if(unchanged.has(lesson.id)||!matchesRepeatLesson(lesson,originals.get(lesson.id))){
+        originals.delete(lesson.id);
+      }else unchanged.add(lesson.id);
+    }
+    for(const id of originals.keys()){
+      if(!unchanged.has(id))originals.delete(id);
+    }
+    if(!originals.size)recorded.delete(date);
+  }
+}
+function undoRepeatSchedule(){
+  if(!lastRepeatBatch?.lessons)return;
+  checkRepeatUndoLessons();
+  const {lessons,count}=lastRepeatBatch;
+  lastRepeatBatch=null;
+  let removed=0;
+  for(const [date,originals] of lessons){
+    const remainingLessons=S.calendar[date].filter(lesson=>!matchesRepeatLesson(lesson,originals.get(lesson.id)));
+    removed+=S.calendar[date].length-remainingLessons.length;
+    if(remainingLessons.length)S.calendar[date]=remainingLessons;
+    else delete S.calendar[date];
+  }
+  lastRepeatBatch={message:'已復原 '+removed+' 堂，略過 '+(count-removed)+' 堂'};
+  if(removed){
+    invalidateEntriesCache();
+    saveState();render();
+  }
+  updateRepeatScheduleForm(repeatForm);
+  renderRepeatScheduleResult();
+  document.getElementById('repeat-schedule-message').focus();
 }
 function calculateRepeatBatch({courseId,days,perDay,start,end}){
   const selectedCourse=course(courseId);
@@ -3421,8 +3481,8 @@ function openRepeatPreview(event){
   const key=JSON.stringify(plan);
   if(key===lastRepeatBatch?.key||repeatDialog.open)return;
   const batch=calculateRepeatBatch(plan);
-  if(batch.error){showRepeatScheduleMessage(batch.error,true);return;}
-  showRepeatScheduleMessage('');
+  if(batch.error){showRepeatScheduleError(batch.error);return;}
+  showRepeatScheduleError('');
   repeatPreview={key,courseId:plan.courseId,batch};
   renderRepeatPreview(batch);
   repeatDialog.showModal();
@@ -3445,7 +3505,7 @@ function confirmRepeatSchedule(event){
   }
   if(key!==repeatPreview.key){
     closeRepeatPreview();
-    showRepeatScheduleMessage('排課條件已變更，請重新預覽。',true);
+    showRepeatScheduleError('排課條件已變更，請重新預覽。');
     return;
   }
   const batch=calculateRepeatBatch(plan);
@@ -3457,20 +3517,28 @@ function confirmRepeatSchedule(event){
   }
 
   repeatConfirm.disabled=true;
-  lastRepeatBatch={key,message:repeatBatchSummary(batch),courseId:plan.courseId};
+  const lessons=new Map();
+  lastRepeatBatch={key,message:repeatBatchSummary(batch),courseId:plan.courseId,lessons,count:batch.added};
   repeatForm.elements['rep-submit'].disabled=true;
   closeRepeatPreview();
   for(const {date,count} of batch.dates){
-    for(let i=0;i<count;i++)addEvent(date,plan.courseId);
+    const originals=new Map();
+    for(let i=0;i<count;i++){
+      const lesson=addEvent(date,plan.courseId);
+      originals.set(lesson.id,{...lesson});
+    }
+    lessons.set(date,originals);
   }
   saveState();render();
   updateRepeatScheduleForm(repeatForm);
+  renderRepeatScheduleResult();
+  document.getElementById('repeat-undo').focus();
 }
 function updateRepeatConditions(){
   const wasPreviewing=!!repeatPreview;
   if(wasPreviewing)closeRepeatPreview();
   updateRepeatScheduleForm(repeatForm);
-  if(wasPreviewing)showRepeatScheduleMessage('排課條件已變更，請重新預覽。',true);
+  showRepeatScheduleError(wasPreviewing?'排課條件已變更，請重新預覽。':'');
 }
 repeatForm.addEventListener('input',updateRepeatConditions);
 repeatForm.addEventListener('change',()=>{
@@ -3478,6 +3546,7 @@ repeatForm.addEventListener('change',()=>{
 });
 repeatDialog.addEventListener('keydown',event=>event.stopPropagation());
 repeatConfirm.addEventListener('click',confirmRepeatSchedule);
+document.getElementById('repeat-undo').addEventListener('click',undoRepeatSchedule);
 document.getElementById('repeat-preview-cancel').addEventListener('click',closeRepeatPreview);
 repeatDialog.addEventListener('cancel',event=>{
   event.preventDefault();
@@ -4844,7 +4913,7 @@ function init(){
   document.getElementById('cal-course-filter').addEventListener('change',event=>{
     calendarCourseId=event.currentTarget.value;
     renderCalendar();
-    if(repeatForm.elements['rep-submit'].disabled)updateRepeatScheduleForm(repeatForm);
+    if(lastRepeatBatch?.lessons)renderRepeatScheduleResult();
   });
   document.getElementById('rep-start').value=todayStr;
 
