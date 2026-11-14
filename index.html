@@ -1681,6 +1681,15 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 /* the remaining-count <b> carries an inline colour, so one !important is required */
 .course-card .progress-bar-col b{font-size:12px;font-weight:700;color:var(--accent) !important;}
 
+/* Calendar scheduling entry: mobile only. */
+.mobile-schedule{display:none;}
+@media(max-width:767px){
+  .mobile-schedule{display:block;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .mobile-schedule-row{display:flex;align-items:center;gap:10px;}
+  .mobile-schedule-row span{flex:1;min-width:0;overflow-wrap:anywhere;}
+  .mobile-course-options{display:grid;gap:8px;max-height:30vh;overflow:auto;margin-top:8px;}
+  .mobile-course-options button{white-space:normal;text-align:left;min-height:44px;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -1920,6 +1929,7 @@ onAuthStateChanged(auth,user=>{
           <button onclick="navNext()">›</button>
         </div>
       </div>
+      <div class="mobile-schedule" id="mobile-schedule" aria-live="polite"></div>
       <div class="cal-body" id="cal-body"></div>
       <!-- Memo area -->
       <div class="memo-area" id="memo-area" style="display:none;">
@@ -2778,12 +2788,15 @@ function closeTabletPanel(){
 }
 // 視窗 resize 時重設狀態
 window.addEventListener('resize',()=>{
+  if(!isMobile()&&(S.tapCourseId||mobileSchedulePickerOpen))cancelCalendarSchedule();
   if(!isTablet())closeTabletPanel();
   if(!useSlideDayPanel())closeDayPanel();
 });
+let mobileSchedulePickerOpen=false;
 let currentMobileTab='course';
 function mobileTab(tab){
   if(isTablet())return; // tablet uses FAB overlay instead
+  if(tab!=='cal')cancelCalendarSchedule();
   currentMobileTab=tab;
   document.getElementById('panel-l').classList.toggle('mob-active',tab==='course');
   document.getElementById('panel-cal').classList.toggle('mob-active',tab==='cal');
@@ -2795,9 +2808,52 @@ function mobileTab(tab){
   if(tab==='day')renderDayPanel();
 }
 
+function cancelCalendarSchedule(){
+  S.tapCourseId=null;
+  mobileSchedulePickerOpen=false;
+  renderTodo();renderCalendar();
+}
+function openCalendarSchedule(){
+  if(!isMobile())return;
+  S.tapCourseId=null;
+  mobileSchedulePickerOpen=true;
+  renderTodo();renderCalendar();
+}
+function renderMobileSchedule(){
+  const el=document.getElementById('mobile-schedule');
+  const selected=course(S.tapCourseId);
+  if(selected&&remaining(selected)>0){
+    el.innerHTML='<div class="mobile-schedule-row"><span>已選：'+esc(selected.name)+' · 請點選日期</span><button class="btn btn-sand" onclick="cancelCalendarSchedule()">取消</button></div>';
+    return;
+  }
+  if(S.tapCourseId)S.tapCourseId=null;
+  if(!mobileSchedulePickerOpen){
+    el.innerHTML='<button class="btn btn-primary" onclick="openCalendarSchedule()">＋安排課堂</button>';
+    return;
+  }
+  el.innerHTML='<div class="mobile-schedule-row"><span>選擇既有課程</span><button class="btn btn-sand" onclick="cancelCalendarSchedule()">取消</button></div>';
+  const options=document.createElement('div');
+  options.className='mobile-course-options';
+  const pending=S.courses.filter(c=>remaining(c)>0);
+  if(!pending.length)options.textContent=S.courses.length?'所有課程都已排滿，目前沒有可安排的課堂。':'目前沒有可安排的課程，請先到「課程」新增課程。';
+  pending.forEach(c=>{
+    const btn=document.createElement('button');
+    btn.className='btn btn-sand';
+    btn.textContent=c.name+'（剩 '+remaining(c)+' 堂）';
+    btn.onclick=()=>{
+      if(!course(c.id)||remaining(course(c.id))<=0){renderMobileSchedule();return;}
+      mobileSchedulePickerOpen=false;
+      tapTodo(c.id);
+    };
+    options.appendChild(btn);
+  });
+  el.appendChild(options);
+}
+
 // ── Tap-to-schedule (mobile) ──────────────────────────────────────
 function tapTodo(cid){
   if(!isMobile()){return;}
+  mobileSchedulePickerOpen=false;
   if(S.tapCourseId===cid){S.tapCourseId=null;}
   else{S.tapCourseId=cid;mobileTab('cal');}
   renderTodo();renderCalendar();
@@ -2806,7 +2862,8 @@ function tapCell(date){
   if(!isMobile()||!S.tapCourseId)return false;
   const c=course(S.tapCourseId);
   if(!c||remaining(c)<=0){S.tapCourseId=null;renderTodo();renderCalendar();return false;}
-  addEvent(date,c.id,'');S.selectedDate=date;S.tapCourseId=null;
+  S.tapCourseId=null; // consume the selection before saving or rendering
+  addEvent(date,c.id,'');S.selectedDate=date;
   saveState();render();mobileTab('day');
   return true;
 }
@@ -3023,7 +3080,7 @@ function renderWeekView(){
 function wkEv(ev,date){
   const c=course(ev.courseId);if(!c)return'';
   const lbl=(ev.time?ev.time.slice(0,5)+' ':'')+esc(c.name.slice(0,3));
-  return`<div class="week-ev" style="background:${c.color}18;color:${c.color};${ev.done?'opacity:.45;text-decoration:line-through':''}" title="${esc(c.name)}${ev.time?' @ '+ev.time:''}" onclick="event.stopPropagation();selectDate('${date}');${isMobile()?'mobileTab(\'day\')':''}"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>${lbl}</div>`;
+  return`<div class="week-ev" style="background:${c.color}18;color:${c.color};${ev.done?'opacity:.45;text-decoration:line-through':''}" title="${esc(c.name)}${ev.time?' @ '+ev.time:''}" onclick="event.stopPropagation();handleCellClick('${date}');${isMobile()?'mobileTab(\'day\')':''}"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>${lbl}</div>`;
 }
 
 function handleCellClick(date){
@@ -3033,6 +3090,7 @@ function handleCellClick(date){
 }
 
 function renderCalendar(){
+  renderMobileSchedule();
   document.getElementById('vt-month').className='vt-btn'+(S.view==='month'?' active':'');
   document.getElementById('vt-week').className='vt-btn'+(S.view==='week'?' active':'');
   if(S.view==='month')renderMonthView();else renderWeekView();
