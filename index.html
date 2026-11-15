@@ -1613,7 +1613,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 
 /* ═══ Phase 2-1 · Course card refinements (CSS only) ═══════════════
    Selectors are intentionally NOT scoped under #course-list: the drag
-   preview is a cloneNode appended to <body> and must look identical.
+   preview is a cloneNode appended to <body data-wide-page="calendar"> and must look identical.
    No change to draggable / ondragstart / .is-draggable / touch-action
    / will-change. */
 .course-card{padding:14px 16px;margin-bottom:10px;}
@@ -2574,6 +2574,255 @@ input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focu
 .exam-detail-group.is-outside h3{color:var(--accent-h);}
 .exam-detail-group .btn{margin-top:4px;max-width:100%;white-space:normal;text-align:left;}
 .exam-detail-dates{list-style:none;margin:0;padding:0;}
+
+/* ═══ Repeat preview · daily load (information only) ═══ */
+#repeat-preview-dates li{display:block;padding:10px 0;}
+#repeat-preview-dates .rp-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;}
+#repeat-preview-dates .rp-head span{color:var(--text-2);}
+#repeat-preview-dates .rp-load{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--text-3);overflow-wrap:anywhere;}
+#repeat-preview-dates details.rp-load{margin-top:0;}
+#repeat-preview-dates details.rp-load>summary{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;
+  cursor:pointer;list-style:none;color:var(--text-2);-webkit-tap-highlight-color:transparent;
+}
+#repeat-preview-dates details.rp-load>summary::-webkit-details-marker{display:none;}
+#repeat-preview-dates details.rp-load>summary::after{
+  content:'';flex-shrink:0;width:7px;height:7px;margin:-3px 4px 0 0;
+  border:solid var(--text-3);border-width:0 2px 2px 0;transform:rotate(45deg);transition:transform .2s ease;
+}
+#repeat-preview-dates details.rp-load[open]>summary::after{transform:rotate(-135deg);margin-top:3px;}
+#repeat-preview-dates details.rp-load>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-xs);}
+#repeat-preview-dates .rp-courses{list-style:none;margin:0 0 4px;padding:6px 12px;background:var(--surface);border-radius:var(--r-sm);}
+#repeat-preview-dates .rp-courses li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border:0;font-size:13px;}
+#repeat-preview-dates .rp-courses li+li{border-top:1px solid var(--border-lt);}
+#repeat-preview-dates .rp-course{min-width:0;overflow-wrap:anywhere;color:var(--text);}
+#repeat-preview-dates .rp-n{flex-shrink:0;color:var(--text-2);text-align:right;}
+@media(prefers-reduced-motion:reduce){#repeat-preview-dates details.rp-load>summary::after{transition:none;}}
+
+/* ═══ Exam overview ═══ */
+.exam-overview{margin:0 0 12px;border-bottom:1px solid var(--border-lt);}
+.eo-head{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.eo-title{font-size:15px;font-weight:600;color:var(--text);flex-shrink:0;}
+.eo-sum{flex:1;min-width:0;font-size:13px;color:var(--text-3);text-align:right;overflow-wrap:anywhere;}
+.eo-chev{flex-shrink:0;width:8px;height:8px;margin:-3px 4px 0 0;border:solid var(--text-3);border-width:0 2px 2px 0;transform:rotate(45deg);transition:transform .2s ease;}
+.exam-overview.is-open .eo-chev{transform:rotate(-135deg);margin-top:3px;}
+.eo-head:focus-visible,.eo-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-xs);}
+.eo-body[hidden]{display:none;}
+.eo-empty{margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--text-3);}
+.eo-list{list-style:none;margin:0 0 6px;padding:0;}
+.eo-list li+li{border-top:1px solid var(--border-lt);}
+.eo-row{display:flex;flex-direction:column;gap:2px;width:100%;min-height:44px;padding:10px 0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.eo-row.is-static{cursor:default;}
+button.eo-row:active{opacity:.6;}
+.eo-line{display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0;}
+.eo-name{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:15px;font-weight:600;color:var(--text);overflow-wrap:anywhere;}
+.eo-name .dot{flex-shrink:0;transform:translateY(-1px);}
+.eo-when{flex-shrink:0;font-size:13px;font-weight:600;color:var(--accent-h);font-variant-numeric:tabular-nums;}
+.eo-when.is-today{color:var(--danger-c);}
+.eo-sub{flex-wrap:wrap;font-size:13px;color:var(--text-3);}
+.eo-date{font-variant-numeric:tabular-nums;}
+.eo-stats{display:flex;flex-wrap:wrap;gap:2px 12px;justify-content:flex-end;}
+.eo-stat b{font-weight:600;color:var(--text-2);font-variant-numeric:tabular-nums;}
+.eo-stat.is-warn,.eo-stat.is-warn b{color:var(--warn-c);}
+@media(prefers-reduced-motion:reduce){.eo-chev{transition:none;}}
+
+/* ═══ Calendar exam markers ═══ */
+.ce-wrap{display:flex;flex-direction:column;gap:2px;min-width:0;margin-bottom:2px;}
+.cal-exam{
+  display:inline-flex;align-items:center;gap:4px;max-width:100%;min-width:0;min-height:20px;margin:0;padding:1px 5px;
+  border:1px solid rgba(138,98,24,.38);border-radius:var(--r-xs);background:var(--warn-bg);color:var(--warn-c);
+  font:inherit;font-size:10px;font-weight:600;line-height:1.35;text-align:left;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;overflow:hidden;
+}
+.cal-exam.is-static{cursor:inherit;}
+button.cal-exam:active{opacity:.6;}
+button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.cal-exam .ce-ic{flex-shrink:0;}
+.cal-exam .ce-label{flex-shrink:0;white-space:nowrap;}
+.cal-exam .ce-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+.cal-exam .ce-short{display:none;}
+.ce-grp{display:none;}
+.wch-exams{padding:2px 2px 0;}
+.wch-exams .cal-exam{width:100%;}
+@media(min-width:768px){
+  .ce-wrap[data-n]:not([data-n="1"]):not([data-n="2"]) .ce-ind{display:none;}
+  .ce-wrap[data-n]:not([data-n="1"]):not([data-n="2"]) .ce-grp{display:inline-flex;}
+}
+@media(max-width:767px){
+  .cal-exam{flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:1px 3px;font-size:10px;line-height:1.25;}
+  .cal-exam .ce-ic,.cal-exam .ce-name{display:none;}
+  .cal-exam .ce-short{display:block;font-weight:500;max-width:100%;overflow:hidden;white-space:nowrap;}
+  .ce-wrap:not([data-n="1"]) .ce-ind{display:none;}
+  .ce-wrap:not([data-n="1"]) .ce-grp{display:inline-flex;}
+  .ce-grp .ce-ic{display:none;}
+  .ce-grp .ce-label{white-space:normal;}
+}
+#exam-day-dialog{
+  position:fixed;inset:0;margin:auto;width:min(420px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:auto;
+  padding:clamp(16px,3vw,24px);color:var(--text);background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
+}
+#exam-day-dialog::backdrop{background:var(--scrim);}
+.ed-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+#exam-day-title{font-size:18px;margin:0;overflow-wrap:anywhere;}
+.ed-hint{margin:6px 0 8px;font-size:13px;color:var(--text-3);}
+#exam-day-list{list-style:none;margin:0;padding:0;}
+#exam-day-list li+li{border-top:1px solid var(--border-lt);}
+.ed-row{display:flex;flex-direction:column;gap:2px;width:100%;min-height:44px;padding:10px 0;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;}
+.ed-row.is-static{cursor:default;}
+.ed-row:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-xs);}
+.ed-name{display:flex;align-items:baseline;gap:8px;font-size:15px;font-weight:600;overflow-wrap:anywhere;}
+.ed-meta{font-size:13px;color:var(--text-3);font-variant-numeric:tabular-nums;}
+
+/* ═══ Preview · skip days ═══ */
+#repeat-preview-dates .rp-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;min-height:0;}
+.rp-exam{font-size:12px;font-weight:600;color:var(--warn-c);background:var(--warn-bg);border-radius:var(--r-xs);padding:2px 6px;overflow-wrap:anywhere;}
+.rp-skip,.rp-restore{
+  margin-left:auto;min-height:44px;min-width:44px;padding:0 10px;border:0;background:none;font:inherit;font-size:13px;font-weight:600;
+  color:var(--accent-h);cursor:pointer;border-radius:var(--r-sm);-webkit-tap-highlight-color:transparent;
+}
+.rp-skip:hover,.rp-restore:hover{background:var(--accent-tint);}
+.rp-skip:active,.rp-restore:active{opacity:.6;}
+.rp-skip:focus-visible,.rp-restore:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.rp-skipped{margin-top:12px;padding-top:8px;border-top:1px solid var(--border);}
+.rp-skipped[hidden]{display:none;}
+.rp-skipped-title{margin:0;font-size:14px;font-weight:600;color:var(--text);}
+.rp-skipped-note{margin:2px 0 4px;font-size:12px;line-height:1.5;color:var(--text-3);}
+.rp-skipped-list{list-style:none;margin:0;padding:0;}
+.rp-skipped-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0;border-top:1px solid var(--border-lt);font-variant-numeric:tabular-nums;}
+.rp-skipped-list li:first-child{border-top:0;}
+.rp-skipped-date{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;color:var(--text-2);text-decoration:line-through;text-decoration-color:var(--border-strong);}
+.rp-skipped-date .rp-exam{text-decoration:none;}
+.wide-only,.wide-dialog{display:none;}
+@media(min-width:768px){
+  .app-header .header-row{
+    display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    width:100%;max-width:1260px;margin:auto;gap:12px;
+  }
+  .app-header .wide-brand{display:inline;}
+  .app-header .phone-brand,.app-header .progress-track,
+  .header-actions>:not(.auth-area),#auth-logged-in>.sync-status,#auth-logged-in>.user-chip,
+  #auth-logged-in>.signout-btn,.app-header .phone-header-action{display:none!important;}
+  .app-header .header-actions{justify-self:end;}
+  .wide-tabs{display:flex;gap:3px;padding:3px;background:var(--sunken);border-radius:var(--r-pill);}
+  .wide-tabs button,.wide-tools button{min-height:44px;}
+  .wide-tabs button[aria-current]{background:var(--surface);color:var(--accent-h);box-shadow:var(--shadow-sm);}
+  .account-controls{display:block;}
+  #account-toggle{width:44px;height:44px;padding:0;display:grid;place-items:center;color:var(--accent-h);}
+  #account-photo{grid-area:1/1;width:34px;height:34px;border-radius:50%;object-fit:cover;}
+  #account-photo[hidden]{display:none;}
+  #account-toggle svg{grid-area:1/1;}
+  #account-panel{
+    position:absolute;right:16px;top:calc(100% + 6px);z-index:250;
+    width:min(260px,calc(100vw - 32px));padding:10px;
+    background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
+  }
+  #account-panel button{display:block;width:100%;text-align:left;margin-top:2px;}
+  #account-panel .account-signout{color:var(--danger-c);margin-top:8px;}
+  #account-panel .account-signout[hidden]{display:none;}
+  .account-identity{padding:5px 8px 10px;border-bottom:1px solid var(--border-lt);overflow-wrap:anywhere;}
+  .account-identity .sync-status{margin-top:4px;display:flex;}
+  #account-name{display:block;font-weight:600;}
+  .app-shell{overflow-y:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable;}
+  body:has(dialog[open]) .app-shell{overflow-y:hidden!important;}
+  .layout{
+    display:block!important;width:min(1232px,calc(100% - 32px));padding:16px 0 24px;
+    margin:auto;height:auto!important;overflow:visible!important;
+  }
+  #panel-l,#fab-manage,#memo-area,.cal-progress .makeup-entry,#week-progress{display:none!important;}
+  #panel-cal{
+    width:100%;max-width:none;height:auto!important;min-width:0;display:flex!important;
+    flex-direction:column;overflow:visible!important;border-radius:var(--r-lg);
+    background:var(--surface);border:1px solid var(--border-lt);
+  }
+  [data-wide-page=courses] #panel-cal,[data-wide-page=calendar] #wide-courses{display:none!important;}
+  #panel-cal .cal-head{
+    grid-template-columns:minmax(0,1fr) auto auto minmax(120px,190px);
+    align-items:center;border-radius:var(--r-lg) var(--r-lg) 0 0;
+  }
+  #panel-cal .cal-title,#panel-cal .view-toggle,#panel-cal .cal-nav,#panel-cal .cal-course-filter{
+    grid-column:auto;grid-row:auto;margin:0;
+  }
+  #panel-cal .cal-title{overflow-wrap:normal;}
+  #panel-cal .cal-body{flex:auto;overflow:clip!important;}
+  #panel-cal .cal-cell{min-height:clamp(72px,10vh,126px);}
+  .wide-cal-tools{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:4px var(--sp-4);border-bottom:1px solid var(--border-lt);
+  }
+  .wide-week{flex:1;min-width:0;max-width:280px;color:var(--text-2);font-size:var(--ui-caption);}
+  #wide-week-track{display:block;margin-top:3px;height:3px;background:var(--sunken);border-radius:var(--r-pill);overflow:hidden;}
+  #wide-week-fill{display:block;height:100%;background:var(--accent);}
+  #wide-drag{
+    display:block;margin:0 var(--sp-4);padding:8px 0 4px;border-bottom:1px solid var(--border-lt);
+  }
+  #wide-drag[hidden]{display:none;}
+  #wide-drag h3{font-size:14px;margin:0 0 4px;}
+  #wide-drag #todo-list{display:flex;overflow:auto;gap:8px;padding:2px 0 6px;max-height:130px;}
+  #wide-drag .todo-card{
+    flex:0 0 clamp(134px,22vw,250px);margin:0;background:var(--card-2);
+    border:1px solid var(--border-lt);border-radius:var(--r-sm);
+  }
+  #wide-courses{display:block;max-width:860px;margin:auto;}
+  .wide-course-head{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;
+  }
+  .wide-course-head h2{margin:0;font-size:var(--ui-heading);}
+  .wide-tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+  .wide-course-list{
+    margin:0;padding:0;list-style:none;background:var(--surface);
+    border:1px solid var(--border-lt);border-radius:var(--r-lg);
+  }
+  .wide-course-list li+li{border-top:1px solid var(--border-lt);}
+  .wide-course-row{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;
+    width:100%;min-height:58px;padding:12px 16px;border:0;background:none;text-align:left;
+    color:var(--text);font:inherit;cursor:pointer;
+  }
+  .wide-course-row:hover,.wide-course-row:active{background:var(--accent-tint);}
+  .wide-course-row span:first-of-type{grid-column:2;grid-row:1;}
+  .wide-course-row span:last-of-type{grid-column:1;}
+  .wide-course-row strong{overflow-wrap:anywhere;}
+  .wide-course-row span{color:var(--text-2);font-size:var(--ui-caption);}
+  .wide-course-empty{padding:16px;color:var(--text-3);}
+  .wide-dialog[open]{display:block;}
+  .wide-dialog{
+    position:fixed;inset:0;margin:auto;width:min(620px,calc(100% - 32px));
+    max-height:calc(100% - 32px);max-height:calc(100dvh - 32px);
+    padding:20px;overflow:auto;overscroll-behavior:contain;
+    color:var(--text);background:var(--surface);border:1px solid var(--border-lt);
+    border-radius:var(--r-xl);box-shadow:var(--shadow-pop);
+  }
+  .wide-dialog::backdrop{background:var(--scrim);}
+  .wide-dialog h2{font-size:var(--ui-heading);overflow-wrap:anywhere;}
+  .wide-dialog .makeup-head{margin-bottom:12px;}
+  .wide-dialog .wide-close{min-width:44px;font-size:20px;}
+  #wide-day #panel-r{
+    display:block!important;position:static;visibility:visible;opacity:1;transform:none;pointer-events:auto;
+    width:auto;min-width:0;max-width:none;height:auto!important;max-height:none;
+    border:0;padding:0;overflow:visible!important;
+    box-shadow:none;background:none;backdrop-filter:none;transition:none;
+  }
+  #wide-day .day-panel-close{display:grid;place-items:center;}
+  #wide-day[data-stage=schedule] #day-events,#wide-day[data-stage=schedule] #day-schedule-open,
+  #wide-day[data-stage=move] .day-schedule-entry,#wide-day[data-stage=move] #day-events{display:none;}
+  #wide-day #reschedule-form{border-top:1px solid var(--border-lt);padding-top:12px;}
+  #wide-course-dialog #course-list{margin-bottom:12px;}
+  #wide-course-dialog #exam-popover{position:static;width:100%;margin:12px 0;box-shadow:none;}
+  #wide-course-dialog #repeat-schedule-form{margin:16px 0 0;}
+  #wide-course-dialog .section:last-child{margin-bottom:0;}
+  #wide-course-dialog .course-planning-form{pointer-events:auto;}
+  .wide-legacy[open]{display:block;}
+  .wide-legacy{
+    position:fixed;inset:0;margin:0;width:100%;height:100%;max-width:none;max-height:none;
+    padding:0;border:0;background:transparent;overflow:hidden;
+  }
+  .wide-legacy::backdrop{background:transparent;}
+}
+@media(min-width:768px) and (max-width:900px){
+  #panel-cal .cal-head{grid-template-columns:minmax(0,1fr) auto auto;}
+  #panel-cal .cal-course-filter{grid-column:1/-1;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -2709,7 +2958,11 @@ onAuthStateChanged(auth,user=>{
 
 <header class="app-header">
   <div class="header-row">
-    <h1><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Zm0 0v12.4"/></svg><span>課程進度追蹤</span></h1>
+    <h1><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Zm0 0v12.4"/></svg><span class="phone-brand">課程進度追蹤</span><span class="wide-only wide-brand">StudyOS</span></h1>
+    <nav class="wide-only wide-tabs" aria-label="主要導覽">
+      <button type="button" class="btn" data-wide-page-button="calendar" aria-current="page">行事曆</button>
+      <button type="button" class="btn" data-wide-page-button="courses">我的課程</button>
+    </nav>
     <div class="header-actions">
       <!-- Auth area -->
       <div class="auth-area" id="auth-area">
@@ -2727,6 +2980,19 @@ onAuthStateChanged(auth,user=>{
             <span class="user-name" id="user-name"></span>
           </div>
           <button class="signout-btn" onclick="window._fb&&window._fb.signOut()">登出</button>
+        </div>
+        <div class="wide-only account-controls">
+          <button type="button" class="btn" id="account-toggle" aria-label="帳號" aria-expanded="false" aria-controls="account-panel">
+            <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
+            <img id="account-photo" alt="" hidden/>
+          </button>
+          <div id="account-panel" hidden>
+            <div class="account-identity"><span id="account-name">尚未登入</span><div class="sync-status"><span id="account-sync-dot" class="sync-dot offline"></span><span id="account-sync-label" role="status">本機</span></div></div>
+            <button type="button" class="btn" id="account-export">匯出</button>
+            <button type="button" class="btn" id="account-import">匯入</button>
+            <button type="button" class="btn" id="account-settings">同步設定</button>
+            <button type="button" class="btn account-signout" id="account-signout" hidden>登出</button>
+          </div>
         </div>
       </div>
       <span class="global-pct" id="global-pct"></span>
@@ -2751,6 +3017,18 @@ onAuthStateChanged(auth,user=>{
 <div class="app-shell">
   <div class="layout">
 
+    <section class="wide-only" id="wide-courses" aria-labelledby="wide-courses-title">
+      <div class="wide-course-head">
+        <h2 id="wide-courses-title">我的課程</h2>
+        <div class="wide-tools">
+          <button type="button" class="btn btn-sand" id="wide-makeup-open" aria-haspopup="dialog">補課清單</button>
+          <button type="button" class="btn btn-primary" id="wide-add-open" aria-haspopup="dialog">＋新增課程</button>
+        </div>
+      </div>
+      <div id="wide-exam-slot"></div>
+      <ul class="wide-course-list" id="wide-course-list"></ul>
+    </section>
+
     <aside class="panel panel-l" id="panel-l">
       <div class="mobile-page-intro course-summary-intro"><h2>我的課程</h2><p id="course-summary"></p></div>
       <div class="tablet-course-heading">
@@ -2759,6 +3037,12 @@ onAuthStateChanged(auth,user=>{
       </div>
       <div class="section course-list-section">
         <div class="section-label">我的課程</div>
+        <section class="exam-overview" id="exam-overview" aria-label="考試總覽">
+          <button type="button" class="eo-head" id="exam-overview-toggle" aria-expanded="false" aria-controls="exam-overview-body">
+            <span class="eo-title">考試總覽</span><span class="eo-sum" id="exam-overview-sum"></span><span class="eo-chev" aria-hidden="true"></span>
+          </button>
+          <div class="eo-body" id="exam-overview-body" hidden></div>
+        </section>
         <div id="course-list"></div>
       </div>
       <div class="section quick-course-section">
@@ -2822,6 +3106,7 @@ onAuthStateChanged(auth,user=>{
           <label class="form-label" for="rep-end">排課結束日期（必填）</label>
           <input type="date" id="rep-end" required/>
         </div>
+        <p class="course-plan-message" id="repeat-prefill-note" role="status"></p>
         <button type="submit" id="rep-submit" class="btn btn-sand" style="width:100%;" aria-haspopup="dialog">預覽排課</button>
         <p class="course-plan-message is-error" id="repeat-schedule-error" role="status"></p>
         <div id="repeat-schedule-result" hidden>
@@ -2857,6 +3142,16 @@ onAuthStateChanged(auth,user=>{
           </div>
         </div>
       </div>
+      <div class="wide-only wide-cal-tools">
+        <div class="wide-week">
+          <span>本週進度 · <b id="wide-week-count"></b></span>
+          <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
+        </div>
+        <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
+      </div>
+      <section class="wide-only" id="wide-drag" hidden aria-label="拖曳排課">
+        <h3>拖曳課程到日期格排課</h3>
+      </section>
       <div class="cal-progress">
         <details class="week-progress" id="week-progress">
           <summary id="week-progress-summary">
@@ -2953,6 +3248,21 @@ onAuthStateChanged(auth,user=>{
   </div>
 </template>
 
+<dialog class="wide-dialog" id="wide-day" aria-labelledby="day-label"></dialog>
+<dialog class="wide-dialog" id="wide-course-dialog" aria-labelledby="wide-course-title">
+  <div class="makeup-head">
+    <h2 id="wide-course-title">課程明細</h2>
+    <button type="button" id="wide-course-close" class="btn btn-sand wide-close" aria-label="關閉課程視窗" autofocus>×</button>
+  </div>
+  <div id="wide-card-slot" hidden>
+    <button type="button" class="btn btn-sand" id="wide-memo-open" aria-haspopup="dialog">課程備忘錄</button>
+  </div>
+  <div id="wide-repeat-slot" hidden></div>
+  <div id="wide-add-slot" hidden></div>
+</dialog>
+<dialog class="wide-dialog wide-legacy" id="wide-legacy-modal" aria-labelledby="modal-title"></dialog>
+<dialog class="wide-dialog wide-legacy" id="wide-legacy-confirm" aria-labelledby="confirm-title"></dialog>
+
 <dialog id="repeat-preview" aria-labelledby="repeat-preview-title" aria-describedby="repeat-preview-summary">
   <h2 id="repeat-preview-title">預覽排課</h2>
   <p id="repeat-preview-notice" role="status"></p>
@@ -2960,11 +3270,18 @@ onAuthStateChanged(auth,user=>{
   <div id="repeat-preview-body" role="region" aria-label="科目與排課日期" tabindex="0">
     <p id="repeat-preview-course"></p>
     <ul id="repeat-preview-dates"></ul>
+    <div id="repeat-preview-skipped" class="rp-skipped" hidden></div>
   </div>
   <div class="day-schedule-actions">
     <button type="button" class="btn btn-sand" id="repeat-preview-cancel" autofocus>取消</button>
     <button type="button" class="btn btn-primary" id="repeat-preview-confirm">確認排課</button>
   </div>
+</dialog>
+
+<dialog id="exam-day-dialog" aria-labelledby="exam-day-title">
+  <div class="ed-head"><h2 id="exam-day-title">考試</h2><button type="button" class="btn btn-sand" id="exam-day-close">關閉</button></div>
+  <p class="ed-hint">這天有多科考試，選擇科目查看考前進度。</p>
+  <ul id="exam-day-list"></ul>
 </dialog>
 
 <dialog id="exam-progress-dialog" aria-labelledby="exam-progress-title" aria-describedby="exam-progress-course">
@@ -3262,7 +3579,7 @@ S.selectedDate=todayStr;S.weekStart=weekStartOf(todayStr);
 
 // ── Helpers ───────────────────────────────────────────────────────
 function ds(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
-function weekStartOf(s){const[y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);dt.setDate(dt.getDate()-dt.getDay());return ds(dt.getFullYear(),dt.getMonth(),dt.getDate());}
+function weekStartOf(s,startDay=isMobile()?0:1){const[y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);return addDays(s,-((dt.getDay()-startDay+7)%7));}
 function addDays(s,n){const[y,m,d]=s.split('-').map(Number);const dt=new Date(y,m-1,d);dt.setDate(dt.getDate()+n);return ds(dt.getFullYear(),dt.getMonth(),dt.getDate());}
 function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/86400000);}
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -3301,7 +3618,11 @@ function fmtDate(s){const[y,m,d]=s.split('-').map(Number);return`${m}月${d}日�
 
 // ── Toast notifications ───────────────────────────────────────────
 function toast(msg,type='',duration=2800){
-  const c=document.getElementById('toast-container');if(!c)return;
+  const c=document.getElementById('toast-container');
+  if(!isMobile()){
+    const host=document.activeElement?.closest('dialog[open]')||document.body;
+    if(c.parentElement!==host)host.append(c);
+  }if(!c)return;
   const el=document.createElement('div');
   el.className='toast'+(type?' toast-'+type:'');
   const icons={success:'✓',warn:'⚠️',error:'✕'};
@@ -3331,8 +3652,9 @@ function showConfirm(title,msg,onYes,yesLabel='確定刪除',yesClass='btn-prima
   yesBtn.onclick=()=>{hideConfirm();onYes();};
   btns.appendChild(cancelBtn);btns.appendChild(yesBtn);
   document.getElementById('confirm-backdrop').classList.add('open');
+  if(!isMobile()&&!$id('wide-legacy-confirm').open)$id('wide-legacy-confirm').showModal();
 }
-function hideConfirm(){document.getElementById('confirm-backdrop').classList.remove('open');}
+function hideConfirm(){document.getElementById('confirm-backdrop').classList.remove('open');$id('wide-legacy-confirm').close();}
 document.getElementById('confirm-backdrop').addEventListener('click',e=>{
   if(e.target===document.getElementById('confirm-backdrop'))hideConfirm();
 });
@@ -3403,14 +3725,22 @@ window.onFirebaseLogin=function(user){
   const li=document.getElementById('auth-logged-in');li.style.display='flex';
   document.getElementById('user-name').textContent=user.displayName||user.email;
   const av=document.getElementById('user-avatar');
-  if(user.photoURL)av.src=user.photoURL;else av.style.display='none';
+  if(user.photoURL){av.src=user.photoURL;av.style.removeProperty('display');}
+  else av.style.display='none';
+  const accountPhoto=document.getElementById('account-photo');
+  accountPhoto.hidden=!user.photoURL;
+  if(user.photoURL)accountPhoto.src=user.photoURL;
+  else accountPhoto.removeAttribute('src');
+  document.getElementById('account-name').textContent=user.displayName||user.email||'帳號';
+  document.getElementById('account-signout').hidden=false;
   setSyncStatus('syncing');
   // Start real-time listener
   window._fb.listenCloud(user.uid,remoteData=>{
     if(!remoteData){
       // 雲端還沒有資料（第一次登入）：把本機資料上傳
-      if(S.courses.length)window._fb.saveToCloud(user.uid,statePayload()).catch(()=>setSyncStatus('error'));
-      setSyncStatus('synced');
+      if(S.courses.length){
+        window._fb.saveToCloud(user.uid,statePayload()).then(()=>setSyncStatus('synced'),()=>setSyncStatus('error'));
+      }else setSyncStatus('synced');
       return;
     }
     _syncPaused=true;
@@ -3418,6 +3748,7 @@ window.onFirebaseLogin=function(user){
     // Also update local cache
     try{localStorage.setItem(LS,JSON.stringify(statePayload()));}catch(e){}
     render();
+    if(typeof recheckRepeatPreview==='function')recheckRepeatPreview();
     _syncPaused=false;
     setSyncStatus('synced');
   });
@@ -3425,6 +3756,10 @@ window.onFirebaseLogin=function(user){
 window.onFirebaseLogout=function(){
   document.getElementById('auth-logged-out').style.display='';
   document.getElementById('auth-logged-in').style.display='none';
+  document.getElementById('account-name').textContent='尚未登入';
+  document.getElementById('account-photo').hidden=true;
+  document.getElementById('account-signout').hidden=true;
+  closeAccountPanel();
   setSyncStatus('offline');
 };
 
@@ -3434,6 +3769,8 @@ function setSyncStatus(s){
   if(!dot)return;
   dot.className='sync-dot '+s;
   lbl.textContent={synced:'已同步 ✓',syncing:'同步中…',offline:'本機',error:'同步失敗'}[s]||'';
+  document.getElementById('account-sync-dot').className=dot.className;
+  document.getElementById('account-sync-label').textContent=lbl.textContent;
 }
 // ── Firebase Setup Guide ──────────────────────────────────────────
 function showFirebaseSetup(){
@@ -3512,9 +3849,11 @@ function openModal(title,desc,btns,taVal,htmlBody,extraHtml){
     document.getElementById('modal-btns').appendChild(el);
   });
   document.getElementById('modal').style.display='flex';
+  if(!isMobile()&&!$id('wide-legacy-modal').open)$id('wide-legacy-modal').showModal();
 }
 function closeModal(){
   document.getElementById('modal').style.display='none';
+  $id('wide-legacy-modal').close();
   document.getElementById('modal-inner').className='modal';
 }
 
@@ -3817,7 +4156,7 @@ function editCourse(id){
   requestAnimationFrame(()=>document.getElementById('edit-name')?.focus());
 }
 
-function updateExamDate(id,val){const c=course(id);if(!c)return;c.examDate=val;saveState();renderPartial(renderCourses);}
+function updateExamDate(id,val){const c=course(id);if(!c)return;c.examDate=val;saveState();renderPartial(renderCourses,renderCalendar);}
 
 // ── Exam Popover ──────────────────────────────────────────────────
 let _examPickerCid=null;
@@ -3827,6 +4166,10 @@ function openExamPicker(id, btnEl){
   const pop=document.getElementById('exam-popover');
   document.getElementById('exam-pop-input').value=c.examDate||'';
   pop.style.display='block';
+  if(!isMobile()&&wideCourse.open){
+    document.getElementById('exam-pop-input').focus();
+    return;
+  }
   // Position near the button
   const rect=btnEl.getBoundingClientRect();
   const pw=230,ph=120;
@@ -3967,7 +4310,7 @@ function undoRepeatSchedule(){
   renderRepeatScheduleResult();
   document.getElementById('repeat-schedule-message').focus();
 }
-function calculateRepeatBatch({courseId,days,perDay,start,end}){
+function calculateRepeatBatch({courseId,days,perDay,start,end},skips=[]){
   const selectedCourse=course(courseId);
   if(!selectedCourse)return {error:'請先選擇科目。'};
   if(!days.length)return {error:'請選擇至少一個上課日。'};
@@ -3979,32 +4322,78 @@ function calculateRepeatBatch({courseId,days,perDay,start,end}){
 
   const available=Math.floor(remaining(selectedCourse));
   const dates=[];
-  let added=0;
+  const skipSet=new Set(skips);
+  let added=0,skippedMatches=0;
   // Date inputs provide UTC midnight, so weekday steps are stable across time zones and DST.
   for(let timestamp=start;timestamp<=end&&added<available;timestamp+=86400000){
     const date=new Date(timestamp);
     if(!days.includes(date.getUTCDay()))continue;
     const year=String(date.getUTCFullYear()).padStart(4,'0');
+    const dateKey=ds(year,date.getUTCMonth(),date.getUTCDate());
+    if(skipSet.has(dateKey)){skippedMatches++;continue;}
     const count=Math.min(perDay,available-added);
-    dates.push({date:ds(year,date.getUTCMonth(),date.getUTCDate()),count});
+    dates.push({date:dateKey,count});
     added+=count;
   }
   const reason=!available ? '這門課程已無未排堂次。' :
-    !added ? '這段期間沒有符合所選星期的上課日。' : '';
-  return {name:selectedCourse.name,available,dates,added,remaining:available-added,reason};
+    !added ? (skippedMatches?'符合條件的日期都已跳過。':'這段期間沒有符合所選星期的上課日。') : '';
+  return {name:selectedCourse.name,available,dates,added,remaining:available-added,reason,skipped:[...skipSet].sort()};
 }
 function repeatBatchSummary(batch){
-  return '本次安排 '+batch.added+' 堂，剩餘 '+batch.remaining+' 堂未排';
+  return '本次安排 '+batch.added+' 堂，剩餘 '+batch.remaining+' 堂未排'+(batch.skipped?.length?'（已跳過 '+batch.skipped.length+' 天）':'');
 }
-function renderRepeatPreview(batch,notice=''){
+// Daily load (information only). Counts every lesson already in S.calendar for that date —
+// all courses, done or not, timed or not — and ignores the calendar course filter.
+function repeatDayLoad(date){
+  const by=new Map();
+  const list=S.calendar[date]||[];
+  for(const lesson of list){
+    const row=by.get(lesson.courseId)||{id:lesson.courseId,n:0,done:0};
+    row.n++;if(lesson.done)row.done++;
+    by.set(lesson.courseId,row);
+  }
+  const rows=[...by.values()].map(r=>({...r,name:course(r.id)?.name||'（已刪除的科目）'}))
+    .sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name,'zh-Hant'));
+  return {total:list.length,rows};
+}
+// Snapshot used by the confirm-time recheck: only counts matter (names and done flags do not).
+function repeatLoadKey(batch){
+  return JSON.stringify((batch.dates||[]).map(({date})=>{
+    const load=repeatDayLoad(date);
+    return [date,load.total,load.rows.map(r=>[r.id,r.n]).sort()];
+  }));
+}
+function repeatLoadHtml(date,added){
+  const load=repeatDayLoad(date);
+  const summary='原有 '+load.total+' 堂、本次新增 '+added+' 堂、排後共 '+(load.total+added)+' 堂';
+  if(!load.total)return '<p class="rp-load">'+summary+'</p>';
+  const rows=load.rows.map(r=>
+    '<li><span class="rp-course">'+esc(r.name)+'</span><span class="rp-n">'+r.n+' 堂'+(r.done?'（'+r.done+' 堂已完成）':'')+'</span></li>'
+  ).join('');
+  // Phone: summary only until expanded. Tablet and desktop: expanded by default.
+  return '<details class="rp-load"'+(isMobile()?'':' open')+'><summary>'+summary+'</summary><ul class="rp-courses" aria-label="'+date+' 原有課堂">'+rows+'</ul></details>';
+}
+function repeatExamHint(date){
+  const exams=S.courses.filter(c=>c.examDate===date);
+  if(!exams.length)return '';
+  return '<span class="rp-exam">當天有考試'+(exams.length===1?' · '+esc(exams[0].name):'（'+exams.length+' 科）')+'</span>';
+}
+function renderRepeatPreview(batch,notice='',{keepScroll=false}={}){
   document.getElementById('repeat-preview-notice').textContent=notice;
   document.getElementById('repeat-preview-course').textContent=batch.name||'';
   document.getElementById('repeat-preview-summary').textContent=batch.error||
     repeatBatchSummary(batch)+(batch.reason?'。'+batch.reason:'');
   document.getElementById('repeat-preview-dates').innerHTML=(batch.dates||[]).map(({date,count})=>
-    '<li><time datetime="'+date+'">'+date+'</time><span>新增 '+count+' 堂</span></li>'
+    '<li><div class="rp-head"><time datetime="'+date+'">'+date+'</time><span>新增 '+count+' 堂</span></div>'+repeatLoadHtml(date,count)+
+    '<div class="rp-tools">'+repeatExamHint(date)+'<button type="button" class="rp-skip" data-rp-skip="'+date+'" aria-label="跳過 '+date+'">跳過這天</button></div></li>'
   ).join('');
-  document.getElementById('repeat-preview-body').scrollTop=0;
+  const skipped=batch.skipped||[];
+  const skipBox=document.getElementById('repeat-preview-skipped');
+  skipBox.hidden=!skipped.length;
+  skipBox.innerHTML=!skipped.length?'':'<h3 class="rp-skipped-title">已跳過 '+skipped.length+' 天</h3><p class="rp-skipped-note">跳過只影響本次預計新增的課堂；當天原有課堂與考試日期不受影響。</p><ul class="rp-skipped-list">'+skipped.map(date=>
+    '<li><span class="rp-skipped-date"><time datetime="'+date+'">'+date+'</time>'+repeatExamHint(date)+'</span><button type="button" class="rp-restore" data-rp-restore="'+date+'" aria-label="恢復 '+date+'">恢復</button></li>'
+  ).join('')+'</ul>';
+  if(!keepScroll)document.getElementById('repeat-preview-body').scrollTop=0;
   repeatConfirm.disabled=!batch.added;
 }
 function openRepeatPreview(event){
@@ -4015,7 +4404,7 @@ function openRepeatPreview(event){
   const batch=calculateRepeatBatch(plan);
   if(batch.error){showRepeatScheduleError(batch.error);return;}
   showRepeatScheduleError('');
-  repeatPreview={key,courseId:plan.courseId,batch};
+  repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips:[]};
   renderRepeatPreview(batch);
   repeatDialog.showModal();
 }
@@ -4040,10 +4429,12 @@ function confirmRepeatSchedule(event){
     showRepeatScheduleError('排課條件已變更，請重新預覽。');
     return;
   }
-  const batch=calculateRepeatBatch(plan);
-  if(JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch)){
-    repeatPreview={key,courseId:plan.courseId,batch,pointerConfirmAfter:performance.now()+400};
-    renderRepeatPreview(batch,batch.added?'排課結果已更新，請重新確認。':'排課結果已更新。');
+  const skips=repeatPreview.skips||[];
+  const batch=calculateRepeatBatch(plan,skips);
+  const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
+  if(batchChanged||repeatLoadKey(batch)!==repeatPreview.loadKey){
+    repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,pointerConfirmAfter:performance.now()+400};
+    renderRepeatPreview(batch,!batchChanged?'預覽日期的原有課堂數已更新，請重新確認。':batch.added?'排課結果已更新，請重新確認。':'排課結果已更新。');
     document.getElementById('repeat-preview-body').focus();
     return;
   }
@@ -4072,7 +4463,47 @@ function updateRepeatConditions(){
   updateRepeatScheduleForm(repeatForm);
   showRepeatScheduleError(wasPreviewing?'排課條件已變更，請重新預覽。':'');
 }
-repeatForm.addEventListener('input',updateRepeatConditions);
+function changeRepeatSkip(date,skip){
+  if(!repeatPreview||!repeatDialog.open)return;
+  const plan=readRepeatPlan(repeatForm);
+  if(JSON.stringify(plan)!==repeatPreview.key)return;
+  if(skip&&!repeatPreview.batch.dates.some(d=>d.date===date))return;
+  const set=new Set(repeatPreview.skips||[]);
+  skip?set.add(date):set.delete(date);
+  const skips=[...set].sort();
+  const batch=calculateRepeatBatch(plan,skips);
+  if(batch.error)return;
+  repeatPreview={...repeatPreview,batch,skips,loadKey:repeatLoadKey(batch),pointerConfirmAfter:performance.now()+400,pointerSkipAfter:performance.now()+350};
+  renderRepeatPreview(batch,'',{keepScroll:true});
+  const next=skip
+    ?document.querySelector('[data-rp-restore="'+date+'"]')
+    :(document.querySelector('[data-rp-skip="'+date+'"]')||document.getElementById('repeat-preview-body'));
+  next?.focus({preventScroll:false});
+}
+document.getElementById('repeat-preview-body').addEventListener('click',event=>{
+  const b=event.target.closest('[data-rp-skip],[data-rp-restore]');
+  if(!b||!repeatPreview)return;
+  // A quick second tap after the list reflows must not hit a different row's button.
+  if(event.detail>0&&performance.now()<(repeatPreview.pointerSkipAfter||0))return;
+  if(b.dataset.rpSkip)changeRepeatSkip(b.dataset.rpSkip,true);
+  else changeRepeatSkip(b.dataset.rpRestore,false);
+});
+function recheckRepeatPreview(){
+  if(!repeatPreview||!repeatDialog.open)return;
+  const plan=readRepeatPlan(repeatForm);
+  if(JSON.stringify(plan)!==repeatPreview.key)return;
+  const skips=repeatPreview.skips||[];
+  const batch=calculateRepeatBatch(plan,skips);
+  if(batch.error)return;
+  const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
+  if(!batchChanged&&repeatLoadKey(batch)===repeatPreview.loadKey)return;
+  repeatPreview={key:repeatPreview.key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,pointerConfirmAfter:performance.now()+400};
+  renderRepeatPreview(batch,!batchChanged?'同步後，預覽日期的原有課堂數已更新，請重新確認。':batch.added?'同步後，排課結果已更新，請重新確認。':'同步後，排課結果已更新。');
+}
+repeatForm.addEventListener('input',event=>{
+  if(['rep-course','rep-start','rep-end'].includes(event.target.id))document.getElementById('repeat-prefill-note').textContent='';
+  updateRepeatConditions();
+});
 repeatForm.addEventListener('change',()=>{
   if(repeatPreview)updateRepeatConditions();
 });
@@ -4090,10 +4521,10 @@ function localDateKey(now=new Date()){
   return ds(now.getFullYear(),now.getMonth(),now.getDate());
 }
 
-function getExamPlans(localToday){
+function getExamPlans(localToday,includeToday=false){
   const plans=new Map();
   for(const c of S.courses){
-    if(c.examDate>localToday){
+    if(c.examDate>localToday||(includeToday&&c.examDate&&c.examDate===localToday)){
       plans.set(c.id,{deadline:c.examDate,past:0,before:0,after:0,unscheduled:remaining(c),dates:new Map()});
     }
   }
@@ -4123,12 +4554,63 @@ function examBadge(c,localToday,plan){
   </button>`;
 }
 
+// ── Exam overview (read-only; same counting as the course-card exam progress) ──
+let examOverviewOpen=false;
+function examOverviewRows(localToday){
+  const plans=getExamPlans(localToday,true);
+  return S.courses.map((c,index)=>({c,index,plan:plans.get(c.id)})).filter(r=>r.plan)
+    .sort((a,b)=>a.plan.deadline.localeCompare(b.plan.deadline)||a.index-b.index);
+}
+function renderExamOverview(){
+  const root=document.getElementById('exam-overview');if(!root)return;
+  const localToday=localDateKey();
+  const rows=examOverviewRows(localToday);
+  const toggle=document.getElementById('exam-overview-toggle');
+  const body=document.getElementById('exam-overview-body');
+  const first=rows[0];
+  document.getElementById('exam-overview-sum').textContent=!rows.length?'沒有即將到來的考試':
+    rows.length+' 科 · '+(first.plan.deadline===localToday?'今天考試':'最近 '+daysBetween(localToday,first.plan.deadline)+' 天後');
+  toggle.setAttribute('aria-expanded',String(examOverviewOpen));
+  root.classList.toggle('is-open',examOverviewOpen);
+  body.hidden=!examOverviewOpen;
+  const html=!rows.length?'<p class="eo-empty">目前沒有即將到來的考試。到課程的「📋」設定考試日期後會列在這裡。</p>':
+    '<ul class="eo-list">'+rows.map(({c,plan})=>{
+      const isToday=plan.deadline===localToday;
+      const when=isToday?'<span class="eo-when is-today">今天考試</span>':'<span class="eo-when">距考試 '+daysBetween(localToday,plan.deadline)+' 天</span>';
+      const stats='<span class="eo-stat">考前尚未安排 <b>'+(plan.after+plan.unscheduled)+'</b> 堂</span>'+
+        (plan.past?'<span class="eo-stat is-warn">待補課 <b>'+plan.past+'</b> 堂</span>':'');
+      const inner='<span class="eo-line"><span class="eo-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span>'+when+'</span>'+
+        '<span class="eo-line eo-sub"><span class="eo-date">'+esc(fmtDate(plan.deadline))+'</span><span class="eo-stats">'+stats+'</span></span>';
+      // Exam day has no progress detail; offer the make-up list when something is overdue.
+      const actionable=!isToday||plan.past>0;
+      return '<li>'+(actionable?'<button type="button" class="eo-row" data-eo-course="'+esc(c.id)+'" data-eo-kind="'+(isToday?'makeup':'detail')+'">'+inner+'</button>':'<div class="eo-row is-static" data-eo-course="'+esc(c.id)+'">'+inner+'</div>')+'</li>';
+    }).join('')+'</ul>';
+  if(body.innerHTML!==html){
+    const focusId=body.contains(document.activeElement)?document.activeElement.dataset?.eoCourse:null;
+    body.innerHTML=html;
+    if(focusId)[...body.querySelectorAll('button[data-eo-course]')].find(el=>el.dataset.eoCourse===focusId)?.focus({preventScroll:true});
+  }
+}
+document.getElementById('exam-overview-toggle').addEventListener('click',()=>{examOverviewOpen=!examOverviewOpen;renderExamOverview();});
+document.getElementById('exam-overview-body').addEventListener('click',event=>{
+  const row=event.target.closest('button[data-eo-course]');
+  if(!row)return;
+  const id=row.dataset.eoCourse;
+  if(row.dataset.eoKind==='makeup'){openMakeupList(()=>row.isConnected?row.focus({preventScroll:true}):document.getElementById('exam-overview-toggle').focus());return;}
+  openExamProgress(id,'overview');
+});
+
 const examProgressDialog=document.getElementById('exam-progress-dialog');
 const examProgressBody=document.getElementById('exam-progress-body');
 const examProgressClose=document.getElementById('exam-progress-close');
 let examProgressCourseId=null;
 
 function focusExamProgress(id){
+  if(examProgressOrigin==='calendar'&&focusCalendarExam())return;
+  if(examProgressOrigin==='overview'){
+    const row=[...document.querySelectorAll('[data-eo-course]')].find(el=>el.dataset.eoCourse===id);
+    if(row){row.focus({preventScroll:true});return;}
+  }
   const button=[...document.querySelectorAll('[data-exam-progress]')].find(el=>el.dataset.examProgress===id);
   (button||document.querySelector('#course-list .exam-pen-btn')||document.getElementById('quick-input')).focus({preventScroll:true});
 }
@@ -4145,7 +4627,7 @@ function renderExamProgressDetail(plan){
     ['已過日期',plan.past,plan.past?'<button type="button" class="btn btn-sand" data-exam-action="makeup">開啟補課清單</button>':''],
     ['今天至考試前已排',plan.before,''],
     ['考試當天或之後已排',plan.after,dates?'<ul class="exam-detail-dates">'+dates+'</ul>':''],
-    ['尚未排課',plan.unscheduled,plan.unscheduled?'<button type="button" class="btn btn-sand" data-exam-action="schedule">前往重複排課</button>':'']
+    ['尚未排課',plan.unscheduled,plan.unscheduled?'<button type="button" class="btn btn-sand" data-exam-action="schedule">安排剩餘課堂</button>':'']
   ];
   const content=groups.map(([label,count,actions],index)=>
     `<section class="exam-detail-group${index>=2?' is-outside':''}"><h3>${label} <span class="exam-detail-count">${count} 堂</span></h3>${actions}</section>`
@@ -4157,16 +4639,33 @@ function renderExamProgressDetail(plan){
   }
 }
 
-document.getElementById('course-list').addEventListener('click',event=>{
-  const button=event.target.closest('[data-exam-progress]');
-  if(!button)return;
-  const id=button.dataset.examProgress;
+let examProgressOrigin='card';
+document.getElementById('exam-day-close').addEventListener('click',()=>{document.getElementById('exam-day-dialog').close();});
+document.getElementById('exam-day-dialog').addEventListener('keydown',e=>e.stopPropagation());
+document.getElementById('exam-day-dialog').addEventListener('close',()=>{if(examDayReturn&&!examDayReturn.chose)focusCalendarExam();});
+document.getElementById('exam-day-list').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-ed-course]');if(!b)return;
+  const id=b.dataset.edCourse;
+  if(examDayReturn)examDayReturn.chose=true;
+  document.getElementById('exam-day-dialog').close();
+  const date=examDayReturn?.date;
+  examDayReturn={date,id,chose:true};
+  if(!openExamProgress(id,'calendar'))focusCalendarExam();
+});
+function openExamProgress(id,origin='card'){
   const plan=getExamPlans(localDateKey()).get(id);
-  if(!plan){renderCourses();return;}
+  if(!plan){renderCourses();return false;}
+  examProgressOrigin=origin;
   examProgressCourseId=id;
   examProgressDialog.showModal();
   renderExamProgressDetail(plan);
   examProgressBody.scrollTop=0;
+  return true;
+}
+document.getElementById('course-list').addEventListener('click',event=>{
+  const button=event.target.closest('[data-exam-progress]');
+  if(!button)return;
+  openExamProgress(button.dataset.examProgress,'card');
 });
 examProgressClose.addEventListener('click',()=>examProgressDialog.close());
 examProgressDialog.addEventListener('keydown',event=>event.stopPropagation());
@@ -4174,6 +4673,37 @@ examProgressDialog.addEventListener('close',()=>{
   if(examProgressCourseId!==null)focusExamProgress(examProgressCourseId);
   examProgressCourseId=null;
 });
+// 「安排剩餘課堂」: only fills the existing repeat-schedule form. It never writes the calendar;
+// the existing preview → confirm flow does that. End date is the day BEFORE the exam.
+function prepareRemainingSchedule(id){
+  const c=course(id);
+  const today=localDateKey();
+  const plan=c&&getExamPlans(today).get(id);
+  if(!plan||!plan.unscheduled){
+    toast('這門課目前沒有可安排的剩餘課堂','warn');
+    renderCourses();
+    return;
+  }
+  const [y,m,d]=plan.deadline.split('-').map(Number);
+  const lastDay=localDateKey(new Date(y,m-1,d-1));
+  const form=repeatForm;
+  if(isMobile()){
+    mobileTab('course');
+    if(!form.classList.contains('is-open'))toggleFold(form.querySelector('.fold-head'));
+  }else{
+    setWidePage('courses');
+    openWideCourse(id);
+  }
+  form.elements['rep-course'].value=id;
+  form.elements['rep-start'].value=today;
+  form.elements['rep-end'].value=lastDay;
+  updateRepeatConditions();
+  document.getElementById('repeat-prefill-note').textContent=
+    '已帶入 '+today+' 至 '+lastDay+'（考試日 '+plan.deadline+' 不排課），可自行修改日期；請再選每週上課日和每日堂數。';
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  form.scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'});
+  form.querySelector('.rep-day-cb')?.focus({preventScroll:true});
+}
 examProgressBody.addEventListener('click',event=>{
   const button=event.target.closest('[data-exam-action],[data-exam-date]');
   if(!button)return;
@@ -4183,97 +4713,218 @@ examProgressBody.addEventListener('click',event=>{
   if(button.dataset.examAction==='makeup'){
     openMakeupList(()=>focusExamProgress(id));
   }else if(button.dataset.examAction==='schedule'){
-    const select=document.getElementById('rep-course');
-    const form=select.form;
-    if(isMobile()&&!form.classList.contains('is-open'))toggleFold(form.querySelector('.fold-head'));
-    select.value=id;
-    select.dispatchEvent(new Event('change',{bubbles:true}));
-    select.focus();
+    prepareRemainingSchedule(id);
   }else{
     const date=button.dataset.examDate;
-    if(isTablet())closeTabletPanel();
-    const [year,month]=date.split('-').map(Number);
-    S.year=year;S.month=month-1;
-    selectDate(date);
+    if(!isMobile())dayPanelReturnFocus=()=>focusExamProgress(id);
+    selectDate(date,{preserveWeek:!isMobile()});
     if(isMobile())mobileTab('day');
     const panel=document.getElementById('panel-r');
     panel.scrollTop=0;
-    if(useSlideDayPanel()){
-      dayPanelReturnFocus=()=>focusExamProgress(id);
-      document.getElementById('day-panel-close').focus({preventScroll:true});
-    }else document.getElementById('day-schedule-open').focus({preventScroll:true});
+    if(isMobile())document.getElementById('day-schedule-open').focus({preventScroll:true});
   }
 });
 
 // ── Tablet panel toggle ───────────────────────────────────────────
 function isTablet(){return window.innerWidth>=768&&window.innerWidth<1200;}
 function isMobile(){return window.innerWidth<=767;}
-function useSlideDayPanel(){return window.innerWidth>=1200;}
-let _panelTouchStartX=0;
-let _panelTouchStartY=0;
-let _panelTouchDeltaX=0;
-function _resetDayPanelGestureStyles(){
-  const panel=document.getElementById('panel-r');
-  if(!panel)return;
-  panel.style.removeProperty('transform');
-  panel.style.removeProperty('transition');
-}
+const $id=id=>document.getElementById(id);
+const wideDay=$id('wide-day');
+const wideCourse=$id('wide-course-dialog');
+const wideCourses=$id('wide-course-list');
+const accountToggle=$id('account-toggle');
+const accountPanel=$id('account-panel');
+const wideMedia=matchMedia('(min-width:768px)');
+let wideCourseId=null;
 let dayPanelReturnFocus=null;
-function openDayPanel(){
-  if(!useSlideDayPanel())return;
-  const panel=document.getElementById('panel-r');
-  const overlay=document.getElementById('day-panel-overlay');
-  _resetDayPanelGestureStyles();
-  panel?.classList.add('open');
-  overlay?.classList.add('open');
-}
-function closeDayPanel(){
-  cancelDaySchedule();
-  _resetDayPanelGestureStyles();
-  document.getElementById('panel-r')?.classList.remove('open');
-  document.getElementById('day-panel-overlay')?.classList.remove('open');
-  if(dayPanelReturnFocus){
-    dayPanelReturnFocus();
-    dayPanelReturnFocus=null;
+
+const wideMounts=[
+  ['panel-r','wide-day'],['course-list','wide-card-slot'],['exam-overview','wide-exam-slot'],
+  ['exam-popover','wide-card-slot'],['repeat-schedule-form','wide-repeat-slot'],
+  ['new-course-form','wide-add-slot'],['todo-list','wide-drag'],
+  ['modal','wide-legacy-modal'],['confirm-backdrop','wide-legacy-confirm'],
+].map(([id,target])=>{
+  const el=$id(id),home=document.createComment(id);
+  el.before(home);
+  return {el,home,target:$id(target)};
+});
+const quickSection=$id('quick-input').closest('.quick-course-section');
+const quickHome=document.createComment('quick-input');
+quickSection.before(quickHome);
+
+let wideCalendarScroll=0;
+function setWidePage(page){
+  if(document.body.dataset.widePage===page)return;
+  const shell=document.querySelector('.app-shell');
+  if(page==='courses')wideCalendarScroll=shell.scrollTop;
+  document.body.dataset.widePage=page;
+  shell.scrollTop=page==='calendar'?wideCalendarScroll:0;
+  for(const button of document.querySelectorAll('[data-wide-page-button]')){
+    if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
+    else button.removeAttribute('aria-current');
   }
 }
-function initDayPanelGesture(){
-  const panel=document.getElementById('panel-r');
-  if(!panel||panel.dataset.gestureReady==='1')return;
-  panel.dataset.gestureReady='1';
-  panel.addEventListener('touchstart',e=>{
-    if(!panel.classList.contains('open')||!useSlideDayPanel())return;
-    const t=e.touches&&e.touches[0];if(!t)return;
-    _panelTouchStartX=t.clientX;_panelTouchStartY=t.clientY;_panelTouchDeltaX=0;
-  },{passive:true});
-  panel.addEventListener('touchmove',e=>{
-    if(!_panelTouchStartX||!panel.classList.contains('open')||!useSlideDayPanel())return;
-    const t=e.touches&&e.touches[0];if(!t)return;
-    const dx=t.clientX-_panelTouchStartX;
-    const dy=Math.abs(t.clientY-_panelTouchStartY);
-    if(dx>0&&dy<36){
-      _panelTouchDeltaX=Math.min(dx,160);
-      panel.style.transition='none';
-      panel.style.transform=`translateX(${_panelTouchDeltaX}px)`;
-    }
-  },{passive:true});
-  const onGestureEnd=()=>{
-    if(!_panelTouchStartX)return;
-    const shouldClose=_panelTouchDeltaX>88;
-    _panelTouchStartX=0;_panelTouchStartY=0;_panelTouchDeltaX=0;
-    panel.style.transition='transform .3s cubic-bezier(0.22,1,0.36,1),opacity .3s cubic-bezier(0.22,1,0.36,1)';
-    if(shouldClose){
-      closeDayPanel();
-    }else if(panel.classList.contains('open')){
-      panel.style.transform='translateX(0)';
-      setTimeout(()=>_resetDayPanelGestureStyles(),320);
-    }else{
-      _resetDayPanelGestureStyles();
-    }
-  };
-  panel.addEventListener('touchend',onGestureEnd,{passive:true});
-  panel.addEventListener('touchcancel',onGestureEnd,{passive:true});
+
+function mountWideLayout(){
+  const wide=wideMedia.matches;
+  if(!wide){
+    closeDayPanel();
+    closeWideCourse();
+    closeExamPicker();
+    closeAccountPanel();
+    closeModal();
+    hideConfirm();
+  }
+  for(const {el,home,target} of wideMounts){
+    if(wide)target.append(el);
+    else home.after(el);
+  }
+  if(wide)$id('wide-add-slot').prepend(quickSection);
+  else quickHome.after(quickSection);
+  if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
+  render();
 }
+wideMedia.addEventListener('change',mountWideLayout);
+
+function bindWideDialog(dialog,dismiss){
+  let outside=false;
+  dialog.addEventListener('pointerdown',event=>{outside=event.target===dialog;});
+  dialog.addEventListener('click',event=>{
+    if(!outside||event.target!==dialog)return;
+    const {left,right,top,bottom}=dialog.getBoundingClientRect();
+    if(event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom)dismiss();
+  });
+  dialog.addEventListener('cancel',event=>{
+    event.preventDefault();dismiss();
+  });
+  dialog.addEventListener('keydown',event=>event.stopPropagation());
+}
+
+function usesDayDialog(){return !isMobile();}
+function openDayPanel(){
+  if(!usesDayDialog()||wideDay.open)return;
+  if(!dayPanelReturnFocus){
+    const date=S.selectedDate;
+    dayPanelReturnFocus=()=>(document.querySelector('#cal-body [data-calendar-date="'+date+'"]')||$id('vt-'+S.view)).focus({preventScroll:true});
+  }
+  wideDay.dataset.stage='detail';
+  wideDay.showModal();
+  wideDay.scrollTop=0;
+  $id('day-panel-close').focus({preventScroll:true});
+}
+function closeDayPanel(){
+  if(!wideDay.open)return;
+  if(wideDay.dataset.stage==='move')closeLessonReschedule(false);
+  cancelDaySchedule(false);
+  wideDay.close();
+  dayPanelReturnFocus?.();
+  dayPanelReturnFocus=null;
+}
+bindWideDialog(wideDay,closeDayPanel);
+wideDay.addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||event.defaultPrevented||event.isComposing)return;
+  if(wideDay.dataset.stage==='move'){event.preventDefault();closeLessonReschedule();}
+  else if(wideDay.dataset.stage==='schedule'){event.preventDefault();cancelDaySchedule();}
+});
+
+function renderWideCourses(){
+  if(!wideMedia.matches)return;
+  const rows=S.courses.map(c=>'<li><button class="wide-course-row" type="button" data-wide-course="'+esc(c.id)+'" aria-haspopup="dialog">'+
+    '<strong>'+esc(c.name)+'</strong><span>完成 '+completed(c)+'／'+c.total+' 堂</span><span>未排 '+remaining(c)+' 堂</span></button></li>').join('');
+  if(wideCourses.innerHTML!==rows && rows){
+    const focused=wideCourses.contains(document.activeElement)&&document.activeElement.dataset.wideCourse;
+    wideCourses.innerHTML=rows;
+    if(focused)focusWideCourse(focused);
+  }else if(!rows && !wideCourses.querySelector('.wide-course-empty')){
+    wideCourses.innerHTML='<li class="wide-course-empty">尚未新增課程</li>';
+  }
+}
+function focusWideCourse(id){
+  const row=[...wideCourses.querySelectorAll('[data-wide-course]')].find(button=>button.dataset.wideCourse===id);
+  (row||$id('wide-add-open')).focus({preventScroll:true});
+}
+function openWideCourse(id,mode='course'){
+  const c=course(id);
+  if(mode==='course'&&!c)return;
+  wideCourseId=c?.id??null;
+  wideCourse.dataset.mode=mode;
+  $id('wide-course-title').textContent=mode==='add'?'新增課程':c.name;
+  $id('wide-card-slot').hidden=mode!=='course';
+  $id('wide-repeat-slot').hidden=mode!=='course';
+  $id('wide-add-slot').hidden=mode!=='add';
+  if(mode==='course'){
+    repeatForm.elements['rep-course'].value=id;
+    updateRepeatScheduleForm(repeatForm);
+  }
+  if(!wideCourse.open){
+    wideCourse.showModal();
+    wideCourse.scrollTop=0;
+  }
+  renderCourses();
+}
+function closeWideCourse(){
+  if(!wideCourse.open)return;
+  const id=wideCourseId;
+  closeExamPicker();
+  wideCourseId=null;
+  wideCourse.close();
+  focusWideCourse(id);
+}
+bindWideDialog(wideCourse,closeWideCourse);
+wideCourses.addEventListener('click',event=>{
+  const row=event.target.closest('[data-wide-course]');
+  if(row)openWideCourse(row.dataset.wideCourse);
+});
+$id('wide-course-close').addEventListener('click',closeWideCourse);
+$id('wide-memo-open').addEventListener('click',event=>openMemoModal(wideCourseId,event.currentTarget));
+$id('wide-add-open').addEventListener('click',()=>openWideCourse(null,'add'));
+$id('wide-makeup-open').addEventListener('click',()=>openMakeupList(()=>$id('wide-makeup-open').focus()));
+$id('wide-drag-toggle').addEventListener('click',event=>{
+  const area=$id('wide-drag');
+  area.hidden=!area.hidden;
+  event.currentTarget.setAttribute('aria-expanded',String(!area.hidden));
+});
+for(const button of document.querySelectorAll('[data-wide-page-button]')){
+  button.addEventListener('click',()=>setWidePage(button.dataset.widePageButton));
+}
+
+function closeAccountPanel(restoreFocus=false){
+  if(accountPanel.hidden)return;
+  accountPanel.hidden=true;
+  accountToggle.setAttribute('aria-expanded','false');
+  if(restoreFocus)accountToggle.focus();
+}
+accountToggle.addEventListener('click',()=>{
+  if(!accountPanel.hidden){closeAccountPanel(true);return;}
+  accountPanel.hidden=false;
+  accountToggle.setAttribute('aria-expanded','true');
+});
+document.addEventListener('click',event=>{
+  if(!accountPanel.contains(event.target)&&!accountToggle.contains(event.target))closeAccountPanel();
+});
+$id('auth-area').addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&!accountPanel.hidden){event.preventDefault();event.stopPropagation();closeAccountPanel(true);}
+});
+for(const [id,action] of [
+  ['account-export',showExport],['account-import',showImport],['account-settings',showFirebaseSetup],
+  ['account-signout',()=>window._fb?.signOut()],
+]){
+  $id(id).addEventListener('click',()=>{closeAccountPanel(true);action();});
+}
+$id('account-photo').addEventListener('error',event=>{event.currentTarget.hidden=true;});
+
+document.addEventListener('close',event=>{
+  const toasts=$id('toast-container');
+  if(toasts.parentElement===event.target)document.body.append(toasts);
+},true);
+for(const [layer,dismiss] of [
+  ['wide-legacy-modal',closeModal],['wide-legacy-confirm',hideConfirm],
+]){
+  const dialog=$id(layer);
+  dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
+  dialog.addEventListener('keydown',event=>event.stopPropagation());
+}
+
 function toggleTabletPanel(){
   const panel=document.getElementById('panel-l');
   const overlay=document.getElementById('tablet-overlay');
@@ -4300,7 +4951,7 @@ window.addEventListener('resize',()=>{
   syncFolds();
   if(!isMobile()&&(S.tapCourseId||mobileSchedulePickerOpen))cancelCalendarSchedule();
   if(!isTablet()||window.innerWidth>=1120)closeTabletPanel();
-  if(!useSlideDayPanel()&&document.getElementById('panel-r')?.classList.contains('open'))closeDayPanel();
+  if(!usesDayDialog()&&document.getElementById('panel-r')?.classList.contains('open'))closeDayPanel();
 });
 let mobileSchedulePickerOpen=false;
 function mobileTab(tab){
@@ -4470,19 +5121,26 @@ function renderCourseSummary(){
 }
 function renderCourses(){
   renderCourseSummary();
+  renderExamOverview();
+  renderWideCourses();
   const el=document.getElementById('course-list');
   const localToday=localDateKey();
   const plans=getExamPlans(localToday);
   renderExamProgressDetail(plans.get(examProgressCourseId));
+  const selected=course(wideCourseId);
+  if(!isMobile()&&wideCourse.open&&wideCourse.dataset.mode==='course'){
+    if(!selected){closeWideCourse();return;}
+    $id('wide-course-title').textContent=selected.name;
+  }
   if(!S.courses.length){el.innerHTML='<div class="muted">尚未新增課程</div>';return;}
-  const show=S.courseListExpanded?S.courses:S.courses.slice(0,COURSE_PREVIEW);
+  const show=isMobile()?(S.courseListExpanded?S.courses:S.courses.slice(0,COURSE_PREVIEW)):(selected?[selected]:[]);
   const focusedExamId=document.activeElement?.dataset.examProgress;
 
   const cards=show.map(c=>{
     const done=completed(c),arr=allEntries(c.id).length,rem=remaining(c),pct=Math.min(100,Math.round(done/c.total*100));
     const ls=c.lessonStart??1, le=c.lessonEnd??c.total;
     const lessonChip=`<span class="lesson-chip">第 ${ls}–${le} 堂</span>`;
-    const dragAttrs=rem>0?`draggable="true" ondragstart="dragStart(event,'${c.id}')" ondragend="dragEnd(event)" title="拖曳到行事曆排課"`:'';
+    const dragAttrs=isMobile()&&rem>0?`draggable="true" ondragstart="dragStart(event,'${c.id}')" ondragend="dragEnd(event)" title="拖曳到行事曆排課"`:'';
     return`<div class="course-card ${rem>0?'is-draggable':''}" ${dragAttrs}>
       <div class="course-head">
         <span class="dot" style="background:${c.color}"></span>
@@ -4505,7 +5163,7 @@ function renderCourses(){
   }).join('');
 
   let footer='';
-  if(S.courses.length>COURSE_PREVIEW){
+  if(isMobile()&&S.courses.length>COURSE_PREVIEW){
     footer=`<div class="course-list-footer">
       <button class="course-expand-btn" onclick="toggleCourseList()">
         ${S.courseListExpanded?'收起':'查看全部（共 '+S.courses.length+' 門）'}
@@ -4564,6 +5222,62 @@ function calendarScheduleMessage(message,courseId){
   return message+'。行事曆篩選目前隱藏「'+(course(courseId)?.name||'此科目')+'」。';
 }
 
+// ── Exam markers: derived from course.examDate only. Never written to S.calendar, so they are
+// not lessons and are not counted in daily load, weekly progress or the make-up list.
+const EXAM_ICON='<svg class="ce-ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>';
+function examsForDate(date){
+  return S.courses.filter(c=>c.examDate===date&&!isCalendarCourseHidden(c.id));
+}
+function examMarkHtml(date){
+  const exams=examsForDate(date);
+  if(!exams.length)return '';
+  const today=localDateKey();
+  const act=c=>!isMobile()||c.examDate>today;
+  const ind=exams.map(c=>{
+    const inner=EXAM_ICON+'<span class="ce-label">考試</span><span class="ce-name">'+esc(c.name)+'</span><span class="ce-short">'+esc(courseMark(c.name,2))+'</span>';
+    return act(c)
+      ?'<button type="button" class="cal-exam ce-ind" data-exam-date="'+date+'" data-exam-course="'+esc(c.id)+'" title="'+esc(c.name)+'" aria-label="考試：'+esc(c.name)+'，查看考試明細" onclick="event.stopPropagation();openCalendarExam(\''+date+'\',\''+esc(c.id)+'\')" onkeydown="event.stopPropagation()">'+inner+'</button>'
+      :'<span class="cal-exam ce-ind is-static" title="'+esc(c.name)+'" aria-label="考試：'+esc(c.name)+'">'+inner+'</span>';
+  }).join('');
+  let grp='';
+  if(exams.length>1){
+    const label=EXAM_ICON+'<span class="ce-label">考試 · '+exams.length+' 科</span>';
+    grp=exams.some(act)
+      ?'<button type="button" class="cal-exam ce-grp" data-exam-date="'+date+'" data-exam-course="" aria-haspopup="dialog" aria-label="'+exams.length+' 科考試，選擇科目" onclick="event.stopPropagation();openCalendarExam(\''+date+'\',\'\')" onkeydown="event.stopPropagation()">'+label+'</button>'
+      :'<span class="cal-exam ce-grp is-static" aria-label="'+exams.length+' 科考試">'+label+'</span>';
+  }
+  return '<div class="ce-wrap" data-n="'+exams.length+'">'+ind+grp+'</div>';
+}
+let examDayReturn=null;
+function openCalendarExam(date,id){
+  const exams=examsForDate(date);
+  if(!exams.length||id&&!exams.some(c=>c.id===id))return;
+  const today=localDateKey();
+  examDayReturn={date,id};
+  if(id&&date>today){
+    openExamProgress(id,'calendar');
+    return;
+  }
+  document.getElementById('exam-day-title').textContent=fmtDate(date)+' 考試';
+  const plans=getExamPlans(today);
+  document.getElementById('exam-day-list').innerHTML=exams.map(c=>{
+    const plan=plans.get(c.id);
+    if(!plan)return '<li><div class="ed-row is-static"><span class="ed-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span><span class="ed-meta">'+(c.examDate===today?'今天考試':'已過考試日')+'</span></div></li>';
+    return '<li><button type="button" class="ed-row" data-ed-course="'+esc(c.id)+'"><span class="ed-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span><span class="ed-meta">距考試 '+daysBetween(today,c.examDate)+' 天 · 考前尚未安排 '+(plan.after+plan.unscheduled)+' 堂</span></button></li>';
+  }).join('');
+  const dlg=document.getElementById('exam-day-dialog');
+  dlg.showModal();
+  dlg.querySelector('button.ed-row')?.focus();
+}
+function focusCalendarExam(){
+  const r=examDayReturn;examDayReturn=null;
+  if(!r)return false;
+  const sel=r.id?'.cal-exam[data-exam-date="'+r.date+'"][data-exam-course="'+r.id+'"]':null;
+  const el=(sel&&document.querySelector(sel))||document.querySelector('.cal-exam[data-exam-date="'+r.date+'"]:not(.is-static)')||document.querySelector('[data-calendar-date="'+r.date+'"]');
+  if(el){el.focus({preventScroll:true});return true;}
+  return false;
+}
+
 // Keep emoji and combined characters intact in compact calendar labels.
 const courseNameSegments=typeof Intl.Segmenter==='function'?new Intl.Segmenter():null;
 function courseMark(name,count){
@@ -4575,8 +5289,10 @@ function courseMark(name,count){
 function renderMonthView(){
   const{year:y,month:m}=S;
   document.getElementById('cal-title').textContent=`${y} 年 ${MONTHS[m]}`;
-  const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
-  let html=WDAYS.map(l=>`<div class="cal-lbl">${l}</div>`).join('');
+  const weekOffset=isMobile()?0:1;
+  const first=(new Date(y,m,1).getDay()-weekOffset+7)%7,days=new Date(y,m+1,0).getDate();
+  const weekdays=[...WDAYS.slice(weekOffset),...WDAYS.slice(0,weekOffset)];
+  let html=weekdays.map(l=>`<div class="cal-lbl">${l}</div>`).join('');
   for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
   for(let d=1;d<=days;d++){
     const s=ds(y,m,d),evts=calendarLessonsForDate(s);
@@ -4602,7 +5318,7 @@ function renderMonthView(){
     html+=`<div class="${cls}" role="button" tabindex="0" data-calendar-date="${s}" aria-label="${s}，${evts.length} 堂課" aria-pressed="${s===S.selectedDate}" ${s===todayStr?'aria-current="date"':''} onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')"
          ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}')">
       <div class="date-num">${d}</div>
-      <div class="cal-tags">${tags}${more}</div>
+      <div class="cal-tags">${examMarkHtml(s)}${tags}${more}</div>
     </div>`;
   }
   // Apply slide animation class
@@ -4621,12 +5337,12 @@ function renderWeekView(){
   document.getElementById('cal-title').textContent=`${sy}年${sm}月${sd}日–${em}月${ed}日`;
   const col='36px repeat(7,minmax(0,1fr))',isTap=!!S.tapCourseId;
   let headHtml=`<div class="wch-spacer"></div>`;
-  weekDays.forEach((s,i)=>{const d=Number(s.slice(-2));headHtml+=`<div class="wch-day ${s===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${s}，${lessonsByDay[i].length} 堂課" aria-pressed="${s===S.selectedDate}" data-calendar-date="${s}" onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')">${WDAYS[i]}<span class="wch-date">${d}</span></button></div>`;});
+  weekDays.forEach((s,i)=>{const d=Number(s.slice(-2));headHtml+=`<div class="wch-day ${s===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${s}，${lessonsByDay[i].length} 堂課" aria-pressed="${s===S.selectedDate}" data-calendar-date="${s}" onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span></button>${examMarkHtml(s)?'<div class="wch-exams">'+examMarkHtml(s)+'</div>':''}</div>`;});
   let unHtml=`<div class="unsched-lbl">未定時</div>`;
   weekDays.forEach((s,i)=>{
     const evts=lessonsByDay[i].filter(e=>!e.time);
     const cls=['week-slot-unsched',s===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
-    unHtml+=`<div class="${cls}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
+    unHtml+=`<div class="${cls}" data-drop-date="${s}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
   });
   let rowsHtml='';
   HOURS.forEach(h=>{
@@ -4635,7 +5351,7 @@ function renderWeekView(){
     weekDays.forEach((s,i)=>{
       const evts=lessonsByDay[i].filter(e=>e.time&&parseInt(e.time)===h);
       const cls=['week-slot',s===todayStr?'today-slot':'',s===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
-      rowsHtml+=`<div class="${cls}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','${t}')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
+      rowsHtml+=`<div class="${cls}" data-drop-date="${s}" data-drop-time="${t}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','${t}')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
     });
   });
   const body=document.getElementById('cal-body');
@@ -4652,18 +5368,14 @@ function wkEv(ev,date){
 function activateCalendarDate(event,date){
   if(event.key!=='Enter' && event.key!==' ')return;
   event.preventDefault();
+  event.stopPropagation();
   handleCellClick(date);
   if(isMobile())document.getElementById('day-schedule-open')?.focus();
-  else if(useSlideDayPanel()){
-    dayPanelReturnFocus=()=>document.querySelector('[data-calendar-date="'+date+'"]')?.focus({preventScroll:true});
-    document.getElementById('day-panel-close')?.focus({preventScroll:true});
-  }
-  else document.querySelector('[data-calendar-date="'+date+'"]')?.focus();
 }
 
 function handleCellClick(date){
   if(tapCell(date))return;  // mobile tap-to-schedule
-  selectDate(date);
+  selectDate(date,{preserveWeek:!isMobile()});
   if(isMobile())mobileTab('day');
 }
 
@@ -4676,12 +5388,12 @@ let weekProgressRollover;
 function renderCalendarProgress(){
   const now=new Date();
   const localToday=localDateKey(now);
-  renderWeekProgress(localToday,now.getDay());
+  renderWeekProgress(localToday);
   renderMakeupList(localToday);
 }
 
-function renderWeekProgress(localToday,weekday){
-  const monday=addDays(localToday,-((weekday+6)%7));
+function renderWeekProgress(localToday){
+  const monday=weekStartOf(localToday,1);
   const sunday=addDays(monday,6);
   const dateLabel=(date,includeYear)=>{
     const [year,month,day]=date.split('-').map(Number);
@@ -4694,11 +5406,18 @@ function renderWeekProgress(localToday,weekday){
     for(const lesson of S.calendar[date]||[]){
       scheduled++;
       if(lesson.done){completed++;continue;}
+      if(!isMobile())continue;
       const late=date<localToday;
       if(late)overdue++;
       pending.push({date,time:lesson.time||'',name:course(lesson.courseId)?.name||'未知課程',late});
     }
   }
+  const percentage=scheduled?Math.round(completed/scheduled*100):0;
+  $id('wide-week-count').textContent=completed+'／'+scheduled+' 堂';
+  $id('wide-week-track').setAttribute('aria-valuenow',percentage);
+  $id('wide-week-track').setAttribute('aria-valuetext',completed+'／'+scheduled+' 堂');
+  $id('wide-week-fill').style.width=percentage+'%';
+  if(!isMobile())return;
   pending.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'24:00').localeCompare(b.time||'24:00'));
   document.getElementById('week-progress-range').textContent=
     dateLabel(monday,true)+'–'+dateLabel(sunday,monday.slice(0,4)!==sunday.slice(0,4));
@@ -4821,7 +5540,7 @@ weekProgressList.addEventListener('click',event=>{
   selectDate(row.dataset.weekDate);
   if(isMobile())mobileTab('day');
   document.getElementById('panel-r').scrollTop=0;
-  if(useSlideDayPanel()){
+  if(usesDayDialog()){
     dayPanelReturnFocus=()=>weekProgressSummary.focus({preventScroll:true});
     document.getElementById('day-panel-close').focus({preventScroll:true});
   }else{
@@ -5150,9 +5869,9 @@ function initScheduleTime(prefix,onTimeEdit){
       if(!event.isComposing)apply();
     }
   });
-  const dialog=picker.closest('dialog');
-  (dialog||document).addEventListener('keydown',event=>{
-    if(!dialog&&document.querySelector('dialog[open]'))return;
+  document.addEventListener('keydown',event=>{
+    const dialog=picker.closest('dialog');
+    if(dialog!==event.target.closest?.('dialog'))return;
     if(event.key==='Escape'&&!editor.hidden&&!event.isComposing){
       event.preventDefault();
       event.stopPropagation();
@@ -5172,7 +5891,8 @@ const resetRescheduleTime=initScheduleTime('reschedule',()=>{
 });
 
 let dayScheduleDate=null;
-function cancelDaySchedule(){
+function cancelDaySchedule(restoreFocus=true){
+  const inSchedule=wideDay.open&&wideDay.dataset.stage==='schedule';
   dayScheduleDate=null;
   document.getElementById('day-schedule-form').reset();
   resetDayScheduleTime();
@@ -5180,6 +5900,10 @@ function cancelDaySchedule(){
   document.getElementById('day-schedule-message').textContent='';
   document.getElementById('day-schedule-form').hidden=true;
   document.getElementById('day-schedule-open').setAttribute('aria-expanded','false');
+  if(inSchedule){
+    wideDay.dataset.stage='detail';
+    if(restoreFocus)$id('day-schedule-open').focus({preventScroll:true});
+  }
 }
 function refreshDayScheduleCourses(){
   const select=document.getElementById('day-schedule-course');
@@ -5203,6 +5927,11 @@ function openDaySchedule(){
   refreshDayScheduleCourses();
   document.getElementById('day-schedule-form').hidden=false;
   document.getElementById('day-schedule-open').setAttribute('aria-expanded','true');
+  if(wideDay.open){
+    wideDay.dataset.stage='schedule';
+    wideDay.scrollTop=0;
+    ($id('day-schedule-course').disabled?$id('day-panel-close'):$id('day-schedule-course')).focus({preventScroll:true});
+  }
 }
 function submitDaySchedule(event){
   event.preventDefault();
@@ -5232,29 +5961,38 @@ function closeLessonReschedule(restoreFocus=true){
   const draft=rescheduleDraft;
   rescheduleDraft=null;
   resetRescheduleTime();
-  rescheduleDialog.close();
+  if(draft?.inline){
+    rescheduleDialog.append($id('reschedule-form'));
+    wideDay.dataset.stage='detail';
+  }else rescheduleDialog.close();
   if(!restoreFocus)return;
   if(draft?.returnFocus)draft.returnFocus();
   else (rescheduleButton(draft?.id)||document.getElementById('day-schedule-open')).focus();
 }
 function openLessonReschedule(id,date=S.selectedDate,returnFocus=null){
-  if(rescheduleDialog.open)return;
+  if(rescheduleDraft)return;
   const lesson=S.calendar[date]?.find(item=>item.id===id);
   if(!lesson){toast('找不到原課堂，請重新選擇。','warn');return;}
   const time=lesson.time||'';
-  rescheduleDraft={date,id,timeEdited:false,returnFocus};
+  const inline=wideDay.open&&!returnFocus;
+  rescheduleDraft={date,id,timeEdited:false,returnFocus,inline};
   rescheduleDate.value=date;
   rescheduleDate.removeAttribute('aria-invalid');
   rescheduleMessage.textContent='';
   rescheduleConfirm.disabled=false;
   document.getElementById('reschedule-original').textContent='原日期 '+date+' · '+(time||'未定時間');
   resetRescheduleTime(time);
-  rescheduleDialog.showModal();
+  if(inline){
+    $id('panel-r').append($id('reschedule-form'));
+    wideDay.dataset.stage='move';
+    wideDay.scrollTop=0;
+    rescheduleDate.focus({preventScroll:true});
+  }else rescheduleDialog.showModal();
 }
 function submitLessonReschedule(event){
   event.preventDefault();
   if(!rescheduleDraft)return;
-  const {date,id,timeEdited,returnFocus}=rescheduleDraft;
+  const {date,id,timeEdited,returnFocus,inline}=rescheduleDraft;
   const source=S.calendar[date];
   const index=source?.findIndex(item=>item.id===id)??-1;
   if(index<0){
@@ -5287,7 +6025,10 @@ function submitLessonReschedule(event){
   invalidateEntriesCache();
   saveState();
 
-  if(returnFocus){
+  if(inline){
+    selectDate(newDate,{preserveWeek:true});
+    (rescheduleButton(id)||$id('day-schedule-open')).focus();
+  }else if(returnFocus){
     render();
     returnFocus();
   }else{
@@ -5479,7 +6220,8 @@ function dragStart(e,cid){
     setTimeout(()=>blank.remove(),0);
   }
   const c=course(cid);if(c){ghostDot.style.background=c.color;ghostName.textContent=c.name;}
-  setTimeout(()=>{e.currentTarget.classList.add('dragging');ghost.classList.add('active');},0);
+  const source=e.currentTarget;
+  setTimeout(()=>{if(S.dragCourseId===cid){source.classList.add('dragging');ghost.classList.add('active');}},0);
 }
 function dragEnd(e){e.currentTarget.classList.remove('dragging');ghost.classList.remove('active');S.dragCourseId=null;}
 document.addEventListener('dragover',e=>{ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';},{passive:true});
@@ -5493,8 +6235,9 @@ function dragLeave(e){e.currentTarget.classList.remove('drag-over');}
 function drop(e,date,time=''){
   e.preventDefault();e.stopPropagation();e.currentTarget.classList.remove('drag-over');
   const c=course(S.dragCourseId);if(!c||remaining(c)<=0)return;
+  S.dragCourseId=null;ghost.classList.remove('active');
   addEvent(date,c.id,time);S.selectedDate=date;saveState();render();
-  if(useSlideDayPanel())openDayPanel();
+  if(usesDayDialog())openDayPanel();
   if(isCalendarCourseHidden(c.id))toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
 }
 
@@ -5578,17 +6321,13 @@ function drop(e,date,time=''){
     _removePlaceholder(_pLastTarget);
     if(_pLastTarget)_pLastTarget.classList.remove('drag-over');
     const el=document.elementFromPoint(pt.clientX,pt.clientY);
-    const cell=el?.closest('.cal-cell:not(.empty)');
+    const cell=el?.closest('.cal-cell:not(.empty),[data-drop-date]');
     document.getElementById('tablet-overlay').classList.remove('is-dragging');
     document.getElementById('panel-l').classList.remove('is-dragging');
     _pLastTarget=null;
     if(_pMoved&&cell&&S.dragCourseId&&e.type!=='pointercancel'){
-      const onclk=cell.getAttribute('onclick')||'';
-      const dMatch=onclk.match(/handleCellClick\('([^']+)'\)/);
-      if(dMatch){
-        if(isTablet())closeTabletPanel();
-        dropWithAnimation(cell,dMatch[1],'');
-      }
+      const date=cell.dataset.calendarDate||cell.dataset.dropDate;
+      if(date)dropWithAnimation(cell,date,cell.dataset.dropTime||'');
     }
     S.dragCourseId=null;
   }
@@ -5635,7 +6374,7 @@ function dropWithAnimation(cellEl,date,time){
   addEvent(date,c.id,time||'');
   S.selectedDate=date;
   saveState();render();
-  if(useSlideDayPanel())openDayPanel();
+  if(usesDayDialog())openDayPanel();
   if(isCalendarCourseHidden(c.id)){
     toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
     return;
@@ -5663,6 +6402,7 @@ function dropWithAnimation(cellEl,date,time){
 
 // ── Keyboard navigation ───────────────────────────────────────────
 document.addEventListener('keydown', e => {
+  if(e.defaultPrevented||document.querySelector('dialog[open]')||(!isMobile()&&document.body.dataset.widePage!=='calendar'))return;
   // Only when not typing in an input
   if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
   const sel = S.selectedDate || todayStr;
@@ -5671,7 +6411,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowDown')  { e.preventDefault(); selectDate(addDays(sel, 7)); }
   if (e.key === 'ArrowUp')    { e.preventDefault(); selectDate(addDays(sel, -7)); }
   if ((e.key === 'Enter' || e.key === ' ') && document.activeElement?.tagName !== 'BUTTON') {
-    if(useSlideDayPanel()) openDayPanel();
+    if(usesDayDialog()) openDayPanel();
   }
   if (e.key === 't' || e.key === 'T') jumpToday();
 });
@@ -5696,12 +6436,11 @@ document.addEventListener('keydown', e => {
   },{passive:true});
 })();
 function setView(v){S.view=v;if(v==='week')S.weekStart=weekStartOf(S.selectedDate||todayStr);render();}
-function selectDate(s){
+function selectDate(s,{preserveWeek=false}={}){
   S.selectedDate=s;
-  if(S.view==='week')S.weekStart=weekStartOf(s);
+  if(S.view==='week'&&!preserveWeek)S.weekStart=weekStartOf(s);
   render();
-  initDayPanelGesture();
-  if(useSlideDayPanel())openDayPanel();
+  if(usesDayDialog())openDayPanel();
 }
 // ── Navigation direction tracking ────────────────────────────────
 let _calNavDir = 0; // -1=prev, 1=next, 0=jump
@@ -5807,15 +6546,9 @@ function init(){
 
   loadState();
 
-  render();
+  mountWideLayout();
   refreshWeekProgressClock();
-  initDayPanelGesture();
   checkIOSInstall();
-
-  // Auto-open today's panel so user sees today's schedule immediately
-  if(useSlideDayPanel() && S.selectedDate===todayStr){
-    setTimeout(()=>openDayPanel(), 300);
-  }
 
 }
 
