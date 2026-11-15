@@ -2696,18 +2696,38 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
 .wide-only,.wide-dialog{display:none;}
 #wide-courses[hidden],#panel-cal[hidden]{display:none!important;}
 @media(min-width:768px){
+  :root{
+    --wide-header-target:44px;
+    --wide-header-inset:8px;
+    --wide-segment-inset:3px;
+    --nav-h:calc(var(--wide-header-target) + 2 * var(--wide-header-inset) + 2 * var(--wide-segment-inset) + 1px);
+  }
   .app-header .header-row{
     display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    align-items:center;padding-block:var(--wide-header-inset);
     width:100%;max-width:1260px;margin:auto;gap:12px;
   }
+  .header-row :is(.wide-tabs,.header-actions) button{min-height:var(--wide-header-target);}
   .app-header .wide-brand{display:inline;}
   .app-header .phone-brand,.app-header .progress-track,
   .header-actions>:not(.auth-area),#auth-logged-in>.sync-status,#auth-logged-in>.user-chip,
   #auth-logged-in>.signout-btn,.app-header .phone-header-action{display:none!important;}
   .app-header .header-actions{justify-self:end;}
-  .wide-tabs{display:flex;gap:3px;padding:3px;background:var(--sunken);border-radius:var(--r-pill);}
-  .wide-tabs button,.wide-tools button{min-height:44px;}
-  .wide-tabs button[aria-current]{background:var(--surface);color:var(--accent-h);box-shadow:var(--shadow-sm);}
+  .wide-tabs{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:relative;isolation:isolate;
+    padding:var(--wide-segment-inset);background:var(--sunken);border-radius:var(--r-pill);
+  }
+  .wide-tabs::before{
+    content:"";position:absolute;inset-block:var(--wide-segment-inset);left:var(--wide-segment-inset);
+    width:calc((100% - 2 * var(--wide-segment-inset)) / 2);border-radius:var(--r-pill);
+    background:var(--surface);box-shadow:var(--shadow-sm);pointer-events:none;
+    transform:translateX(var(--wide-tab-shift,0%));transition:transform 230ms var(--ease-ios);
+  }
+  [data-wide-page=courses] .wide-tabs{--wide-tab-shift:100%;}
+  .wide-tabs button{position:relative;z-index:1;background:transparent;white-space:nowrap;}
+  .wide-tabs button[aria-current]{color:var(--accent-h);}
+  .wide-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+  .wide-tools button{min-height:44px;}
   .account-controls{display:block;}
   #account-toggle{width:44px;height:44px;padding:0;display:grid;place-items:center;color:var(--accent-h);}
   #account-photo{grid-area:1/1;width:34px;height:34px;border-radius:50%;object-fit:cover;}
@@ -2752,8 +2772,22 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
     flex:1 1 0;min-height:0;overflow-y:auto!important;overflow-x:hidden;overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
-  #panel-cal .cal-grid{min-height:100%;grid-template-rows:auto;grid-auto-rows:minmax(max-content,1fr);}
-  #panel-cal .cal-cell{min-height:76px;}
+  /* The layout has a definite height. Use it to budget space per calendar week. */
+  [data-wide-page=calendar] .layout:has(#panel-cal[data-cal-view=month]){container-type:size;}
+  #panel-cal[data-cal-view=month]{
+    --month-row-room:calc((100cqh - 154px) / var(--month-rows,5));
+    width:min(100%,1160px);
+    width:min(100%,1160px,max(880px,calc(var(--month-row-room) * 10)));
+    height:auto!important;max-height:100%;margin-inline:auto;
+  }
+  #panel-cal[data-cal-view=month] .cal-body{
+    flex:0 1 auto;height:auto;container-type:inline-size;scrollbar-gutter:stable both-edges;
+  }
+  #panel-cal[data-cal-view=month] .cal-grid{grid-template-rows:auto;grid-auto-rows:auto;}
+  #panel-cal[data-cal-view=month] .cal-cell{
+    min-height:76px;
+    min-height:clamp(clamp(76px,10cqw,116px),var(--month-row-room),clamp(80px,11.15cqw,128px));
+  }
   #panel-cal .week-wrap{height:auto;min-height:100%;}
   .wide-cal-tools{
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;
@@ -2831,6 +2865,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   }
   .wide-legacy::backdrop{background:transparent;}
 }
+@media(prefers-reduced-motion:reduce){.wide-tabs::before{transition:none;}}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -5338,6 +5373,7 @@ function renderMonthView(){
   document.getElementById('cal-title').textContent=`${y} 年 ${MONTHS[m]}`;
   const weekOffset=isMobile()?0:1;
   const first=(new Date(y,m,1).getDay()-weekOffset+7)%7,days=new Date(y,m+1,0).getDate();
+  $id('panel-cal').style.setProperty('--month-rows',Math.ceil((first+days)/7));
   const weekdays=[...WDAYS.slice(weekOffset),...WDAYS.slice(0,weekOffset)];
   let html=weekdays.map(l=>`<div class="cal-lbl">${l}</div>`).join('');
   for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
@@ -5610,6 +5646,7 @@ function renderCalendar(){
   const key=S.view==='month'?'month:'+S.year+':'+S.month:'week:'+S.weekStart;
   const oldScroll=calBody.scrollTop;
   const sameView=key===calBody.dataset.viewKey;
+  $id('panel-cal').dataset.calView=S.view;
   if(S.view==='month')renderMonthView();else renderWeekView();
   if(!isMobile())calBody.scrollTop=sameView?oldScroll:0;
   if(!sameView&&document.getElementById('panel-cal').hidden)wideCalendarScroll=0;
