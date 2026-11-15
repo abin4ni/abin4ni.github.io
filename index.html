@@ -2751,7 +2751,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   }
   [data-wide-page=courses] .app-shell{overflow-y:auto!important;}
   [data-wide-page=courses] .layout{height:auto!important;overflow:visible!important;padding-block:16px 24px;}
-  body:has(dialog[open]) .app-shell,body:has(dialog[open]) #panel-cal .cal-body{overflow-y:hidden!important;}
+  body:has(dialog[open]) .app-shell,body:has(dialog[open]) #panel-cal[data-cal-view=week] .cal-body{overflow-y:hidden!important;}
   #panel-l,#fab-manage,#memo-area,.cal-progress .makeup-entry,#week-progress{display:none!important;}
   #panel-cal{
     width:100%;max-width:none;height:100%!important;min-width:0;min-height:0;display:flex!important;
@@ -2772,16 +2772,30 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
     flex:1 1 0;min-height:0;overflow-y:auto!important;overflow-x:hidden;overscroll-behavior:contain;
     scrollbar-gutter:stable;
   }
-  /* The layout has a definite height. Use it to budget space per calendar week. */
-  [data-wide-page=calendar] .layout:has(#panel-cal[data-cal-view=month]){container-type:size;}
+  /* Month view scrolls through the document. Keep its size budget tied to the viewport. */
+  html:has(body[data-wide-page=calendar] #panel-cal[data-cal-view=month]){
+    height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;
+    scrollbar-gutter:stable both-edges;scroll-padding-top:var(--nav-h);
+  }
+  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view=month]){
+    height:auto;min-height:100dvh;overflow:visible;
+  }
+  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view=month]) .app-header{position:sticky;top:0;}
+  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view=month]) :is(.app-shell,.layout){
+    height:auto!important;overflow:visible!important;flex:none;
+  }
+  html:has(body[data-wide-page=calendar] #panel-cal[data-cal-view=month]):has(dialog[open]){
+    overflow-y:hidden;
+  }
   #panel-cal[data-cal-view=month]{
-    --month-row-room:calc((100cqh - 154px) / var(--month-rows,5));
+    --month-row-room:calc((100dvh - var(--nav-h) - 18px - 154px) / var(--month-rows,5));
     width:min(100%,1160px);
     width:min(100%,1160px,max(880px,calc(var(--month-row-room) * 10)));
-    height:auto!important;max-height:100%;margin-inline:auto;
+    height:auto!important;max-height:none;margin-inline:auto;overflow:clip!important;
   }
   #panel-cal[data-cal-view=month] .cal-body{
-    flex:0 1 auto;height:auto;container-type:inline-size;scrollbar-gutter:stable both-edges;
+    flex:none;height:auto;max-height:none;overflow:visible!important;
+    container-type:inline-size;scrollbar-gutter:auto;
   }
   #panel-cal[data-cal-view=month] .cal-grid{grid-template-rows:auto;grid-auto-rows:auto;}
   #panel-cal[data-cal-view=month] .cal-cell{
@@ -2866,6 +2880,9 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   .wide-legacy::backdrop{background:transparent;}
 }
 @media(prefers-reduced-motion:reduce){.wide-tabs::before{transition:none;}}
+/* iPad chrome, including narrow Split View. Scrolling stays enabled. */
+html[data-ipad],html[data-ipad] *{scrollbar-width:none!important;scrollbar-gutter:auto!important;}
+html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:none!important;width:0;height:0;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -4808,19 +4825,22 @@ const quickHome=document.createComment('quick-input');
 quickSection.before(quickHome);
 
 let wideCalendarScroll=0;
+function wideCalendarScroller(){
+  return $id('panel-cal').dataset.calView==='month'?document.scrollingElement:$id('cal-body');
+}
 function setWidePage(page){
   const wide=wideMedia.matches;
   const onCalendar=page==='calendar';
   const calendar=$id('panel-cal');
   const courses=$id('wide-courses');
-  const calBody=$id('cal-body');
-  if(wide&&!onCalendar&&!calendar.hidden)wideCalendarScroll=calBody.scrollTop;
+  const scroller=wideCalendarScroller();
+  if(wide&&!onCalendar&&!calendar.hidden)wideCalendarScroll=scroller.scrollTop;
   document.body.dataset.widePage=page;
   calendar.hidden=wide&&!onCalendar;
   calendar.inert=calendar.hidden;
   courses.hidden=!wide||onCalendar;
   courses.inert=courses.hidden;
-  if(wide&&onCalendar)calBody.scrollTop=wideCalendarScroll;
+  if(wide&&onCalendar)scroller.scrollTop=wideCalendarScroll;
   for(const button of document.querySelectorAll('[data-wide-page-button]')){
     if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
@@ -4847,7 +4867,7 @@ function mountWideLayout(){
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
   setWidePage(document.body.dataset.widePage);
   render();
-  if(wide&&document.body.dataset.widePage==='calendar')$id('cal-body').scrollTop=wideCalendarScroll;
+  if(wide&&document.body.dataset.widePage==='calendar')wideCalendarScroller().scrollTop=wideCalendarScroll;
 }
 wideMedia.addEventListener('change',mountWideLayout);
 
@@ -5644,11 +5664,11 @@ function renderCalendar(){
   document.getElementById('vt-week').setAttribute('aria-pressed',String(S.view==='week'));
   const calBody=$id('cal-body');
   const key=S.view==='month'?'month:'+S.year+':'+S.month:'week:'+S.weekStart;
-  const oldScroll=calBody.scrollTop;
+  const oldScroll=wideCalendarScroller().scrollTop;
   const sameView=key===calBody.dataset.viewKey;
   $id('panel-cal').dataset.calView=S.view;
   if(S.view==='month')renderMonthView();else renderWeekView();
-  if(!isMobile())calBody.scrollTop=sameView?oldScroll:0;
+  if(!isMobile())wideCalendarScroller().scrollTop=sameView?oldScroll:0;
   if(!sameView&&document.getElementById('panel-cal').hidden)wideCalendarScroll=0;
   calBody.dataset.viewKey=key;
 }
@@ -6578,6 +6598,9 @@ function doSignIn(){
 
 // ── Init ──────────────────────────────────────────────────────────
 function init(){
+  if(/iPad/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){
+    document.documentElement.dataset.ipad='';
+  }
 
   // ── DOM cache（高頻查詢元素預先快取）────────────────────────────
   window._dom={
