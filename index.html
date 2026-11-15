@@ -2751,7 +2751,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   }
   [data-wide-page=courses] .app-shell{overflow-y:auto!important;}
   [data-wide-page=courses] .layout{height:auto!important;overflow:visible!important;padding-block:16px 24px;}
-  body:has(dialog[open]) .app-shell,body:has(dialog[open]) #panel-cal[data-cal-view=week] .cal-body{overflow-y:hidden!important;}
+  body:has(dialog[open]) .app-shell{overflow-y:hidden!important;}
   #panel-l,#fab-manage,#memo-area,.cal-progress .makeup-entry,#week-progress{display:none!important;}
   #panel-cal{
     width:100%;max-width:none;height:100%!important;min-width:0;min-height:0;display:flex!important;
@@ -2768,32 +2768,28 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   }
   #panel-cal .cal-title{flex:1 1 14rem;overflow-wrap:anywhere;}
   #panel-cal .cal-course-filter{flex:0 1 13rem;min-width:min(150px,100%);max-width:100%;}
-  #panel-cal .cal-body{
-    flex:1 1 0;min-height:0;overflow-y:auto!important;overflow-x:hidden;overscroll-behavior:contain;
-    scrollbar-gutter:stable;
-  }
-  /* Month view scrolls through the document. Keep its size budget tied to the viewport. */
-  html:has(body[data-wide-page=calendar] #panel-cal[data-cal-view=month]){
+  /* Both views use the document scroll and the displayed month’s width budget. */
+  html:has(body[data-wide-page=calendar] #panel-cal[data-cal-view]){
     height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;
     scrollbar-gutter:stable both-edges;scroll-padding-top:var(--nav-h);
   }
-  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view=month]){
+  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view]){
     height:auto;min-height:100dvh;overflow:visible;
   }
-  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view=month]) .app-header{position:sticky;top:0;}
-  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view=month]) :is(.app-shell,.layout){
+  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view]) .app-header{position:sticky;top:0;}
+  body[data-wide-page=calendar]:has(#panel-cal[data-cal-view]) :is(.app-shell,.layout){
     height:auto!important;overflow:visible!important;flex:none;
   }
-  html:has(body[data-wide-page=calendar] #panel-cal[data-cal-view=month]):has(dialog[open]){
+  html:has(body[data-wide-page=calendar] #panel-cal[data-cal-view]):has(dialog[open]){
     overflow-y:hidden;
   }
-  #panel-cal[data-cal-view=month]{
+  #panel-cal[data-cal-view]{
     --month-row-room:calc((100dvh - var(--nav-h) - 18px - 154px) / var(--month-rows,5));
     width:min(100%,1160px);
     width:min(100%,1160px,max(880px,calc(var(--month-row-room) * 10)));
     height:auto!important;max-height:none;margin-inline:auto;overflow:clip!important;
   }
-  #panel-cal[data-cal-view=month] .cal-body{
+  #panel-cal[data-cal-view] .cal-body{
     flex:none;height:auto;max-height:none;overflow:visible!important;
     container-type:inline-size;scrollbar-gutter:auto;
   }
@@ -2802,7 +2798,9 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
     min-height:76px;
     min-height:clamp(clamp(76px,10cqw,116px),var(--month-row-room),clamp(80px,11.15cqw,128px));
   }
-  #panel-cal .week-wrap{height:auto;min-height:100%;}
+  #panel-cal .week-wrap{height:auto;min-height:0;}
+  #panel-cal .week-scroll{flex:none;min-height:0;}
+  #panel-cal .week-col-head{top:var(--nav-h);}
   .wide-cal-tools{
     display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;
     padding:4px var(--sp-4);border-bottom:1px solid var(--border-lt);
@@ -4825,15 +4823,12 @@ const quickHome=document.createComment('quick-input');
 quickSection.before(quickHome);
 
 let wideCalendarScroll=0;
-function wideCalendarScroller(){
-  return $id('panel-cal').dataset.calView==='month'?document.scrollingElement:$id('cal-body');
-}
 function setWidePage(page){
   const wide=wideMedia.matches;
   const onCalendar=page==='calendar';
   const calendar=$id('panel-cal');
   const courses=$id('wide-courses');
-  const scroller=wideCalendarScroller();
+  const scroller=document.scrollingElement;
   if(wide&&!onCalendar&&!calendar.hidden)wideCalendarScroll=scroller.scrollTop;
   document.body.dataset.widePage=page;
   calendar.hidden=wide&&!onCalendar;
@@ -4867,7 +4862,7 @@ function mountWideLayout(){
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
   setWidePage(document.body.dataset.widePage);
   render();
-  if(wide&&document.body.dataset.widePage==='calendar')wideCalendarScroller().scrollTop=wideCalendarScroll;
+  if(wide&&document.body.dataset.widePage==='calendar')document.scrollingElement.scrollTop=wideCalendarScroll;
 }
 wideMedia.addEventListener('change',mountWideLayout);
 
@@ -5393,7 +5388,6 @@ function renderMonthView(){
   document.getElementById('cal-title').textContent=`${y} 年 ${MONTHS[m]}`;
   const weekOffset=isMobile()?0:1;
   const first=(new Date(y,m,1).getDay()-weekOffset+7)%7,days=new Date(y,m+1,0).getDate();
-  $id('panel-cal').style.setProperty('--month-rows',Math.ceil((first+days)/7));
   const weekdays=[...WDAYS.slice(weekOffset),...WDAYS.slice(0,weekOffset)];
   let html=weekdays.map(l=>`<div class="cal-lbl">${l}</div>`).join('');
   for(let i=0;i<first;i++)html+=`<div class="cal-cell empty"></div>`;
@@ -5459,7 +5453,7 @@ function renderWeekView(){
   });
   const body=document.getElementById('cal-body');
   body.innerHTML=`<div class="week-wrap"><div class="week-col-head" style="display:grid;grid-template-columns:${col};">${headHtml}</div><div class="week-scroll"><div class="week-unsched-row" style="grid-template-columns:${col};">${unHtml}</div><div class="week-hour-grid" style="display:grid;grid-template-columns:${col};">${rowsHtml}</div></div></div>`;
-  setTimeout(()=>{const sc=body.querySelector('.week-scroll');if(sc)sc.scrollTop=48;},30);
+  if(isMobile())setTimeout(()=>{const sc=body.querySelector('.week-scroll');if(sc)sc.scrollTop=48;},30);
 }
 
 function wkEv(ev,date){
@@ -5664,11 +5658,17 @@ function renderCalendar(){
   document.getElementById('vt-week').setAttribute('aria-pressed',String(S.view==='week'));
   const calBody=$id('cal-body');
   const key=S.view==='month'?'month:'+S.year+':'+S.month:'week:'+S.weekStart;
-  const oldScroll=wideCalendarScroller().scrollTop;
+  const oldScroll=document.scrollingElement.scrollTop;
   const sameView=key===calBody.dataset.viewKey;
-  $id('panel-cal').dataset.calView=S.view;
+  const panel=$id('panel-cal');
+  panel.dataset.calView=S.view;
+  if(!isMobile()){
+    const first=(new Date(S.year,S.month,1).getDay()+6)%7;
+    const days=new Date(S.year,S.month+1,0).getDate();
+    panel.style.setProperty('--month-rows',Math.ceil((first+days)/7));
+  }
   if(S.view==='month')renderMonthView();else renderWeekView();
-  if(!isMobile())wideCalendarScroller().scrollTop=sameView?oldScroll:0;
+  if(!isMobile())document.scrollingElement.scrollTop=sameView?oldScroll:0;
   if(!sameView&&document.getElementById('panel-cal').hidden)wideCalendarScroll=0;
   calBody.dataset.viewKey=key;
 }
