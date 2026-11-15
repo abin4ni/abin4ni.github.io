@@ -1613,7 +1613,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 
 /* ═══ Phase 2-1 · Course card refinements (CSS only) ═══════════════
    Selectors are intentionally NOT scoped under #course-list: the drag
-   preview is a cloneNode appended to <body data-wide-page="calendar"> and must look identical.
+   preview is a cloneNode appended to <body> and must look identical.
    No change to draggable / ondragstart / .is-draggable / touch-action
    / will-change. */
 .course-card{padding:14px 16px;margin-bottom:10px;}
@@ -2694,6 +2694,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
 .rp-skipped-date{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;color:var(--text-2);text-decoration:line-through;text-decoration-color:var(--border-strong);}
 .rp-skipped-date .rp-exam{text-decoration:none;}
 .wide-only,.wide-dialog{display:none;}
+#wide-courses[hidden],#panel-cal[hidden]{display:none!important;}
 @media(min-width:768px){
   .app-header .header-row{
     display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
@@ -2723,31 +2724,39 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   .account-identity{padding:5px 8px 10px;border-bottom:1px solid var(--border-lt);overflow-wrap:anywhere;}
   .account-identity .sync-status{margin-top:4px;display:flex;}
   #account-name{display:block;font-weight:600;}
-  .app-shell{overflow-y:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable;}
-  body:has(dialog[open]) .app-shell{overflow-y:hidden!important;}
+  .app-shell{overflow:hidden!important;overscroll-behavior:contain;}
   .layout{
-    display:block!important;width:min(1232px,calc(100% - 32px));padding:16px 0 24px;
-    margin:auto;height:auto!important;overflow:visible!important;
+    display:block!important;width:calc(100% - clamp(20px,3vw,56px));padding:8px 0 10px;
+    margin-inline:auto;height:100%!important;overflow:hidden!important;
   }
+  [data-wide-page=courses] .app-shell{overflow-y:auto!important;}
+  [data-wide-page=courses] .layout{height:auto!important;overflow:visible!important;padding-block:16px 24px;}
+  body:has(dialog[open]) .app-shell,body:has(dialog[open]) #panel-cal .cal-body{overflow-y:hidden!important;}
   #panel-l,#fab-manage,#memo-area,.cal-progress .makeup-entry,#week-progress{display:none!important;}
   #panel-cal{
-    width:100%;max-width:none;height:auto!important;min-width:0;display:flex!important;
-    flex-direction:column;overflow:visible!important;border-radius:var(--r-lg);
+    width:100%;max-width:none;height:100%!important;min-width:0;min-height:0;display:flex!important;
+    flex-direction:column;overflow:hidden!important;border-radius:var(--r-lg);
     background:var(--surface);border:1px solid var(--border-lt);
   }
   [data-wide-page=courses] #panel-cal,[data-wide-page=calendar] #wide-courses{display:none!important;}
   #panel-cal .cal-head{
-    grid-template-columns:minmax(0,1fr) auto auto minmax(120px,190px);
+    display:flex;flex-wrap:wrap;justify-content:flex-start;gap:6px 12px;
     align-items:center;border-radius:var(--r-lg) var(--r-lg) 0 0;
   }
   #panel-cal .cal-title,#panel-cal .view-toggle,#panel-cal .cal-nav,#panel-cal .cal-course-filter{
     grid-column:auto;grid-row:auto;margin:0;
   }
-  #panel-cal .cal-title{overflow-wrap:normal;}
-  #panel-cal .cal-body{flex:auto;overflow:clip!important;}
-  #panel-cal .cal-cell{min-height:clamp(72px,10vh,126px);}
+  #panel-cal .cal-title{flex:1 1 14rem;overflow-wrap:anywhere;}
+  #panel-cal .cal-course-filter{flex:0 1 13rem;min-width:min(150px,100%);max-width:100%;}
+  #panel-cal .cal-body{
+    flex:1 1 0;min-height:0;overflow-y:auto!important;overflow-x:hidden;overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+  }
+  #panel-cal .cal-grid{min-height:100%;grid-template-rows:auto;grid-auto-rows:minmax(max-content,1fr);}
+  #panel-cal .cal-cell{min-height:76px;}
+  #panel-cal .week-wrap{height:auto;min-height:100%;}
   .wide-cal-tools{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;
     padding:4px var(--sp-4);border-bottom:1px solid var(--border-lt);
   }
   .wide-week{flex:1;min-width:0;max-width:280px;color:var(--text-2);font-size:var(--ui-caption);}
@@ -2758,6 +2767,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   }
   #wide-drag[hidden]{display:none;}
   #wide-drag h3{font-size:14px;margin:0 0 4px;}
+  #wide-drag{max-height:30vh;overflow:auto;}
   #wide-drag #todo-list{display:flex;overflow:auto;gap:8px;padding:2px 0 6px;max-height:130px;}
   #wide-drag .todo-card{
     flex:0 0 clamp(134px,22vw,250px);margin:0;background:var(--card-2);
@@ -2803,6 +2813,8 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
     border:0;padding:0;overflow:visible!important;
     box-shadow:none;background:none;backdrop-filter:none;transition:none;
   }
+  #wide-exam-dialog .exam-overview{margin:0;border:0;}
+  #wide-exam-dialog .eo-head{display:none;}
   #wide-day .day-panel-close{display:grid;place-items:center;}
   #wide-day[data-stage=schedule] #day-events,#wide-day[data-stage=schedule] #day-schedule-open,
   #wide-day[data-stage=move] .day-schedule-entry,#wide-day[data-stage=move] #day-events{display:none;}
@@ -2818,10 +2830,6 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
     padding:0;border:0;background:transparent;overflow:hidden;
   }
   .wide-legacy::backdrop{background:transparent;}
-}
-@media(min-width:768px) and (max-width:900px){
-  #panel-cal .cal-head{grid-template-columns:minmax(0,1fr) auto auto;}
-  #panel-cal .cal-course-filter{grid-column:1/-1;}
 }
 </style>
 <!-- Firebase SDK -->
@@ -2920,7 +2928,7 @@ onAuthStateChanged(auth,user=>{
 });
 </script>
 </head>
-<body>
+<body data-wide-page="calendar">
 
 <div id="drag-ghost">
   <span id="ghost-dot" class="dot"></span>
@@ -3017,7 +3025,7 @@ onAuthStateChanged(auth,user=>{
 <div class="app-shell">
   <div class="layout">
 
-    <section class="wide-only" id="wide-courses" aria-labelledby="wide-courses-title">
+    <section class="wide-only" id="wide-courses" hidden inert aria-labelledby="wide-courses-title">
       <div class="wide-course-head">
         <h2 id="wide-courses-title">我的課程</h2>
         <div class="wide-tools">
@@ -3025,7 +3033,6 @@ onAuthStateChanged(auth,user=>{
           <button type="button" class="btn btn-primary" id="wide-add-open" aria-haspopup="dialog">＋新增課程</button>
         </div>
       </div>
-      <div id="wide-exam-slot"></div>
       <ul class="wide-course-list" id="wide-course-list"></ul>
     </section>
 
@@ -3147,7 +3154,10 @@ onAuthStateChanged(auth,user=>{
           <span>本週進度 · <b id="wide-week-count"></b></span>
           <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
         </div>
-        <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
+        <div class="wide-tools">
+          <button type="button" class="btn btn-sand" id="wide-exam-open" aria-haspopup="dialog" aria-controls="wide-exam-dialog">考試總覽</button>
+          <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
+        </div>
       </div>
       <section class="wide-only" id="wide-drag" hidden aria-label="拖曳排課">
         <h3>拖曳課程到日期格排課</h3>
@@ -3174,7 +3184,7 @@ onAuthStateChanged(auth,user=>{
         </div>
       </div>
       <div class="mobile-schedule" id="mobile-schedule" aria-live="polite"></div>
-      <div class="cal-body" id="cal-body"></div>
+      <div class="cal-body" id="cal-body" role="region" aria-label="行事曆日期"></div>
       <!-- Memo area -->
       <div class="memo-area" id="memo-area" style="display:none;">
         <div class="memo-area-head">
@@ -3248,6 +3258,12 @@ onAuthStateChanged(auth,user=>{
   </div>
 </template>
 
+<dialog class="wide-dialog" id="wide-exam-dialog" aria-labelledby="wide-exam-title">
+  <div class="makeup-head">
+    <h2 id="wide-exam-title">考試總覽</h2>
+    <button type="button" class="btn btn-sand wide-close" id="wide-exam-close" aria-label="關閉考試總覽" autofocus>×</button>
+  </div>
+</dialog>
 <dialog class="wide-dialog" id="wide-day" aria-labelledby="day-label"></dialog>
 <dialog class="wide-dialog" id="wide-course-dialog" aria-labelledby="wide-course-title">
   <div class="makeup-head">
@@ -4572,7 +4588,7 @@ function renderExamOverview(){
     rows.length+' 科 · '+(first.plan.deadline===localToday?'今天考試':'最近 '+daysBetween(localToday,first.plan.deadline)+' 天後');
   toggle.setAttribute('aria-expanded',String(examOverviewOpen));
   root.classList.toggle('is-open',examOverviewOpen);
-  body.hidden=!examOverviewOpen;
+  body.hidden=isMobile()&&!examOverviewOpen;
   const html=!rows.length?'<p class="eo-empty">目前沒有即將到來的考試。到課程的「📋」設定考試日期後會列在這裡。</p>':
     '<ul class="eo-list">'+rows.map(({c,plan})=>{
       const isToday=plan.deadline===localToday;
@@ -4608,6 +4624,7 @@ let examProgressCourseId=null;
 function focusExamProgress(id){
   if(examProgressOrigin==='calendar'&&focusCalendarExam())return;
   if(examProgressOrigin==='overview'){
+    if(!isMobile()&&!wideExam.open){$id('wide-exam-open').focus({preventScroll:true});return;}
     const row=[...document.querySelectorAll('[data-eo-course]')].find(el=>el.dataset.eoCourse===id);
     if(row){row.focus({preventScroll:true});return;}
   }
@@ -4713,9 +4730,11 @@ examProgressBody.addEventListener('click',event=>{
   if(button.dataset.examAction==='makeup'){
     openMakeupList(()=>focusExamProgress(id));
   }else if(button.dataset.examAction==='schedule'){
+    closeWideExam();
     prepareRemainingSchedule(id);
   }else{
     const date=button.dataset.examDate;
+    closeWideExam();
     if(!isMobile())dayPanelReturnFocus=()=>focusExamProgress(id);
     selectDate(date,{preserveWeek:!isMobile()});
     if(isMobile())mobileTab('day');
@@ -4731,6 +4750,7 @@ function isMobile(){return window.innerWidth<=767;}
 const $id=id=>document.getElementById(id);
 const wideDay=$id('wide-day');
 const wideCourse=$id('wide-course-dialog');
+const wideExam=$id('wide-exam-dialog');
 const wideCourses=$id('wide-course-list');
 const accountToggle=$id('account-toggle');
 const accountPanel=$id('account-panel');
@@ -4739,7 +4759,7 @@ let wideCourseId=null;
 let dayPanelReturnFocus=null;
 
 const wideMounts=[
-  ['panel-r','wide-day'],['course-list','wide-card-slot'],['exam-overview','wide-exam-slot'],
+  ['panel-r','wide-day'],['course-list','wide-card-slot'],['exam-overview','wide-exam-dialog'],
   ['exam-popover','wide-card-slot'],['repeat-schedule-form','wide-repeat-slot'],
   ['new-course-form','wide-add-slot'],['todo-list','wide-drag'],
   ['modal','wide-legacy-modal'],['confirm-backdrop','wide-legacy-confirm'],
@@ -4754,11 +4774,18 @@ quickSection.before(quickHome);
 
 let wideCalendarScroll=0;
 function setWidePage(page){
-  if(document.body.dataset.widePage===page)return;
-  const shell=document.querySelector('.app-shell');
-  if(page==='courses')wideCalendarScroll=shell.scrollTop;
+  const wide=wideMedia.matches;
+  const onCalendar=page==='calendar';
+  const calendar=$id('panel-cal');
+  const courses=$id('wide-courses');
+  const calBody=$id('cal-body');
+  if(wide&&!onCalendar&&!calendar.hidden)wideCalendarScroll=calBody.scrollTop;
   document.body.dataset.widePage=page;
-  shell.scrollTop=page==='calendar'?wideCalendarScroll:0;
+  calendar.hidden=wide&&!onCalendar;
+  calendar.inert=calendar.hidden;
+  courses.hidden=!wide||onCalendar;
+  courses.inert=courses.hidden;
+  if(wide&&onCalendar)calBody.scrollTop=wideCalendarScroll;
   for(const button of document.querySelectorAll('[data-wide-page-button]')){
     if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
@@ -4770,6 +4797,7 @@ function mountWideLayout(){
   if(!wide){
     closeDayPanel();
     closeWideCourse();
+    closeWideExam();
     closeExamPicker();
     closeAccountPanel();
     closeModal();
@@ -4782,23 +4810,42 @@ function mountWideLayout(){
   if(wide)$id('wide-add-slot').prepend(quickSection);
   else quickHome.after(quickSection);
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
+  setWidePage(document.body.dataset.widePage);
   render();
+  if(wide&&document.body.dataset.widePage==='calendar')$id('cal-body').scrollTop=wideCalendarScroll;
 }
 wideMedia.addEventListener('change',mountWideLayout);
 
-function bindWideDialog(dialog,dismiss){
+function bindWideDialog(dialog,dismiss,wideOnly=false){
   let outside=false;
   dialog.addEventListener('pointerdown',event=>{outside=event.target===dialog;});
   dialog.addEventListener('click',event=>{
-    if(!outside||event.target!==dialog)return;
+    if(wideOnly&&!wideMedia.matches||!outside||event.target!==dialog)return;
     const {left,right,top,bottom}=dialog.getBoundingClientRect();
     if(event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom)dismiss();
   });
   dialog.addEventListener('cancel',event=>{
+    if(wideOnly&&!wideMedia.matches)return;
     event.preventDefault();dismiss();
   });
   dialog.addEventListener('keydown',event=>event.stopPropagation());
 }
+
+function closeWideExam(){
+  if(!wideExam.open)return;
+  wideExam.close();
+  if(wideMedia.matches)$id('wide-exam-open').focus({preventScroll:true});
+}
+bindWideDialog(wideExam,closeWideExam);
+for(const dialog of [examProgressDialog,$id('exam-day-dialog')]){
+  bindWideDialog(dialog,()=>dialog.close(),true);
+}
+$id('wide-exam-close').addEventListener('click',closeWideExam);
+$id('wide-exam-open').addEventListener('click',()=>{
+  renderExamOverview();
+  wideExam.showModal();
+  wideExam.scrollTop=0;
+});
 
 function usesDayDialog(){return !isMobile();}
 function openDayPanel(){
@@ -5559,7 +5606,14 @@ function renderCalendar(){
   document.getElementById('vt-week').className='vt-btn'+(S.view==='week'?' active':'');
   document.getElementById('vt-month').setAttribute('aria-pressed',String(S.view==='month'));
   document.getElementById('vt-week').setAttribute('aria-pressed',String(S.view==='week'));
+  const calBody=$id('cal-body');
+  const key=S.view==='month'?'month:'+S.year+':'+S.month:'week:'+S.weekStart;
+  const oldScroll=calBody.scrollTop;
+  const sameView=key===calBody.dataset.viewKey;
   if(S.view==='month')renderMonthView();else renderWeekView();
+  if(!isMobile())calBody.scrollTop=sameView?oldScroll:0;
+  if(!sameView&&document.getElementById('panel-cal').hidden)wideCalendarScroll=0;
+  calBody.dataset.viewKey=key;
 }
 
 // ── Quick Input Parser ────────────────────────────────────────────
@@ -6546,6 +6600,7 @@ function init(){
 
   loadState();
 
+  setWidePage('calendar');
   mountWideLayout();
   refreshWeekProgressClock();
   checkIOSInstall();
