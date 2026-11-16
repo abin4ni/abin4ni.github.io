@@ -3032,6 +3032,42 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 #confirm-title,.modal #modal-title{margin:0;}
 @media(min-width:768px){#wide-day #day-panel-close{display:grid;}}
 
+
+.local-dialog{
+  position:fixed;inset:0;margin:auto;width:min(460px,calc(100% - 28px));
+  max-height:calc(100dvh - 28px);padding:clamp(16px,3vw,24px);overflow:auto;
+  overscroll-behavior:contain;background:var(--surface);color:var(--text);
+  border:1px solid var(--border-lt);border-radius:var(--r-xl);box-shadow:var(--shadow-pop);
+}
+.local-dialog::backdrop{background:var(--scrim);}
+.local-dialog h2{font-size:1.25rem;line-height:1.25;}
+.local-dialog [hidden]{display:none!important;}
+#cal-title{font:inherit;color:inherit;line-height:inherit;border:0;background:none;text-align:left;cursor:pointer;min-height:44px;}
+#calendar-jump-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
+#calendar-jump-form label{min-width:0;}
+#calendar-jump-form :is(input,select){width:100%;}
+#calendar-jump-form .day-schedule-actions{grid-column:1/-1;justify-content:flex-end;}
+html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-today){display:none;}
+@media(max-width:767px) and (pointer:coarse){.cal-nav button:not(.jump-today){display:none;}}
+#cal-body{touch-action:pan-y pinch-zoom;}
+#phone-course-choices{display:grid;gap:8px;margin-top:12px;}
+#phone-course-dialog .fold-head{display:none;}
+#phone-course-dialog .fold-card .fold-body{display:block;}
+#phone-course-dialog .section{margin:12px 0;}
+#phone-course-dialog .phone-repeat-choice{display:flex;align-items:center;gap:8px;min-height:44px;margin-bottom:4px;}
+#phone-course-dialog .phone-repeat-choice input{accent-color:var(--accent);}
+@media(max-width:767px){
+  .phone-courses-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  #phone-course-open{display:grid;place-items:center;width:44px;height:44px;padding:0;font-size:1.35rem;}
+  #panel-cal #phone-schedule-open{grid-area:2/3;min-width:44px;width:44px;padding:0;font-size:1.35rem;}
+  #panel-cal .cal-head .cal-course-filter{grid-area:2/2;}
+  #course-list .course-card .course-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;}
+  #course-list .course-name{flex:1 1 auto;min-width:0;}
+  #course-list .course-head .exam-progress{
+    display:inline-flex;align-items:center;gap:4px;width:auto;min-height:44px;
+    padding:4px 8px;border-radius:var(--r-pill);margin-left:auto;
+  }
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3241,7 +3277,7 @@ onAuthStateChanged(auth,user=>{
     </section>
 
     <aside class="panel panel-l" id="panel-l">
-      <div class="mobile-page-intro course-summary-intro"><h2>我的課程</h2><p id="course-summary"></p></div>
+      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2>我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog">＋</button></div><p id="course-summary"></p></div>
       <div class="tablet-course-heading">
         <h2>我的課程</h2>
         <button type="button" class="btn btn-sand" id="tablet-course-close" onclick="closeTabletPanel()">關閉</button>
@@ -3294,6 +3330,7 @@ onAuthStateChanged(auth,user=>{
           <label class="form-label" for="inp-exam">考試日期（選填）</label>
           <input type="date" id="inp-exam"/>
         </div>
+        <label class="phone-only phone-repeat-choice"><input type="checkbox" id="phone-repeat-after-create"> 建立後接著重複排課（選填）</label>
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:2px;">新增課程</button>
         </div>
       </form>
@@ -3335,7 +3372,7 @@ onAuthStateChanged(auth,user=>{
 
     <main class="cal-panel" id="panel-cal">
       <div class="cal-head">
-        <h2 class="cal-title" id="cal-title" aria-live="polite"></h2>
+        <h2 class="cal-title"><button type="button" id="cal-title" aria-live="polite" aria-haspopup="dialog" aria-controls="calendar-jump"></button></h2>
         <button class="fab-manage" id="fab-manage" onclick="toggleTabletPanel()" title="我的課程" aria-controls="panel-l" aria-expanded="false">我的課程</button>
         <div class="view-toggle" role="group" aria-label="行事曆檢視">
           <button class="vt-btn active" id="vt-month" onclick="setView('month')">月</button>
@@ -3352,7 +3389,7 @@ onAuthStateChanged(auth,user=>{
             <select id="cal-course-filter" aria-label="篩選科目"><option value="">全部課程</option></select>
           </div>
         </div>
-        <button type="button" class="btn phone-only" id="phone-schedule-open" onclick="openCalendarSchedule()">＋安排課堂</button>
+        <button type="button" class="btn phone-only" id="phone-schedule-open" aria-label="安排課堂" onclick="openCalendarSchedule()">＋</button>
       </div>
       <div class="wide-only wide-cal-tools">
         <div class="wide-week">
@@ -3473,6 +3510,25 @@ onAuthStateChanged(auth,user=>{
   </div>
 </template>
 
+<dialog id="calendar-jump" class="local-dialog" aria-labelledby="calendar-jump-title">
+  <div class="makeup-head"><h2 id="calendar-jump-title">選擇年月</h2><button type="button" class="btn popup-close" data-local-close aria-label="關閉年月選擇"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <form id="calendar-jump-form">
+    <label>年份 <input id="calendar-jump-year" type="number" inputmode="numeric" min="100" max="9999" step="1" required></label>
+    <label>月份 <select id="calendar-jump-month"></select></label>
+    <div class="day-schedule-actions"><button type="button" class="btn btn-sand" data-local-close>取消</button><button class="btn btn-primary">確認</button></div>
+  </form>
+</dialog>
+<dialog id="phone-course-dialog" class="local-dialog" aria-labelledby="phone-course-title">
+  <div class="makeup-head"><h2 id="phone-course-title">新增課程或快速輸入</h2><button type="button" class="btn popup-close" data-local-close aria-label="關閉新增課程視窗"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <div id="phone-course-choices">
+    <button type="button" class="btn btn-primary" id="phone-manual-open">新增課程</button>
+    <button type="button" class="btn btn-sand" id="phone-quick-open">快速輸入</button>
+  </div>
+  <div id="phone-manual-slot" hidden></div>
+  <div id="phone-quick-slot" hidden></div>
+  <div id="phone-repeat-slot" hidden></div>
+  <button type="button" class="btn btn-sand" id="phone-existing-repeat" hidden>為既有課程排課</button>
+</dialog>
 <dialog id="backup-import-dialog" aria-labelledby="backup-import-title">
   <div class="makeup-head">
     <h2 id="backup-import-title">匯入備份</h2>
@@ -3872,14 +3928,13 @@ function completed(c){return allEntries(c.id).filter(e=>e.done).length;}
 function course(id){return S.courses.find(c=>c.id===id);}
 // isMobile defined below
 const WDAYS=['日','一','二','三','四','五','六'];
-const MONTHS=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 const HOURS=Array.from({length:16},(_,i)=>i+7);
 function fmtDate(s){const[y,m,d]=s.split('-').map(Number);return`${m}月${d}日（週${WDAYS[new Date(y,m-1,d).getDay()]}）`;}
 
 // ── Toast notifications ───────────────────────────────────────────
 function toast(msg,type='',duration=2800){
   const c=document.getElementById('toast-container');
-  if(!isMobile()){
+  if(!isMobile()||document.activeElement?.closest('#phone-course-dialog')){
     const host=document.activeElement?.closest('dialog[open]')||document.body;
     if(c.parentElement!==host)host.append(c);
   }if(!c)return;
@@ -4232,6 +4287,7 @@ function addCourse(event){
   const examDate=document.getElementById('inp-exam').value||'';
   const id=`c${S.cid++}`;
   S.courses.push({id,name,total,color:PALETTE[colorCursor++%PALETTE.length],examDate,lessonStart,lessonEnd});
+  const repeatAfterCreate=isMobile()&&document.getElementById('phone-repeat-after-create').checked;
   event.currentTarget.reset();
   updateNewCourseRange();
   nameInput.focus();
@@ -4241,6 +4297,7 @@ function addCourse(event){
     const cards=document.querySelectorAll('#course-list .course-card');
     if(cards.length) cards[cards.length-1].classList.add('new-card');
   });
+  if(repeatAfterCreate)openPhoneCourse('repeat',id);
   toast(`已新增「${name}」（${total} 堂）`,'success');
 }
 function deleteCourse(id){
@@ -4902,8 +4959,9 @@ function examBadge(c,localToday,plan){
   if(c.examDate<localToday)return '<span class="exam-badge danger">考試已過期</span>';
   if(c.examDate===localToday)return '<span class="exam-badge danger">今天考試</span>';
   const days=daysBetween(localToday,c.examDate);
+  const pending=plan.after+plan.unscheduled;
   return `<button type="button" class="exam-progress" data-exam-progress="${esc(c.id)}" aria-haspopup="dialog" aria-controls="exam-progress-dialog">
-    <span><strong>距考試 ${days} 天</strong><span>考前尚未安排 ${plan.after+plan.unscheduled} 堂</span></span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg>
+    <span><strong>距考試 ${days} 天</strong>${!isMobile()&&pending>=1?`<span>考前尚未安排 ${pending} 堂</span>`:""}</span><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 6 6 6-6 6"/></svg>
   </button>`;
 }
 
@@ -4930,7 +4988,8 @@ function renderExamOverview(){
     '<ul class="eo-list">'+rows.map(({c,plan})=>{
       const isToday=plan.deadline===localToday;
       const when=isToday?'<span class="eo-when is-today">今天考試</span>':'<span class="eo-when">距考試 '+daysBetween(localToday,plan.deadline)+' 天</span>';
-      const stats='<span class="eo-stat">考前尚未安排 <b>'+(plan.after+plan.unscheduled)+'</b> 堂</span>'+
+      const pending=plan.after+plan.unscheduled;
+      const stats=(pending>=1?'<span class="eo-stat">考前尚未安排 <b>'+pending+'</b> 堂</span>':'')+
         (plan.past?'<span class="eo-stat is-warn">待補課 <b>'+plan.past+'</b> 堂</span>':'');
       const inner='<span class="eo-line"><span class="eo-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span>'+when+'</span>'+
         '<span class="eo-line eo-sub"><span class="eo-date">'+esc(fmtDate(plan.deadline))+'</span><span class="eo-stats">'+stats+'</span></span>';
@@ -4977,13 +5036,15 @@ function renderExamProgressDetail(plan){
   const dates=[...plan.dates].sort(([a],[b])=>a.localeCompare(b)).map(([date,count])=>
     `<li><button type="button" class="btn btn-sand" data-exam-date="${esc(date)}">${esc(date)} · ${count} 堂 · 查看日期詳情</button></li>`
   ).join('');
+  const pending=plan.after+plan.unscheduled;
+  const summary=pending>=1?`<p>考前尚未安排 ${pending} 堂</p>`:'';
   const groups=[
     ['已過日期',plan.past,plan.past?'<button type="button" class="btn btn-sand" data-exam-action="makeup">開啟補課清單</button>':''],
     ['今天至考試前已排',plan.before,''],
     ['考試當天或之後已排',plan.after,dates?'<ul class="exam-detail-dates">'+dates+'</ul>':''],
     ...(plan.unscheduled>=1?[['剩餘課程：',plan.unscheduled,'<button type="button" class="btn btn-sand" data-exam-action="schedule">安排剩餘課堂</button>']]:[])
   ];
-  const content=groups.map(([label,count,actions],index)=>
+  const content=summary+groups.map(([label,count,actions],index)=>
     `<section class="exam-detail-group${index>=2?' is-outside':''}"><h3>${label} <span class="exam-detail-count">${count} 堂</span></h3>${actions}</section>`
   ).join('');
   if(examProgressBody.innerHTML!==content){
@@ -5043,7 +5104,7 @@ function prepareRemainingSchedule(id){
   const form=repeatForm;
   if(isMobile()){
     mobileTab('course');
-    if(!form.classList.contains('is-open'))toggleFold(form.querySelector('.fold-head'));
+    openPhoneCourse('repeat',id);
   }else{
     setWidePage('courses');
     openWideCourse(id);
@@ -5106,8 +5167,6 @@ const wideMounts=[
   return {el,home,target:$id(target)};
 });
 const quickSection=$id('quick-input').closest('.quick-course-section');
-const quickHome=document.createComment('quick-input');
-quickSection.before(quickHome);
 
 let wideCalendarScroll=0;
 function setWidePage(page){
@@ -5131,6 +5190,7 @@ function setWidePage(page){
 
 function mountWideLayout(){
   const wide=wideMedia.matches;
+  if(wide&&$id('phone-course-dialog').open)closePhoneCourse();
   if(!wide){
     closeDayPanel();
     closeWideCourse();
@@ -5145,7 +5205,11 @@ function mountWideLayout(){
     else home.after(el);
   }
   if(wide)$id('wide-add-slot').prepend(quickSection);
-  else quickHome.after(quickSection);
+  else{
+    $id('phone-quick-slot').append(quickSection);
+    $id('phone-manual-slot').append($id('new-course-form'));
+    $id('phone-repeat-slot').append($id('repeat-schedule-form'));
+  }
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
   setWidePage(document.body.dataset.widePage);
   render();
@@ -5544,7 +5608,7 @@ function syncFolds(){
 function renderCourseSummary(){
   const el=document.getElementById('course-summary');if(!el)return;
   const n=S.courses.length,rem=S.courses.reduce((t,c)=>t+remaining(c),0);
-  el.textContent=n?`${n} 門課 · 尚有 ${rem} 堂未安排`:'還沒有課程，用下方快速輸入建立第一門';
+  el.textContent=n?`${n} 門課${rem>=1?` · 尚有 ${rem} 堂未安排`:''}`:'還沒有課程，請先新增第一門';
 }
 function renderCourses(){
   renderCourseSummary();
@@ -5568,18 +5632,20 @@ function renderCourses(){
     const ls=c.lessonStart??1, le=c.lessonEnd??c.total;
     const lessonChip=`<span class="lesson-chip">第 ${ls}–${le} 堂</span>`;
     const dragAttrs=isMobile()&&rem>0?`draggable="true" ondragstart="dragStart(event,'${c.id}')" ondragend="dragEnd(event)" title="拖曳到行事曆排課"`:'';
+    const badge=examBadge(c,localToday,plans.get(c.id));
     return`<div class="course-card ${rem>0?'is-draggable':''}" ${dragAttrs}>
       <div class="course-head">
         <span class="dot" style="background:${c.color}"></span>
         <span class="course-name">${esc(c.name)}</span>
+        ${isMobile()?badge:""}
       </div>
-      ${lessonChip}${examBadge(c,localToday,plans.get(c.id))}
+      ${lessonChip}${isMobile()?"":badge}
       <div class="course-progress-row">
         <div class="course-stat"><span class="course-meta">完成 ${done}／${c.total}</span><span class="course-meta">${pct}%</span></div>
         <div class="progress-wrap" role="progressbar" aria-label="課程完成進度" aria-valuenow="${pct}">
           <div class="progress-fill" style="width:${pct}%;background:var(--accent)"></div>
         </div>
-        <span class="course-meta">已排 ${arr}${rem>=1?" · "+remainingCourseText(rem):""}</span>
+        ${isMobile()?(rem>=1?`<span class="course-meta">${remainingCourseText(rem)}</span>`:""):`<span class="course-meta">已排 ${arr}${rem>=1?" · "+remainingCourseText(rem):""}</span>`}
       </div>
       <div class="course-actions">
         <button class="exam-pen-btn" onclick="editCourse('${c.id}')" title="編輯課程" aria-label="編輯課程"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m13.5 6.5 4 4M5 19l4.5-1 10-10a2.8 2.8 0 0 0-4-4l-10 10L5 19Z"/></svg></button>
@@ -5692,7 +5758,7 @@ function openCalendarExam(date,id){
   document.getElementById('exam-day-list').innerHTML=exams.map(c=>{
     const plan=plans.get(c.id);
     if(!plan)return '<li><div class="ed-row is-static"><span class="ed-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span><span class="ed-meta">'+(c.examDate===today?'今天考試':'已過考試日')+'</span></div></li>';
-    return '<li><button type="button" class="ed-row" data-ed-course="'+esc(c.id)+'"><span class="ed-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span><span class="ed-meta">距考試 '+daysBetween(today,c.examDate)+' 天 · 考前尚未安排 '+(plan.after+plan.unscheduled)+' 堂</span></button></li>';
+    return '<li><button type="button" class="ed-row" data-ed-course="'+esc(c.id)+'"><span class="ed-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span><span class="ed-meta">距考試 '+daysBetween(today,c.examDate)+' 天'+(plan.after+plan.unscheduled>=1?' · 考前尚未安排 '+(plan.after+plan.unscheduled)+' 堂':'')+'</span></button></li>';
   }).join('');
   const dlg=document.getElementById('exam-day-dialog');
   showAppDialog(dlg,()=>dlg.close());
@@ -5717,7 +5783,7 @@ function courseMark(name,count){
 // ── Month View ────────────────────────────────────────────────────
 function renderMonthView(){
   const{year:y,month:m}=S;
-  document.getElementById('cal-title').textContent=`${y} 年 ${MONTHS[m]}`;
+  document.getElementById('cal-title').textContent=`${y} 年 ${m+1} 月`;
   const weekOffset=isMobile()?0:1;
   const first=(new Date(y,m,1).getDay()-weekOffset+7)%7,days=new Date(y,m+1,0).getDate();
   const weekdays=[...WDAYS.slice(weekOffset),...WDAYS.slice(0,weekOffset)];
@@ -5762,8 +5828,9 @@ function renderWeekView(){
   const weekDays=Array.from({length:7},(_,i)=>addDays(S.weekStart,i));
   const lessonsByDay=weekDays.map(calendarLessonsForDate);
   const[sy,sm,sd]=weekDays[0].split('-').map(Number);
-  const[,em,ed]=weekDays[6].split('-').map(Number);
-  document.getElementById('cal-title').textContent=`${sy}年${sm}月${sd}日–${em}月${ed}日`;
+  const[ey,em,ed]=weekDays[6].split('-').map(Number);
+  const crossYear=sy!==ey;
+  document.getElementById('cal-title').textContent=`${crossYear?sy+'/':''}${sm}/${sd}–${crossYear?ey+'/':''}${em}/${ed}`;
   const col='36px repeat(7,minmax(0,1fr))',isTap=!!S.tapCourseId;
   let headHtml=`<div class="wch-spacer"></div>`;
   weekDays.forEach((s,i)=>{const d=Number(s.slice(-2));headHtml+=`<div class="wch-day ${s===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${s}，${lessonsByDay[i].length} 堂課" aria-pressed="${s===S.selectedDate}" data-calendar-date="${s}" onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span></button>${examMarkHtml(s)?'<div class="wch-exams">'+examMarkHtml(s)+'</div>':''}</div>`;});
@@ -6861,25 +6928,93 @@ document.addEventListener('keydown', e => {
   if (e.key === 't' || e.key === 'T') jumpToday();
 });
 
-// ── Touch swipe to change month/week ─────────────────────────────
-(function(){
-  let tx=0, ty=0;
-  const calBody = () => document.getElementById('cal-body');
-  function onTouchStart(e){ tx=e.touches[0].clientX; ty=e.touches[0].clientY; }
-  function onTouchEnd(e){
-    const dx=e.changedTouches[0].clientX-tx;
-    const dy=e.changedTouches[0].clientY-ty;
-    if(Math.abs(dx)<Math.abs(dy)*1.2||Math.abs(dx)<40)return; // mostly vertical, ignore
-    if(dx < -40) navNext();
-    if(dx >  40) navPrev();
+// Track only a single deliberate horizontal swipe that starts on the calendar.
+{
+  let swipe=null;
+  const body=$id('cal-body');
+  const excluded='button,select,input,textarea,a,[contenteditable],dialog';
+  body.addEventListener('touchstart',event=>{
+    swipe=null;
+    if(event.touches.length!==1||event.target.closest(excluded)||topAppDialog()||S.dragCourseId)return;
+    const {clientX:x,clientY:y,identifier:id}=event.touches[0];
+    if(x<24||x>innerWidth-24)return;
+    swipe={x,y,id};
+  },{passive:true});
+  body.addEventListener('touchmove',event=>{
+    if(!swipe)return;
+    const t=event.touches[0];
+    if(event.touches.length!==1||t.identifier!==swipe.id||
+      (Math.abs(t.clientY-swipe.y)>14&&Math.abs(t.clientY-swipe.y)>Math.abs(t.clientX-swipe.x)))swipe=null;
+  },{passive:true});
+  body.addEventListener('touchcancel',()=>{swipe=null;},{passive:true});
+  body.addEventListener('touchend',event=>{
+    const start=swipe;
+    swipe=null;
+    if(!start||event.touches.length||topAppDialog()||S.dragCourseId)return;
+    const t=[...event.changedTouches].find(t=>t.identifier===start.id);
+    if(!t)return;
+    const dx=t.clientX-start.x,dy=t.clientY-start.y;
+    if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.6)return;
+    if(event.cancelable)event.preventDefault();
+    (dx<0?navNext:navPrev)();
+  },{passive:false});
+}
+
+const calendarJump=$id('calendar-jump');
+const jumpYear=$id('calendar-jump-year');
+const jumpMonth=$id('calendar-jump-month');
+jumpMonth.replaceChildren(...Array.from({length:12},(_,i)=>new Option((i+1)+' 月',i)));
+function closeCalendarJump(){
+  calendarJump.close();
+  $id('cal-title').focus({preventScroll:true});
+}
+bindWideDialog(calendarJump,closeCalendarJump);
+calendarJump.querySelectorAll('[data-local-close]').forEach(button=>button.addEventListener('click',closeCalendarJump));
+$id('cal-title').addEventListener('click',()=>{
+  const [year,month]=S.view==='week'?S.weekStart.split('-').map(Number):[S.year,S.month+1];
+  jumpYear.value=year;
+  jumpMonth.value=month-1;
+  showAppDialog(calendarJump,closeCalendarJump);
+});
+$id('calendar-jump-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  const year=jumpYear.valueAsNumber,month=Number(jumpMonth.value);
+  S.year=year;
+  S.month=month;
+  S.selectedDate=ds(year,month,1);
+  if(S.view==='week')S.weekStart=weekStartOf(S.selectedDate);
+  closeCalendarJump();
+  renderCalendar();
+});
+
+const phoneCourseDialog=$id('phone-course-dialog');
+function closePhoneCourse(){
+  phoneCourseDialog.close();
+  $id('new-course-form').reset();
+  updateNewCourseRange();
+  const input=$id('quick-input');
+  input.value='';
+  input.dispatchEvent(new Event('input'));
+  $id('phone-course-open').focus({preventScroll:true});
+}
+function openPhoneCourse(mode,id=''){
+  $id('phone-course-title').textContent={menu:'新增課程或快速輸入',manual:'新增課程',quick:'快速輸入',repeat:'重複排課'}[mode];
+  for(const [element,stage] of [['phone-course-choices','menu'],['phone-manual-slot','manual'],['phone-existing-repeat','manual'],['phone-quick-slot','quick'],['phone-repeat-slot','repeat']]){
+    $id(element).hidden=mode!==stage;
   }
-  document.addEventListener('touchstart', e=>{
-    if(e.target.closest('#cal-body'))onTouchStart(e);
-  },{passive:true});
-  document.addEventListener('touchend', e=>{
-    if(e.target.closest('#cal-body'))onTouchEnd(e);
-  },{passive:true});
-})();
+  if(mode==='repeat'){
+    $id('rep-course').value=id;
+    updateRepeatConditions();
+  }
+  if(!phoneCourseDialog.open)showAppDialog(phoneCourseDialog,closePhoneCourse);
+  phoneCourseDialog.scrollTop=0;
+  $id({menu:'phone-manual-open',manual:'inp-name',quick:'quick-input',repeat:'rep-course'}[mode]).focus();
+}
+bindWideDialog(phoneCourseDialog,closePhoneCourse);
+phoneCourseDialog.querySelector('[data-local-close]').addEventListener('click',closePhoneCourse);
+for(const [id,mode] of [['phone-course-open','menu'],['phone-manual-open','manual'],['phone-quick-open','quick'],['phone-existing-repeat','repeat']]){
+  $id(id).addEventListener('click',()=>openPhoneCourse(mode));
+}
 function setView(v){S.view=v;if(v==='week')S.weekStart=weekStartOf(S.selectedDate||todayStr);render();}
 function selectDate(s,{preserveWeek=false}={}){
   S.selectedDate=s;
@@ -6932,6 +7067,7 @@ function doSignIn(){
 
 // ── Init ──────────────────────────────────────────────────────────
 function init(){
+  if(/iPhone|iPod/i.test(navigator.userAgent))document.documentElement.dataset.phoneTouch='';
   if(/iPad/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){
     document.documentElement.dataset.ipad='';
   }
