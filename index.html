@@ -2821,7 +2821,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   }
   .wide-course-row:hover,.wide-course-row:active{background:var(--accent-tint);}
   .wide-course-row span:first-of-type{grid-column:2;grid-row:1;}
-  .wide-course-row span:last-of-type{grid-column:1;}
+  .wide-course-row .course-remaining{grid-column:1;}
   .wide-course-row strong{overflow-wrap:anywhere;}
   .wide-course-row span{color:var(--text-2);font-size:var(--ui-caption);}
   .wide-course-empty{padding:16px;color:var(--text-3);}
@@ -3863,6 +3863,11 @@ function allEntries(cid){
 function invalidateEntriesCache(){_entriesCacheKey='';}
 
 function remaining(c){return Math.max(0,c.total-allEntries(c.id).length);}
+function remainingCourseText(count){return '剩餘課程：'+count+' 堂';}
+function scheduleCourseLabel(c){
+  const count=remaining(c);
+  return c.name+(count>=1?'（'+remainingCourseText(count)+'）':'');
+}
 function completed(c){return allEntries(c.id).filter(e=>e.done).length;}
 function course(id){return S.courses.find(c=>c.id===id);}
 // isMobile defined below
@@ -4688,7 +4693,7 @@ function calculateRepeatBatch({courseId,days,perDay,start,end},skips=[]){
   return {name:selectedCourse.name,available,dates,added,remaining:available-added,reason,skipped:[...skipSet].sort()};
 }
 function repeatBatchSummary(batch){
-  return '本次安排 '+batch.added+' 堂，剩餘 '+batch.remaining+' 堂未排'+(batch.skipped?.length?'（已跳過 '+batch.skipped.length+' 天）':'');
+  return '本次安排 '+batch.added+' 堂'+(batch.remaining>=1?' · '+remainingCourseText(batch.remaining):'')+(batch.skipped?.length?'（已跳過 '+batch.skipped.length+' 天）':'');
 }
 // Daily load (information only). Counts every lesson already in S.calendar for that date —
 // all courses, done or not, timed or not — and ignores the calendar course filter.
@@ -4976,7 +4981,7 @@ function renderExamProgressDetail(plan){
     ['已過日期',plan.past,plan.past?'<button type="button" class="btn btn-sand" data-exam-action="makeup">開啟補課清單</button>':''],
     ['今天至考試前已排',plan.before,''],
     ['考試當天或之後已排',plan.after,dates?'<ul class="exam-detail-dates">'+dates+'</ul>':''],
-    ['尚未排課',plan.unscheduled,plan.unscheduled?'<button type="button" class="btn btn-sand" data-exam-action="schedule">安排剩餘課堂</button>':'']
+    ...(plan.unscheduled>=1?[['剩餘課程：',plan.unscheduled,'<button type="button" class="btn btn-sand" data-exam-action="schedule">安排剩餘課堂</button>']]:[])
   ];
   const content=groups.map(([label,count,actions],index)=>
     `<section class="exam-detail-group${index>=2?' is-outside':''}"><h3>${label} <span class="exam-detail-count">${count} 堂</span></h3>${actions}</section>`
@@ -5229,7 +5234,8 @@ wideDay.addEventListener('keydown',event=>{
 function renderWideCourses(){
   if(!wideMedia.matches)return;
   const rows=S.courses.map(c=>'<li><button class="wide-course-row" type="button" data-wide-course="'+esc(c.id)+'" aria-haspopup="dialog">'+
-    '<strong>'+esc(c.name)+'</strong><span>完成 '+completed(c)+'／'+c.total+' 堂</span><span>未排 '+remaining(c)+' 堂</span></button></li>').join('');
+    '<strong>'+esc(c.name)+'</strong><span>完成 '+completed(c)+'／'+c.total+' 堂</span>'+
+    (remaining(c)>=1?'<span class="course-remaining">'+remainingCourseText(remaining(c))+'</span>':'')+'</button></li>').join('');
   if(wideCourses.innerHTML!==rows && rows){
     const focused=wideCourses.contains(document.activeElement)&&document.activeElement.dataset.wideCourse;
     wideCourses.innerHTML=rows;
@@ -5427,7 +5433,7 @@ function renderMobileSchedule(){
   pending.forEach(c=>{
     const btn=document.createElement('button');
     btn.className='btn btn-sand';
-    btn.textContent=c.name+'（剩 '+remaining(c)+' 堂）';
+    btn.textContent=scheduleCourseLabel(c);
     btn.onclick=()=>{
       if(!course(c.id)||remaining(course(c.id))<=0){renderMobileSchedule();return;}
       mobileSchedulePickerOpen=false;
@@ -5573,7 +5579,7 @@ function renderCourses(){
         <div class="progress-wrap" role="progressbar" aria-label="課程完成進度" aria-valuenow="${pct}">
           <div class="progress-fill" style="width:${pct}%;background:var(--accent)"></div>
         </div>
-        <span class="course-meta">已排 ${arr} · 未排 ${rem}</span>
+        <span class="course-meta">已排 ${arr}${rem>=1?" · "+remainingCourseText(rem):""}</span>
       </div>
       <div class="course-actions">
         <button class="exam-pen-btn" onclick="editCourse('${c.id}')" title="編輯課程" aria-label="編輯課程"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m13.5 6.5 4 4M5 19l4.5-1 10-10a2.8 2.8 0 0 0-4-4l-10 10L5 19Z"/></svg></button>
@@ -5596,7 +5602,7 @@ function renderCourses(){
 }
 function renderRepeatSelect(){
   const sel=document.getElementById('rep-course'),prev=sel.value;
-  sel.innerHTML='<option value="">選擇科目…</option>'+S.courses.map(c=>`<option value="${c.id}">${esc(c.name)}（剩 ${remaining(c)} 堂）</option>`).join('');
+  sel.innerHTML='<option value="">選擇科目…</option>'+S.courses.map(c=>`<option value="${c.id}">${esc(scheduleCourseLabel(c))}</option>`).join('');
   if(prev)sel.value=prev;
 }
 function renderTodo(){
@@ -5609,7 +5615,7 @@ function renderTodo(){
          ondragstart="dragStart(event,'${c.id}')" ondragend="dragEnd(event)"
          onclick="tapTodo('${c.id}')">
       <span class="dot" style="background:${c.color}"></span>
-      <div class="todo-info"><div class="todo-name">${esc(c.name)}</div><div class="todo-rem">還有 ${remaining(c)} 堂未安排</div></div>
+      <div class="todo-info"><div class="todo-name">${esc(c.name)}</div><div class="todo-rem">${remainingCourseText(remaining(c))}</div></div>
       <span class="drag-icon">⠿</span>
     </div>`;
   }).join('');
@@ -6083,7 +6089,7 @@ function initQuickInput(){
     document.getElementById('quick-total').textContent=parsed.total+' 堂';
     document.getElementById('quick-plan').textContent=dates.length
       ? '建立並排課 · 新增 '+dates.length+' 堂 · '+dates[0]+(dates.length>1?' 至 '+dates.at(-1):'')+
-        (dates.length<parsed.total?' · 剩餘 '+(parsed.total-dates.length)+' 堂未排':'')
+        (dates.length<parsed.total?' · '+remainingCourseText(parsed.total-dates.length):'')
       : '只建立課程 · 不新增課堂'+(parsed.time?'，所填時間不會排入行事曆。':'。');
     if(dates.length)button.textContent='建立並排課';
     return {parsed,dates};
@@ -6351,7 +6357,7 @@ function refreshDayScheduleCourses(){
   const pending=S.courses.filter(c=>remaining(c)>0);
   pending.forEach(c=>{
     const option=document.createElement('option');
-    option.value=c.id;option.textContent=c.name+'（剩 '+remaining(c)+' 堂）';
+    option.value=c.id;option.textContent=scheduleCourseLabel(c);
     select.appendChild(option);
   });
   if(pending.some(c=>c.id===previous))select.value=previous;
