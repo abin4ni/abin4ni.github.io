@@ -3068,6 +3068,14 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
     padding:4px 8px;border-radius:var(--r-pill);margin-left:auto;
   }
 }
+
+#calendar-swipe-hint{padding:4px 12px;color:var(--text-3);font-size:var(--ui-caption);}
+#calendar-swipe-hint[hidden]{display:none;}
+#cal-body.is-swiping{position:relative;overflow-x:clip;}
+#cal-body.is-swiping .week-col-head{position:static;}
+#cal-body>.calendar-neighbor{position:absolute;inset:0 0 auto;width:100%;pointer-events:none;}
+#cal-body.is-swiping>:first-child,#cal-body>.calendar-neighbor{will-change:transform;}
+#cal-body.is-settling>:first-child,#cal-body.is-settling>.calendar-neighbor{transition:transform 220ms var(--ease-ios);}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3436,6 +3444,7 @@ onAuthStateChanged(auth,user=>{
         </details>
       </div>
       <div class="mobile-schedule" id="mobile-schedule" aria-live="polite" hidden></div>
+      <p id="calendar-swipe-hint" hidden>左右滑動切換月份／週次</p>
       <div class="cal-body" id="cal-body" role="region" aria-label="行事曆日期"></div>
       <!-- Memo area -->
       <div class="memo-area" id="memo-area" style="display:none;">
@@ -5781,9 +5790,7 @@ function courseMark(name,count){
 }
 
 // ── Month View ────────────────────────────────────────────────────
-function renderMonthView(){
-  const{year:y,month:m}=S;
-  document.getElementById('cal-title').textContent=`${y} 年 ${m+1} 月`;
+function monthMarkup(y,m,slideClass=''){
   const weekOffset=isMobile()?0:1;
   const first=(new Date(y,m,1).getDay()-weekOffset+7)%7,days=new Date(y,m+1,0).getDate();
   const weekdays=[...WDAYS.slice(weekOffset),...WDAYS.slice(0,weekOffset)];
@@ -5816,21 +5823,26 @@ function renderMonthView(){
       <div class="cal-tags">${examMarkHtml(s)}${tags}${more}</div>
     </div>`;
   }
-  // Apply slide animation class
+  return `<div class="cal-grid${slideClass?' '+slideClass:''}">${html}</div>`;
+}
+function renderMonthView(){
+  const {year,month}=S;
+  $id('cal-title').textContent=`${year} 年 ${month+1} 月`;
   const slideClass=_calNavDir===1?'slide-next':_calNavDir===-1?'slide-prev':'';
-  const grid=`<div class="cal-grid${slideClass?' '+slideClass:''}">${html}</div>`;
-  document.getElementById('cal-body').innerHTML=grid;
-  _calNavDir=0; // reset after render
+  $id('cal-body').innerHTML=monthMarkup(year,month,slideClass);
+  _calNavDir=0;
 }
 
 // ── Week View ─────────────────────────────────────────────────────
-function renderWeekView(){
-  const weekDays=Array.from({length:7},(_,i)=>addDays(S.weekStart,i));
-  const lessonsByDay=weekDays.map(calendarLessonsForDate);
-  const[sy,sm,sd]=weekDays[0].split('-').map(Number);
-  const[ey,em,ed]=weekDays[6].split('-').map(Number);
+function weekTitle(first,last){
+  const[sy,sm,sd]=first.split('-').map(Number);
+  const[ey,em,ed]=last.split('-').map(Number);
   const crossYear=sy!==ey;
-  document.getElementById('cal-title').textContent=`${crossYear?sy+'/':''}${sm}/${sd}–${crossYear?ey+'/':''}${em}/${ed}`;
+  return `${crossYear?sy+'/':''}${sm}/${sd}–${crossYear?ey+'/':''}${em}/${ed}`;
+}
+function weekMarkup(start){
+  const weekDays=Array.from({length:7},(_,i)=>addDays(start,i));
+  const lessonsByDay=weekDays.map(calendarLessonsForDate);
   const col='36px repeat(7,minmax(0,1fr))',isTap=!!S.tapCourseId;
   let headHtml=`<div class="wch-spacer"></div>`;
   weekDays.forEach((s,i)=>{const d=Number(s.slice(-2));headHtml+=`<div class="wch-day ${s===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${s}，${lessonsByDay[i].length} 堂課" aria-pressed="${s===S.selectedDate}" data-calendar-date="${s}" onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span></button>${examMarkHtml(s)?'<div class="wch-exams">'+examMarkHtml(s)+'</div>':''}</div>`;});
@@ -5850,9 +5862,11 @@ function renderWeekView(){
       rowsHtml+=`<div class="${cls}" data-drop-date="${s}" data-drop-time="${t}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','${t}')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
     });
   });
-  const body=document.getElementById('cal-body');
-  body.innerHTML=`<div class="week-wrap"><div class="week-col-head" style="display:grid;grid-template-columns:${col};">${headHtml}</div><div class="week-scroll"><div class="week-unsched-row" style="grid-template-columns:${col};">${unHtml}</div><div class="week-hour-grid" style="display:grid;grid-template-columns:${col};">${rowsHtml}</div></div></div>`;
-  if(isMobile())setTimeout(()=>{const sc=body.querySelector('.week-scroll');if(sc)sc.scrollTop=48;},30);
+  return `<div class="week-wrap"><div class="week-col-head" style="display:grid;grid-template-columns:${col};">${headHtml}</div><div class="week-scroll"><div class="week-unsched-row" style="grid-template-columns:${col};">${unHtml}</div><div class="week-hour-grid" style="display:grid;grid-template-columns:${col};">${rowsHtml}</div></div></div>`;
+}
+function renderWeekView(){
+  $id('cal-title').textContent=weekTitle(S.weekStart,addDays(S.weekStart,6));
+  $id('cal-body').innerHTML=weekMarkup(S.weekStart);
 }
 
 function wkEv(ev,date){
@@ -6050,6 +6064,8 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 function renderCalendar(){
+  resetCalendarSwipe();
+  $id('calendar-swipe-hint').hidden=calendarSwiped||!document.documentElement.matches('[data-ipad],[data-phone-touch]');
   renderCalendarCourseFilter();
   renderCalendarProgress();
   renderMobileSchedule();
@@ -6928,37 +6944,123 @@ document.addEventListener('keydown', e => {
   if (e.key === 't' || e.key === 'T') jumpToday();
 });
 
-// Track only a single deliberate horizontal swipe that starts on the calendar.
-{
-  let swipe=null;
-  const body=$id('cal-body');
-  const excluded='button,select,input,textarea,a,[contenteditable],dialog';
-  body.addEventListener('touchstart',event=>{
-    swipe=null;
-    if(event.touches.length!==1||event.target.closest(excluded)||topAppDialog()||S.dragCourseId)return;
-    const {clientX:x,clientY:y,identifier:id}=event.touches[0];
-    if(x<24||x>innerWidth-24)return;
-    swipe={x,y,id};
-  },{passive:true});
-  body.addEventListener('touchmove',event=>{
-    if(!swipe)return;
-    const t=event.touches[0];
-    if(event.touches.length!==1||t.identifier!==swipe.id||
-      (Math.abs(t.clientY-swipe.y)>14&&Math.abs(t.clientY-swipe.y)>Math.abs(t.clientX-swipe.x)))swipe=null;
-  },{passive:true});
-  body.addEventListener('touchcancel',()=>{swipe=null;},{passive:true});
-  body.addEventListener('touchend',event=>{
-    const start=swipe;
-    swipe=null;
-    if(!start||event.touches.length||topAppDialog()||S.dragCourseId)return;
-    const t=[...event.changedTouches].find(t=>t.identifier===start.id);
-    if(!t)return;
-    const dx=t.clientX-start.x,dy=t.clientY-start.y;
-    if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.6)return;
-    if(event.cancelable)event.preventDefault();
-    (dx<0?navNext:navPrev)();
-  },{passive:false});
+// Build an inert adjacent page once per direction. Commit only after settling.
+const swipeBody=$id('cal-body');
+const swipeReducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
+let calendarSwiped=false;
+try{calendarSwiped=sessionStorage.getItem('calendar-swiped')==='1';}catch{}
+let calendarSwipe=null;
+let swipeTimer=null;
+let suppressCalendarClickUntil=0;
+
+function resetCalendarSwipe(){
+  clearTimeout(swipeTimer);
+  if(calendarSwipe?.current)calendarSwipe.current.style.removeProperty('transform');
+  swipeBody.querySelectorAll('.calendar-neighbor').forEach(page=>page.remove());
+  swipeBody.classList.remove('is-swiping','is-settling');
+  calendarSwipe=null;
 }
+function calendarNeighbor(state,direction){
+  if(state.previews.has(direction))return state.previews.get(direction);
+  const page=document.createElement('div');
+  page.className='calendar-neighbor';
+  page.inert=true;
+  page.setAttribute('aria-hidden','true');
+  if(S.view==='week')page.innerHTML=weekMarkup(addDays(S.weekStart,7*direction));
+  else{
+    const date=new Date(S.year,S.month+direction,1);
+    page.innerHTML=monthMarkup(date.getFullYear(),date.getMonth());
+  }
+  swipeBody.append(page);
+  state.previews.set(direction,page);
+  return page;
+}
+function positionCalendarSwipe(state,offset){
+  const direction=offset<0?1:-1;
+  if(offset!==0)state.direction=direction;
+  const page=calendarNeighbor(state,state.direction);
+  state.current.style.transform='translate3d('+offset+'px,0,0)';
+  for(const neighbor of state.previews.values())neighbor.hidden=neighbor!==page;
+  page.style.transform='translate3d('+(offset+state.direction*state.width)+'px,0,0)';
+  state.offset=offset;
+}
+function settleCalendarSwipe(commit){
+  const state=calendarSwipe;
+  if(!state?.current){resetCalendarSwipe();return;}
+  if(state.settling)return;
+  state.settling=true;
+  suppressCalendarClickUntil=performance.now()+400;
+  const direction=state.direction;
+  const finish=()=>{
+    if(calendarSwipe!==state)return;
+    resetCalendarSwipe();
+    if(commit){
+      calendarSwiped=true;
+      try{sessionStorage.setItem('calendar-swiped','1');}catch{}
+      (direction===1?navNext:navPrev)();
+    }
+  };
+  if(swipeReducedMotion.matches){finish();return;}
+  state.current.getBoundingClientRect();
+  swipeBody.classList.add('is-settling');
+  positionCalendarSwipe(state,commit?-direction*state.width:0);
+  swipeTimer=setTimeout(finish,230);
+}
+swipeBody.addEventListener('touchstart',event=>{
+  if(calendarSwipe?.settling)return;
+  if(calendarSwipe?.current){settleCalendarSwipe(false);return;}
+  resetCalendarSwipe();
+  if(event.touches.length!==1||event.target.closest('button,select,input,textarea,a,[contenteditable],dialog')||
+    topAppDialog()||S.dragCourseId)return;
+  const {clientX:x,clientY:y,identifier:id}=event.touches[0];
+  if(x<24||x>innerWidth-24)return;
+  calendarSwipe={x,y,id,samples:[{x,time:performance.now()}],previews:new Map()};
+},{passive:true});
+swipeBody.addEventListener('touchmove',event=>{
+  const state=calendarSwipe;
+  if(!state||state.settling)return;
+  const t=event.touches[0];
+  if(event.touches.length!==1||t.identifier!==state.id||topAppDialog()||S.dragCourseId){
+    settleCalendarSwipe(false);
+    return;
+  }
+  const dx=t.clientX-state.x,dy=t.clientY-state.y;
+  if(!state.current){
+    if(Math.abs(dy)>12&&Math.abs(dy)>=Math.abs(dx)){resetCalendarSwipe();return;}
+    if(Math.abs(dx)<12||Math.abs(dx)<Math.abs(dy)*1.5)return;
+    state.current=swipeBody.firstElementChild;
+    state.width=swipeBody.clientWidth;
+    swipeBody.classList.add('is-swiping');
+  }
+  if(event.cancelable)event.preventDefault();
+  const time=performance.now();
+  state.samples=state.samples.filter(sample=>time-sample.time<=110);
+  state.samples.push({x:t.clientX,time});
+  positionCalendarSwipe(state,Math.max(-state.width,Math.min(state.width,dx)));
+},{passive:false});
+swipeBody.addEventListener('touchcancel',()=>settleCalendarSwipe(false),{passive:true});
+swipeBody.addEventListener('touchend',event=>{
+  const state=calendarSwipe;
+  if(!state||state.settling)return;
+  const t=[...event.changedTouches].find(t=>t.identifier===state.id);
+  if(!state.current||!t){resetCalendarSwipe();return;}
+  if(event.cancelable)event.preventDefault();
+  const dx=t.clientX-state.x;
+  const time=performance.now();
+  const sample=state.samples.find(sample=>time-sample.time<=110);
+  const velocity=sample?(t.clientX-sample.x)/Math.max(16,time-sample.time):0;
+  const commit=Math.abs(dx)>=state.width*0.28||
+    (Math.abs(dx)>=24&&Math.abs(velocity)>=0.55&&Math.sign(dx)===Math.sign(velocity));
+  positionCalendarSwipe(state,Math.max(-state.width,Math.min(state.width,dx)));
+  settleCalendarSwipe(commit&&!event.touches.length&&!topAppDialog()&&!S.dragCourseId);
+},{passive:false});
+swipeBody.addEventListener('click',event=>{
+  if(performance.now()<suppressCalendarClickUntil&&event.detail>0){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+},true);
+window.addEventListener('resize',resetCalendarSwipe);
 
 const calendarJump=$id('calendar-jump');
 const jumpYear=$id('calendar-jump-year');
