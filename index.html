@@ -2994,6 +2994,44 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
   #panel-cal.mob-active .cal-body{overflow:visible;}
   #panel-cal .mobile-course-options{max-height:none;overflow:visible;}
 }
+
+/* A single moving selection for the calendar segmented control. */
+#panel-cal .view-toggle{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:relative;isolation:isolate;
+  gap:0;padding:3px;--calendar-segment-shift:0%;
+}
+#panel-cal[data-cal-view=week] .view-toggle{--calendar-segment-shift:100%;}
+#panel-cal .view-toggle::before{
+  content:"";position:absolute;inset-block:3px;left:3px;width:calc((100% - 6px)/2);
+  border-radius:var(--r-pill);background:var(--surface);box-shadow:var(--shadow-sm);pointer-events:none;
+  transform:translateX(var(--calendar-segment-shift));transition:transform 230ms var(--ease-ios);
+}
+#panel-cal .cal-head .view-toggle .vt-btn{position:relative;z-index:1;background:transparent;box-shadow:none;}
+@media(prefers-reduced-motion:reduce){#panel-cal .view-toggle::before{transition:none;}}
+@media(max-width:767px){
+  #panel-cal .cal-course-filter{display:flex;min-width:0;gap:4px;}
+  #panel-cal .cal-course-filter label{position:static;width:auto;height:auto;clip-path:none;overflow:visible;}
+  #panel-cal .cal-course-select{min-width:0;}
+}
+@media(max-width:375px){
+  #panel-cal .cal-head .cal-course-filter{grid-area:2/2/3/4;}
+  #panel-cal #phone-schedule-open{grid-area:3/1/4/4;justify-self:start;}
+}
+#memo-course-picker{margin:12px 0;}
+#memo-course-picker select{width:100%;}
+:is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#phone-cal-more) .popup-close{
+  display:grid;place-items:center;width:44px;height:44px;min-height:44px;flex:0 0 44px;
+  padding:0;margin:0 0 0 auto;border:0;border-radius:50%;background:var(--sunken);color:var(--text-2);
+}
+.popup-close svg{
+  width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;pointer-events:none;
+}
+#account-panel>.popup-close{position:absolute;right:10px;top:10px;}
+#account-panel .account-identity{padding-right:48px;min-height:44px;}
+#exam-popover>.popup-close{float:right;}
+#confirm-title,.modal #modal-title{margin:0;}
+@media(min-width:768px){#wide-day #day-panel-close{display:grid;}}
+
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3100,14 +3138,14 @@ onAuthStateChanged(auth,user=>{
 <div id="toast-container"></div>
 <div id="confirm-backdrop">
   <div id="confirm-dialog">
-    <h3 id="confirm-title"></h3>
+    <div class="makeup-head"><h3 id="confirm-title"></h3><button type="button" class="btn popup-close" aria-label="取消確認" onclick="hideConfirm()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
     <p id="confirm-msg"></p>
     <div id="confirm-btns"></div>
   </div>
 </div>
 
 <!-- Exam date popover -->
-<div id="exam-popover">
+<div id="exam-popover"><button type="button" class="btn popup-close" aria-label="關閉考試日期設定" onclick="closeExamPicker()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   <div class="pop-title">設定考試日期</div>
   <input type="date" id="exam-pop-input"/>
   <div class="pop-row">
@@ -3120,7 +3158,7 @@ onAuthStateChanged(auth,user=>{
 <!-- Export/Import Modal -->
 <div id="modal" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-inner">
-    <h2 id="modal-title"></h2>
+    <div class="makeup-head"><h2 id="modal-title"></h2><button type="button" class="btn popup-close" aria-label="關閉視窗" onclick="closeModal()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
     <p id="modal-desc"></p>
     <textarea id="modal-ta" style="display:none;"></textarea>
     <div class="modal-btns" id="modal-btns"></div>
@@ -3157,7 +3195,7 @@ onAuthStateChanged(auth,user=>{
             <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
             <img id="account-photo" alt="" hidden/>
           </button>
-          <div id="account-panel" hidden>
+          <div id="account-panel" hidden><button type="button" class="btn popup-close" aria-label="關閉帳號選單" onclick="closeAccountPanel(true)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
             <div class="account-identity"><span id="account-name">尚未登入</span><div class="sync-status"><span id="account-sync-dot" class="sync-dot offline"></span><span id="account-sync-label" role="status">本機</span></div></div>
             <button type="button" class="btn phone-only" id="phone-account-login" onclick="closeAccountPanel(true);doSignIn()">Google 登入同步</button>
             <button type="button" class="btn phone-only" id="phone-account-settings" onclick="closeAccountPanel(true);showFirebaseSetup()">同步設定</button>
@@ -3323,11 +3361,12 @@ onAuthStateChanged(auth,user=>{
         </div>
         <div class="wide-tools">
           <button type="button" class="btn btn-sand" id="wide-exam-open" aria-haspopup="dialog" aria-controls="wide-exam-dialog">考試總覽</button>
+          <button type="button" class="btn btn-sand" id="wide-memo-calendar" aria-haspopup="dialog">課程備忘錄</button>
           <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
         </div>
       </div>
       <section class="wide-only" id="wide-drag" hidden aria-label="拖曳排課">
-        <h3>拖曳課程到日期格排課</h3>
+        <div class="makeup-head"><h3>拖曳課程到日期格排課</h3><button type="button" class="btn popup-close" aria-label="關閉待排課堂" id="wide-drag-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
       </section>
       <div class="phone-only phone-cal-summary">
         <div class="phone-week">
@@ -3336,7 +3375,7 @@ onAuthStateChanged(auth,user=>{
         </div>
         <details id="phone-cal-more">
           <summary>更多</summary>
-          <div class="cal-progress">
+          <div class="cal-progress"><button type="button" class="btn popup-close" aria-label="關閉更多" onclick="closeCalendarMore(true)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
         <details class="week-progress" id="week-progress">
           <summary id="week-progress-summary">
             <span class="week-progress-heading"><strong>本週進度</strong><span class="week-progress-range" id="week-progress-range"></span></span>
@@ -3373,7 +3412,7 @@ onAuthStateChanged(auth,user=>{
     <aside class="panel panel-r" id="panel-r">
       <div class="day-heading">
         <h2 id="day-label">選擇日期</h2>
-        <button type="button" class="day-panel-close" id="day-panel-close" onclick="closeDayPanel()" aria-label="關閉日期詳情"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+        <button type="button" class="btn popup-close" aria-label="關閉日期詳情" id="day-panel-close" onclick="closeDayPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
       </div>
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
@@ -3437,7 +3476,7 @@ onAuthStateChanged(auth,user=>{
 <dialog id="backup-import-dialog" aria-labelledby="backup-import-title">
   <div class="makeup-head">
     <h2 id="backup-import-title">匯入備份</h2>
-    <button type="button" class="btn btn-sand" id="backup-close" aria-label="關閉匯入備份">×</button>
+    <button type="button" class="btn popup-close" aria-label="關閉匯入備份" id="backup-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   </div>
   <div id="backup-drop">
     <p>將 JSON 備份檔拖到這裡</p>
@@ -3457,14 +3496,14 @@ onAuthStateChanged(auth,user=>{
 <dialog class="wide-dialog" id="wide-exam-dialog" aria-labelledby="wide-exam-title">
   <div class="makeup-head">
     <h2 id="wide-exam-title">考試總覽</h2>
-    <button type="button" class="btn btn-sand wide-close" id="wide-exam-close" aria-label="關閉考試總覽" autofocus>×</button>
+    <button type="button" class="btn popup-close" aria-label="關閉考試總覽" id="wide-exam-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   </div>
 </dialog>
 <dialog class="wide-dialog" id="wide-day" aria-labelledby="day-label"></dialog>
 <dialog class="wide-dialog" id="wide-course-dialog" aria-labelledby="wide-course-title">
   <div class="makeup-head">
     <h2 id="wide-course-title">課程明細</h2>
-    <button type="button" id="wide-course-close" class="btn btn-sand wide-close" aria-label="關閉課程視窗" autofocus>×</button>
+    <button type="button" class="btn popup-close" aria-label="關閉課程視窗" id="wide-course-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   </div>
   <div id="wide-card-slot" hidden>
     <button type="button" class="btn btn-sand" id="wide-memo-open" aria-haspopup="dialog">課程備忘錄</button>
@@ -3476,7 +3515,7 @@ onAuthStateChanged(auth,user=>{
 <dialog class="wide-dialog wide-legacy" id="wide-legacy-confirm" aria-labelledby="confirm-title"></dialog>
 
 <dialog id="repeat-preview" aria-labelledby="repeat-preview-title" aria-describedby="repeat-preview-summary">
-  <h2 id="repeat-preview-title">預覽排課</h2>
+  <div class="makeup-head"><h2 id="repeat-preview-title">預覽排課</h2><button type="button" class="btn popup-close" aria-label="關閉排課預覽" onclick="closeRepeatPreview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p id="repeat-preview-notice" role="status"></p>
   <p id="repeat-preview-summary"></p>
   <div id="repeat-preview-body" role="region" aria-label="科目與排課日期" tabindex="0">
@@ -3491,7 +3530,7 @@ onAuthStateChanged(auth,user=>{
 </dialog>
 
 <dialog id="exam-day-dialog" aria-labelledby="exam-day-title">
-  <div class="ed-head"><h2 id="exam-day-title">考試</h2><button type="button" class="btn btn-sand" id="exam-day-close">關閉</button></div>
+  <div class="ed-head"><h2 id="exam-day-title">考試</h2><button type="button" class="btn popup-close" aria-label="關閉當日考試" id="exam-day-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p class="ed-hint">這天有多科考試，選擇科目查看考前進度。</p>
   <ul id="exam-day-list"></ul>
 </dialog>
@@ -3499,7 +3538,7 @@ onAuthStateChanged(auth,user=>{
 <dialog id="exam-progress-dialog" aria-labelledby="exam-progress-title" aria-describedby="exam-progress-course">
   <div class="makeup-head">
     <h2 id="exam-progress-title">考前排課明細</h2>
-    <button type="button" class="btn btn-sand" id="exam-progress-close" autofocus>關閉</button>
+    <button type="button" class="btn popup-close" aria-label="關閉考前排課明細" id="exam-progress-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   </div>
   <p id="exam-progress-course"></p>
   <div id="exam-progress-body"></div>
@@ -3508,7 +3547,7 @@ onAuthStateChanged(auth,user=>{
 <dialog id="makeup-dialog" aria-labelledby="makeup-title">
   <div class="makeup-head">
     <h2 id="makeup-title">補課清單</h2>
-    <button type="button" class="btn btn-sand" id="makeup-close" autofocus>關閉</button>
+    <button type="button" class="btn popup-close" aria-label="關閉補課清單" id="makeup-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   </div>
   <p id="makeup-empty" hidden>目前沒有待補課堂</p>
   <ul id="makeup-list"></ul>
@@ -3516,7 +3555,7 @@ onAuthStateChanged(auth,user=>{
 
 <dialog id="reschedule-dialog" aria-labelledby="reschedule-title">
   <form id="reschedule-form" novalidate onsubmit="submitLessonReschedule(event)">
-    <h2 id="reschedule-title">改期</h2>
+    <div class="makeup-head"><h2 id="reschedule-title">改期</h2><button type="button" class="btn popup-close" aria-label="取消改期" onclick="closeLessonReschedule()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
     <p id="reschedule-original"></p>
     <label for="reschedule-date">新日期</label>
     <input type="date" id="reschedule-date" required autofocus aria-describedby="reschedule-message"/>
@@ -3534,7 +3573,11 @@ onAuthStateChanged(auth,user=>{
   <div class="memo-modal-head">
     <span class="dot" id="memo-modal-dot"></span>
     <h2 class="memo-modal-title" id="memo-modal-title"></h2>
-    <button type="button" class="btn btn-sand btn-xs" id="memo-close" autofocus>關閉</button>
+    <button type="button" class="btn popup-close" aria-label="關閉課程備忘錄" id="memo-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+  </div>
+  <div id="memo-course-picker" hidden>
+    <label for="memo-course-select">科目</label>
+    <select id="memo-course-select"></select>
   </div>
   <div id="memo-items"></div>
   <button type="button" class="btn btn-sand" id="memo-add">＋新增事項</button>
@@ -3864,7 +3907,7 @@ function showConfirm(title,msg,onYes,yesLabel='確定刪除',yesClass='btn-prima
   yesBtn.onclick=()=>{hideConfirm();onYes();};
   btns.appendChild(cancelBtn);btns.appendChild(yesBtn);
   document.getElementById('confirm-backdrop').classList.add('open');
-  if(!isMobile()&&!$id('wide-legacy-confirm').open)$id('wide-legacy-confirm').showModal();
+  if(!isMobile()&&!$id('wide-legacy-confirm').open)showAppDialog($id('wide-legacy-confirm'),hideConfirm);
 }
 function hideConfirm(){document.getElementById('confirm-backdrop').classList.remove('open');$id('wide-legacy-confirm').close();}
 document.getElementById('confirm-backdrop').addEventListener('click',e=>{
@@ -4048,9 +4091,8 @@ function clearBackupSelection(){
   backupConfirm.hidden=true;
 }
 function showImport(){
-  backupPointerOutside=false;
   clearBackupSelection();
-  backupDialog.showModal();
+  showAppDialog(backupDialog,closeBackupImport);
 }
 function closeBackupImport(){
   clearBackupSelection();
@@ -4062,20 +4104,6 @@ backupDialog.addEventListener('cancel',event=>{
   closeBackupImport();
 });
 backupDialog.addEventListener('keydown',event=>event.stopPropagation());
-let backupPointerOutside=false;
-function outsideBackupDialog(event){
-  const {left,right,top,bottom}=backupDialog.getBoundingClientRect();
-  return event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom;
-}
-document.addEventListener('pointerdown',event=>{
-  backupPointerOutside=backupDialog.open&&outsideBackupDialog(event);
-},true);
-document.addEventListener('click',event=>{
-  if(backupDialog.open&&backupPointerOutside&&outsideBackupDialog(event)){
-    event.stopPropagation();
-    closeBackupImport();
-  }
-},true);
 document.getElementById('backup-close').addEventListener('click',closeBackupImport);
 document.getElementById('backup-cancel').addEventListener('click',closeBackupImport);
 document.getElementById('backup-choose').addEventListener('click',()=>{
@@ -4156,7 +4184,7 @@ function openModal(title,desc,btns,taVal,htmlBody,extraHtml){
     document.getElementById('modal-btns').appendChild(el);
   });
   document.getElementById('modal').style.display='flex';
-  if(!isMobile()&&!$id('wide-legacy-modal').open)$id('wide-legacy-modal').showModal();
+  if(!isMobile()&&!$id('wide-legacy-modal').open)showAppDialog($id('wide-legacy-modal'),closeModal);
 }
 function closeModal(){
   document.getElementById('modal').style.display='none';
@@ -4287,6 +4315,11 @@ function renderDayMemo(){
 function renderMemoEditor(){
   const c=course(memoCourseId);
   if(!c){closeMemoModal();return;}
+  const select=document.getElementById('memo-course-select');
+  if(!select.parentElement.hidden){
+    select.replaceChildren(...S.courses.map(c=>new Option(c.name,c.id)));
+    select.value=c.id;
+  }
   document.getElementById('memo-modal-dot').style.background=c.color;
   document.getElementById('memo-modal-title').textContent=c.name+' 備忘錄';
   const items=courseMemoItems(c.id);
@@ -4317,12 +4350,13 @@ function resetMemoDraft(){
   memoMessage.textContent='';
 }
 function openMemoModal(cid,opener){
-  if(!course(cid))return;
+  document.getElementById('memo-course-picker').hidden=opener?.id!=='wide-memo-calendar';
+  if(!course(cid)){toast('請先新增課程','warn');return;}
   memoCourseId=cid;
   memoOpener=opener;
   resetMemoDraft();
   renderMemoEditor();
-  memoDialog.showModal();
+  showAppDialog(memoDialog,closeMemoModal);
   memoDialog.scrollTop=0;
 }
 function closeMemoModal(){
@@ -4428,6 +4462,12 @@ document.getElementById('memo-item-cancel').addEventListener('click',()=>{
   focusMemoItem(id,'edit');
 });
 document.getElementById('memo-close').addEventListener('click',closeMemoModal);
+document.getElementById('wide-memo-calendar').addEventListener('click',event=>openMemoModal(S.courses[0]?.id,event.currentTarget));
+document.getElementById('memo-course-select').addEventListener('change',event=>{
+  memoCourseId=event.currentTarget.value;
+  resetMemoDraft();
+  renderMemoEditor();
+});
 memoDialog.addEventListener('cancel',event=>{
   event.preventDefault();
   closeMemoModal();
@@ -4474,6 +4514,7 @@ function openExamPicker(id, btnEl){
   document.getElementById('exam-pop-input').value=c.examDate||'';
   pop.style.display='block';
   if(!isMobile()&&wideCourse.open){
+    setTimeout(()=>document.addEventListener('click',_examOutside),0);
     document.getElementById('exam-pop-input').focus();
     return;
   }
@@ -4713,7 +4754,7 @@ function openRepeatPreview(event){
   showRepeatScheduleError('');
   repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips:[]};
   renderRepeatPreview(batch);
-  repeatDialog.showModal();
+  showAppDialog(repeatDialog,closeRepeatPreview);
 }
 function closeRepeatPreview(){
   repeatPreview=null;
@@ -4965,7 +5006,7 @@ function openExamProgress(id,origin='card'){
   if(!plan){renderCourses();return false;}
   examProgressOrigin=origin;
   examProgressCourseId=id;
-  examProgressDialog.showModal();
+  showAppDialog(examProgressDialog,()=>examProgressDialog.close());
   renderExamProgressDetail(plan);
   examProgressBody.scrollTop=0;
   return true;
@@ -5107,18 +5148,38 @@ function mountWideLayout(){
 }
 wideMedia.addEventListener('change',mountWideLayout);
 
-function bindWideDialog(dialog,dismiss,wideOnly=false){
-  let outside=false;
-  dialog.addEventListener('pointerdown',event=>{outside=event.target===dialog;});
-  dialog.addEventListener('click',event=>{
-    if(wideOnly&&!wideMedia.matches||!outside||event.target!==dialog)return;
-    const {left,right,top,bottom}=dialog.getBoundingClientRect();
-    if(event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom)dismiss();
-  });
-  dialog.addEventListener('cancel',event=>{
-    if(wideOnly&&!wideMedia.matches)return;
-    event.preventDefault();dismiss();
-  });
+const appDialogStack=[];
+function topAppDialog(){
+  while(appDialogStack.length&&!appDialogStack.at(-1).dialog.open)appDialogStack.pop();
+  return appDialogStack.at(-1);
+}
+function showAppDialog(dialog,dismiss){
+  const prior=appDialogStack.findIndex(entry=>entry.dialog===dialog);
+  if(prior>=0)appDialogStack.splice(prior,1);
+  dialog.showModal();
+  appDialogStack.push({dialog,dismiss});
+}
+function outsideDialog(dialog,event){
+  const {left,right,top,bottom}=dialog.getBoundingClientRect();
+  return event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom;
+}
+let backdropPress=null;
+document.addEventListener('pointerdown',event=>{
+  const top=topAppDialog();
+  backdropPress=top&&outsideDialog(top.dialog,event)?top:null;
+},true);
+document.addEventListener('click',event=>{
+  const press=backdropPress;
+  backdropPress=null;
+  if(press&&press===topAppDialog()&&outsideDialog(press.dialog,event)){
+    event.stopPropagation();
+    if(press.dialog===wideCourse&&_examPickerCid)closeExamPicker();
+    else press.dismiss();
+  }
+},true);
+
+function bindWideDialog(dialog,dismiss){
+  dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('keydown',event=>event.stopPropagation());
 }
 
@@ -5129,12 +5190,12 @@ function closeWideExam(){
 }
 bindWideDialog(wideExam,closeWideExam);
 for(const dialog of [examProgressDialog,$id('exam-day-dialog')]){
-  bindWideDialog(dialog,()=>dialog.close(),true);
+  bindWideDialog(dialog,()=>dialog.close());
 }
 $id('wide-exam-close').addEventListener('click',closeWideExam);
 $id('wide-exam-open').addEventListener('click',()=>{
   renderExamOverview();
-  wideExam.showModal();
+  showAppDialog(wideExam,closeWideExam);
   wideExam.scrollTop=0;
 });
 
@@ -5146,7 +5207,7 @@ function openDayPanel(){
     dayPanelReturnFocus=()=>(document.querySelector('#cal-body [data-calendar-date="'+date+'"]')||$id('vt-'+S.view)).focus({preventScroll:true});
   }
   wideDay.dataset.stage='detail';
-  wideDay.showModal();
+  showAppDialog(wideDay,closeDayPanel);
   wideDay.scrollTop=0;
   $id('day-panel-close').focus({preventScroll:true});
 }
@@ -5195,7 +5256,7 @@ function openWideCourse(id,mode='course'){
     updateRepeatScheduleForm(repeatForm);
   }
   if(!wideCourse.open){
-    wideCourse.showModal();
+    showAppDialog(wideCourse,closeWideCourse);
     wideCourse.scrollTop=0;
   }
   renderCourses();
@@ -5217,10 +5278,29 @@ $id('wide-course-close').addEventListener('click',closeWideCourse);
 $id('wide-memo-open').addEventListener('click',event=>openMemoModal(wideCourseId,event.currentTarget));
 $id('wide-add-open').addEventListener('click',()=>openWideCourse(null,'add'));
 $id('wide-makeup-open').addEventListener('click',()=>openMakeupList(()=>$id('wide-makeup-open').focus()));
-$id('wide-drag-toggle').addEventListener('click',event=>{
-  const area=$id('wide-drag');
-  area.hidden=!area.hidden;
-  event.currentTarget.setAttribute('aria-expanded',String(!area.hidden));
+function closeCalendarMore(restoreFocus=false){
+  const more=document.getElementById('phone-cal-more');
+  more.open=false;
+  if(restoreFocus)more.querySelector('summary').focus({preventScroll:true});
+}
+document.addEventListener('click',event=>{
+  const more=document.getElementById('phone-cal-more');
+  if(more.open&&!topAppDialog()&&!more.contains(event.target))closeCalendarMore();
+});
+function setDragShelf(open){
+  $id('wide-drag').hidden=!open;
+  $id('wide-drag-toggle').setAttribute('aria-expanded',String(open));
+}
+$id('wide-drag-close').addEventListener('click',()=>{
+  setDragShelf(false);
+  $id('wide-drag-toggle').focus({preventScroll:true});
+});
+document.addEventListener('click',event=>{
+  if(topAppDialog()||$id('wide-drag').hidden)return;
+  if(!event.target.closest('#wide-drag,#wide-drag-toggle,#cal-body'))setDragShelf(false);
+});
+$id('wide-drag-toggle').addEventListener('click',()=>{
+  setDragShelf($id('wide-drag').hidden);
 });
 for(const button of document.querySelectorAll('[data-wide-page-button]')){
   button.addEventListener('click',()=>setWidePage(button.dataset.widePageButton));
@@ -5546,7 +5626,7 @@ function renderCalendarCourseFilter(){
   if(options.length!==S.courses.length+1||S.courses.some((c,i)=>options[i+1].value!==c.id||options[i+1].text!==c.name)){
     select.replaceChildren(new Option('全部課程',''),...S.courses.map(c=>new Option(c.name,c.id)));
   }
-  select.options[0].textContent=isMobile()?'篩選':'全部課程';
+  select.options[0].textContent='全部課程';
   select.value=calendarCourseId;
   select.classList.toggle('is-filtered',Boolean(selected));
   const note=document.getElementById('day-calendar-filter');
@@ -5609,7 +5689,7 @@ function openCalendarExam(date,id){
     return '<li><button type="button" class="ed-row" data-ed-course="'+esc(c.id)+'"><span class="ed-name"><span class="dot" style="background:'+esc(c.color)+'"></span>'+esc(c.name)+'</span><span class="ed-meta">距考試 '+daysBetween(today,c.examDate)+' 天 · 考前尚未安排 '+(plan.after+plan.unscheduled)+' 堂</span></button></li>';
   }).join('');
   const dlg=document.getElementById('exam-day-dialog');
-  dlg.showModal();
+  showAppDialog(dlg,()=>dlg.close());
   dlg.querySelector('button.ed-row')?.focus();
 }
 function focusCalendarExam(){
@@ -5838,7 +5918,7 @@ function focusMakeupAction(id,action){
 let makeupReturnFocus=null;
 function openMakeupList(returnFocus=null){
   makeupReturnFocus=returnFocus;
-  makeupDialog.showModal();
+  showAppDialog(makeupDialog,()=>makeupDialog.close());
   renderCalendarProgress();
   makeupList.scrollTop=0;
 }
@@ -6346,7 +6426,7 @@ function openLessonReschedule(id,date=S.selectedDate,returnFocus=null){
     wideDay.dataset.stage='move';
     wideDay.scrollTop=0;
     rescheduleDate.focus({preventScroll:true});
-  }else rescheduleDialog.showModal();
+  }else showAppDialog(rescheduleDialog,closeLessonReschedule);
 }
 function submitLessonReschedule(event){
   event.preventDefault();
