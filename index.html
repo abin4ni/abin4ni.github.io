@@ -2926,6 +2926,28 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
   #auth-logged-in>.user-chip,#auth-logged-in>.signout-btn{display:none;}
   #account-toggle{min-height:44px;}
 }
+
+#backup-import-dialog{
+  position:fixed;inset:0;margin:auto;width:min(440px,calc(100% - 32px));
+  max-height:calc(100dvh - 32px);padding:clamp(16px,3vw,24px);overflow:auto;overscroll-behavior:contain;
+  color:var(--text);background:var(--surface);border:1px solid var(--border-lt);
+  border-radius:var(--r-xl);box-shadow:var(--shadow-pop);
+}
+#backup-import-dialog::backdrop{background:var(--scrim);}
+#backup-import-title{font-size:1.25rem;font-weight:600;}
+#backup-close{width:44px;padding:0;font-size:1.25rem;}
+#backup-drop{
+  margin:12px 0;padding:20px 12px;text-align:center;
+  border:2px dashed var(--border);border-radius:var(--r);background:var(--card-2);
+}
+#backup-drop p{margin:0 0 10px;}
+#backup-drop.is-dragging{border-color:var(--accent);background:var(--accent-tint);}
+#backup-error{margin:0 0 12px;color:var(--danger-c);}
+#backup-error:empty{display:none;}
+#backup-review{margin:0 0 12px;color:var(--text-2);}
+#backup-filename{font-weight:600;overflow-wrap:anywhere;}
+#backup-import-dialog .day-schedule-actions{justify-content:flex-end;}
+#backup-confirm[hidden]{display:none;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3113,7 +3135,6 @@ onAuthStateChanged(auth,user=>{
         <div class="hstat"><span class="hstat-val" id="dash-total-rem">0</span><span>剩餘</span></div>
       </div>
       <button class="btn btn-sand btn-xs" onclick="showFirebaseSetup()" title="雲端同步設定教學" aria-label="雲端同步設定教學"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 18a4 4 0 0 1-1-7.87 6 6 0 0 1 11.44-1.1A4.5 4.5 0 0 1 17.5 18Z"/></svg></button>
-      <input type="file" id="backup-file" accept=".json,application/json" hidden>
     </div>
   </div>
   <div class="progress-track"><div class="progress-track-fill" id="global-fill" style="width:0%"></div></div>
@@ -3355,6 +3376,26 @@ onAuthStateChanged(auth,user=>{
   </div>
 </template>
 
+<dialog id="backup-import-dialog" aria-labelledby="backup-import-title">
+  <div class="makeup-head">
+    <h2 id="backup-import-title">匯入備份</h2>
+    <button type="button" class="btn btn-sand" id="backup-close" aria-label="關閉匯入備份">×</button>
+  </div>
+  <div id="backup-drop">
+    <p>將 JSON 備份檔拖到這裡</p>
+    <button type="button" class="btn btn-sand" id="backup-choose" autofocus>選擇檔案</button>
+      <input type="file" id="backup-file" accept=".json,application/json" hidden>
+  </div>
+  <p id="backup-error" role="alert"></p>
+  <div id="backup-review" hidden>
+    <p id="backup-filename"></p>
+    <p>匯入會覆蓋現有課程、課表和備忘錄，已登入時也會同步到雲端。</p>
+  </div>
+  <div class="day-schedule-actions">
+    <button type="button" class="btn btn-sand" id="backup-cancel">取消</button>
+    <button type="button" class="btn btn-primary" id="backup-confirm" hidden>確認匯入</button>
+  </div>
+</dialog>
 <dialog class="wide-dialog" id="wide-exam-dialog" aria-labelledby="wide-exam-title">
   <div class="makeup-head">
     <h2 id="wide-exam-title">考試總覽</h2>
@@ -3928,15 +3969,88 @@ function showExport(){
   link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+const backupDialog=document.getElementById('backup-import-dialog');
 const backupFile=document.getElementById('backup-file');
+const backupDrop=document.getElementById('backup-drop');
+const backupError=document.getElementById('backup-error');
+const backupReview=document.getElementById('backup-review');
+const backupFilename=document.getElementById('backup-filename');
+const backupConfirm=document.getElementById('backup-confirm');
+let pendingBackup=null;
+let backupReadVersion=0;
+
+function clearBackupSelection(){
+  backupReadVersion++;
+  pendingBackup=null;
+  backupFile.value='';
+  backupDrop.classList.remove('is-dragging');
+  backupError.textContent='';
+  backupFilename.textContent='';
+  backupReview.hidden=true;
+  backupConfirm.hidden=true;
+}
 function showImport(){
+  backupPointerOutside=false;
+  clearBackupSelection();
+  backupDialog.showModal();
+}
+function closeBackupImport(){
+  clearBackupSelection();
+  backupDialog.close();
+  document.getElementById('account-toggle').focus({preventScroll:true});
+}
+backupDialog.addEventListener('cancel',event=>{
+  event.preventDefault();
+  closeBackupImport();
+});
+backupDialog.addEventListener('keydown',event=>event.stopPropagation());
+let backupPointerOutside=false;
+function outsideBackupDialog(event){
+  const {left,right,top,bottom}=backupDialog.getBoundingClientRect();
+  return event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom;
+}
+document.addEventListener('pointerdown',event=>{
+  backupPointerOutside=backupDialog.open&&outsideBackupDialog(event);
+},true);
+document.addEventListener('click',event=>{
+  if(backupDialog.open&&backupPointerOutside&&outsideBackupDialog(event)){
+    event.stopPropagation();
+    closeBackupImport();
+  }
+},true);
+document.getElementById('backup-close').addEventListener('click',closeBackupImport);
+document.getElementById('backup-cancel').addEventListener('click',closeBackupImport);
+document.getElementById('backup-choose').addEventListener('click',()=>{
   backupFile.value='';
   backupFile.click();
-}
-backupFile.addEventListener('change',async()=>{
-  const file=backupFile.files[0];
-  backupFile.value='';
-  if(!file)return;
+});
+backupFile.addEventListener('change',()=>readBackupFiles([...backupFile.files]));
+document.addEventListener('dragover',event=>{
+  if(!backupDialog.open||!event.dataTransfer?.types.includes('Files'))return;
+  event.preventDefault();
+  const inside=backupDrop.contains(event.target);
+  event.dataTransfer.dropEffect=inside?'copy':'none';
+  backupDrop.classList.toggle('is-dragging',inside);
+},true);
+backupDrop.addEventListener('dragleave',event=>{
+  if(!backupDrop.contains(event.relatedTarget))backupDrop.classList.remove('is-dragging');
+});
+document.addEventListener('drop',event=>{
+  if(!backupDialog.open||!event.dataTransfer?.types.includes('Files'))return;
+  event.preventDefault();
+  event.stopPropagation();
+  backupDrop.classList.remove('is-dragging');
+  if(backupDrop.contains(event.target))readBackupFiles([...event.dataTransfer.files]);
+},true);
+
+async function readBackupFiles(files){
+  clearBackupSelection();
+  if(files.length!==1){
+    backupError.textContent='請一次選擇一個 JSON 備份檔。';
+    return;
+  }
+  const [file]=files;
+  const version=backupReadVersion;
   let d;
   try{
     d=JSON.parse((await file.text()).replace(/^\uFEFF/,''));
@@ -3945,20 +4059,28 @@ backupFile.addEventListener('change',async()=>{
       (d.calendar!=null&&(!record(d.calendar)||!Object.values(d.calendar).every(list=>Array.isArray(list)&&list.every(record))))||
       (d.notes!=null&&!record(d.notes)))throw new Error('格式錯誤');
   }catch{
-    toast('無法讀取備份，請選擇有效的 StudyOS JSON 檔案。','error');
+    if(version===backupReadVersion)backupError.textContent='無法讀取備份，請選擇有效的 StudyOS JSON 檔案。';
     return;
   }
-  showConfirm('匯入備份','將以這份備份覆蓋目前的課程、課表和備忘錄。已登入時，匯入結果也會透過既有同步更新雲端。',()=>{
-    lastRepeatBatch=null;
-    S.courses=d.courses||[];S.calendar=d.calendar||{};
-    updateRepeatScheduleForm(repeatForm);
-    renderRepeatScheduleResult();
-    S.notes=d.notes||{};
-    S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
-    invalidateEntriesCache();
-    saveState();render();
-    toast('匯入成功','success');
-  },'覆蓋匯入');
+  if(version!==backupReadVersion||!backupDialog.open)return;
+  pendingBackup=d;
+  backupFilename.textContent=file.name;
+  backupReview.hidden=false;
+  backupConfirm.hidden=false;
+}
+backupConfirm.addEventListener('click',()=>{
+  if(!pendingBackup||!backupDialog.open)return;
+  const d=pendingBackup;
+  closeBackupImport();
+  lastRepeatBatch=null;
+  S.courses=d.courses||[];S.calendar=d.calendar||{};
+  updateRepeatScheduleForm(repeatForm);
+  renderRepeatScheduleResult();
+  S.notes=d.notes||{};
+  S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
+  invalidateEntriesCache();
+  saveState();render();
+  toast('匯入成功','success');
 });
 function openModal(title,desc,btns,taVal,htmlBody,extraHtml){
   document.getElementById('modal-title').textContent=title;
