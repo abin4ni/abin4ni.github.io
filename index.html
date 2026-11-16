@@ -2728,22 +2728,6 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   .wide-tabs button[aria-current]{color:var(--accent-h);}
   .wide-tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
   .wide-tools button{min-height:44px;}
-  .account-controls{display:block;}
-  #account-toggle{width:44px;height:44px;padding:0;display:grid;place-items:center;color:var(--accent-h);}
-  #account-photo{grid-area:1/1;width:34px;height:34px;border-radius:50%;object-fit:cover;}
-  #account-photo[hidden]{display:none;}
-  #account-toggle svg{grid-area:1/1;}
-  #account-panel{
-    position:absolute;right:16px;top:calc(100% + 6px);z-index:250;
-    width:min(260px,calc(100vw - 32px));padding:10px;
-    background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
-  }
-  #account-panel button{display:block;width:100%;text-align:left;margin-top:2px;}
-  #account-panel .account-signout{color:var(--danger-c);margin-top:8px;}
-  #account-panel .account-signout[hidden]{display:none;}
-  .account-identity{padding:5px 8px 10px;border-bottom:1px solid var(--border-lt);overflow-wrap:anywhere;}
-  .account-identity .sync-status{margin-top:4px;display:flex;}
-  #account-name{display:block;font-weight:600;}
   .app-shell{overflow:hidden!important;overscroll-behavior:contain;}
   .layout{
     display:block!important;width:calc(100% - clamp(20px,3vw,56px));padding:8px 0 10px;
@@ -2919,6 +2903,29 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
   #panel-cal .cal-course-filter{flex-basis:10.5rem;}
   #panel-cal .cal-title{font-size:20px;}
 }
+.account-controls{display:block;}
+#account-toggle{width:44px;height:44px;padding:0;display:grid;place-items:center;color:var(--accent-h);}
+#account-photo{grid-area:1/1;width:34px;height:34px;border-radius:50%;object-fit:cover;}
+#account-photo[hidden]{display:none;}
+#account-toggle svg{grid-area:1/1;}
+#account-panel{
+  position:absolute;right:16px;top:calc(100% + 6px);z-index:250;
+  width:min(260px,calc(100vw - 32px));padding:10px;
+  background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);
+}
+#account-panel button{display:block;width:100%;text-align:left;margin-top:2px;}
+#account-panel .account-signout{color:var(--danger-c);margin-top:8px;}
+#account-panel .account-signout[hidden]{display:none;}
+.account-identity{padding:5px 8px 10px;border-bottom:1px solid var(--border-lt);overflow-wrap:anywhere;}
+.account-identity .sync-status{margin-top:4px;display:flex;}
+#account-name{display:block;font-weight:600;}
+
+#account-panel[hidden]{display:none;}
+.account-backup-title{margin:8px 8px 2px;font-size:var(--ui-caption);color:var(--text-3);font-weight:600;}
+@media(max-width:767px){
+  #auth-logged-in>.user-chip,#auth-logged-in>.signout-btn{display:none;}
+  #account-toggle{min-height:44px;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3077,15 +3084,18 @@ onAuthStateChanged(auth,user=>{
           </div>
           <button class="signout-btn" onclick="window._fb&&window._fb.signOut()">登出</button>
         </div>
-        <div class="wide-only account-controls">
+        <div class="account-controls">
           <button type="button" class="btn" id="account-toggle" aria-label="帳號" aria-expanded="false" aria-controls="account-panel">
             <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
             <img id="account-photo" alt="" hidden/>
           </button>
           <div id="account-panel" hidden>
             <div class="account-identity"><span id="account-name">尚未登入</span><div class="sync-status"><span id="account-sync-dot" class="sync-dot offline"></span><span id="account-sync-label" role="status">本機</span></div></div>
-            <button type="button" class="btn" id="account-export">匯出</button>
-            <button type="button" class="btn" id="account-import">匯入</button>
+            <div role="group" aria-labelledby="account-backup-title">
+              <p class="account-backup-title" id="account-backup-title">資料備份</p>
+              <button type="button" class="btn" id="account-export">匯出備份</button>
+              <button type="button" class="btn" id="account-import">匯入備份</button>
+            </div>
             <button type="button" class="btn" id="account-settings">同步設定</button>
             <button type="button" class="btn account-signout" id="account-signout" hidden>登出</button>
           </div>
@@ -3103,8 +3113,7 @@ onAuthStateChanged(auth,user=>{
         <div class="hstat"><span class="hstat-val" id="dash-total-rem">0</span><span>剩餘</span></div>
       </div>
       <button class="btn btn-sand btn-xs" onclick="showFirebaseSetup()" title="雲端同步設定教學" aria-label="雲端同步設定教學"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 18a4 4 0 0 1-1-7.87 6 6 0 0 1 11.44-1.1A4.5 4.5 0 0 1 17.5 18Z"/></svg></button>
-      <button class="btn btn-sand btn-xs" onclick="showExport()">匯出</button>
-      <button class="btn btn-sand btn-xs" onclick="showImport()">匯入</button>
+      <input type="file" id="backup-file" accept=".json,application/json" hidden>
     </div>
   </div>
   <div class="progress-track"><div class="progress-track-fill" id="global-fill" style="width:0%"></div></div>
@@ -3910,33 +3919,47 @@ function exportData(){
   return JSON.stringify({courses:S.courses,calendar:S.calendar,cid:S.cid,eid:S.eid,colorCursor,notes:S.notes,exportedAt:new Date().toISOString()},null,2);
 }
 function showExport(){
-  openModal('匯出資料','複製以下 JSON，保存到備忘錄或傳給其他裝置後使用「匯入」貼上。',
-    [{label:'複製',action:()=>{navigator.clipboard.writeText(exportData()).then(()=>{toast('已複製到剪貼簿','success');closeModal();}).catch(()=>{document.getElementById('modal-ta').select();document.execCommand('copy');toast('已複製','success');closeModal();});},primary:true},
-     {label:'下載',action:()=>{const a=document.createElement('a');a.href='data:application/json,'+encodeURIComponent(exportData());a.download=`course-tracker-${todayStr}.json`;a.click();closeModal();}},
-     {label:'取消',action:closeModal}],
-    exportData());
+  const url=URL.createObjectURL(new Blob([exportData()],{type:'application/json'}));
+  const link=document.createElement('a');
+  link.href=url;
+  link.download='course-tracker-'+todayStr+'.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
+const backupFile=document.getElementById('backup-file');
 function showImport(){
-  openModal('匯入資料','貼上之前匯出的 JSON 資料。⚠️ 這將覆蓋目前所有資料。',
-    [{label:'確認匯入',action:()=>{
-      const txt=document.getElementById('modal-ta').value.trim();
-      try{
-        const d=JSON.parse(txt);
-        if(!d.courses)throw new Error('格式錯誤');
-        showConfirm('確認匯入','目前所有資料將被覆蓋，確定繼續？',()=>{
-          lastRepeatBatch=null;
-          S.courses=d.courses||[];S.calendar=d.calendar||{};
-          updateRepeatScheduleForm(repeatForm);
-          renderRepeatScheduleResult();
-          S.notes=d.notes||{};
-          S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
-          invalidateEntriesCache();
-          saveState();render();closeModal();
-          toast('匯入成功','success');
-        },'覆蓋匯入');
-      }catch(e){toast('格式錯誤，請貼上正確的備份資料','error');}
-    },primary:true},{label:'取消',action:closeModal}],'');
+  backupFile.value='';
+  backupFile.click();
 }
+backupFile.addEventListener('change',async()=>{
+  const file=backupFile.files[0];
+  backupFile.value='';
+  if(!file)return;
+  let d;
+  try{
+    d=JSON.parse((await file.text()).replace(/^\uFEFF/,''));
+    const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+    if(!Array.isArray(d?.courses)||!d.courses.every(c=>record(c)&&typeof c.id==='string'&&typeof c.name==='string')||
+      (d.calendar!=null&&(!record(d.calendar)||!Object.values(d.calendar).every(list=>Array.isArray(list)&&list.every(record))))||
+      (d.notes!=null&&!record(d.notes)))throw new Error('格式錯誤');
+  }catch{
+    toast('無法讀取備份，請選擇有效的 StudyOS JSON 檔案。','error');
+    return;
+  }
+  showConfirm('匯入備份','將以這份備份覆蓋目前的課程、課表和備忘錄。已登入時，匯入結果也會透過既有同步更新雲端。',()=>{
+    lastRepeatBatch=null;
+    S.courses=d.courses||[];S.calendar=d.calendar||{};
+    updateRepeatScheduleForm(repeatForm);
+    renderRepeatScheduleResult();
+    S.notes=d.notes||{};
+    S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
+    invalidateEntriesCache();
+    saveState();render();
+    toast('匯入成功','success');
+  },'覆蓋匯入');
+});
 function openModal(title,desc,btns,taVal,htmlBody,extraHtml){
   document.getElementById('modal-title').textContent=title;
   const descEl=document.getElementById('modal-desc');
