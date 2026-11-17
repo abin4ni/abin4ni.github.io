@@ -2981,12 +2981,12 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
   }
   #phone-week-progress::-webkit-progress-bar{background:var(--sunken);border-radius:99px;}
   #phone-week-progress::-webkit-progress-value{background:var(--accent);border-radius:99px;}
-  #phone-cal-more>summary{
+  #calendar-more>summary{
     display:grid;place-items:center;min-width:44px;min-height:44px;list-style:none;
     font-size:var(--ui-caption);color:var(--accent-h);cursor:pointer;
   }
-  #phone-cal-more>summary::-webkit-details-marker{display:none;}
-  #phone-cal-more .cal-progress{
+  #calendar-more>summary::-webkit-details-marker{display:none;}
+  #calendar-more .cal-progress{
     position:absolute;inset:100% 10px auto;padding:4px;
     background:var(--surface);border:1px solid var(--border-lt);
     border-radius:var(--r);box-shadow:var(--shadow-pop);
@@ -3019,15 +3019,13 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 }
 #memo-course-picker{margin:12px 0;}
 #memo-course-picker select{width:100%;}
-:is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#phone-cal-more) .popup-close{
+:is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#calendar-more) .popup-close{
   display:grid;place-items:center;width:44px;height:44px;min-height:44px;flex:0 0 44px;
   padding:0;margin:0 0 0 auto;border:0;border-radius:50%;background:var(--sunken);color:var(--text-2);
 }
 .popup-close svg{
   width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;pointer-events:none;
 }
-#account-panel>.popup-close{position:absolute;right:10px;top:10px;}
-#account-panel .account-identity{padding-right:48px;min-height:44px;}
 #exam-popover>.popup-close{float:right;}
 #confirm-title,.modal #modal-title{margin:0;}
 @media(min-width:768px){#wide-day #day-panel-close{display:grid;}}
@@ -3227,13 +3225,42 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;pointer-events:none;
 }
 #panel-cal #phone-schedule-open[hidden]{display:none;}
-:is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#phone-cal-more) .popup-close svg{display:block;}
+:is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#calendar-more) .popup-close svg{display:block;}
 #memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog,#backup-import-dialog,#confirm-dialog,.modal{padding:clamp(20px,3vw,24px);}
 @media(max-width:767px){
   #day-panel-close{
     display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;margin:0 0 0 auto;
     border-radius:50%;background:var(--sunken);
   }
+}
+
+.account-controls{position:relative;}
+#account-panel{right:0;}
+#panel-r #day-panel-close[hidden]{display:none!important;}
+.week-wrap :is(.wch-spacer,.wch-day,.unsched-lbl,.week-slot-unsched,.wt-label,.week-slot){border-inline:0;}
+.week-wrap .week-unsched-row{border-bottom:0;}
+.week-wrap :is(.unsched-lbl,.week-slot-unsched,.wt-label,.week-slot){border-bottom:1px solid var(--border-lt);}
+.wide-cal-tools.phone-cal-summary{position:relative;z-index:11;}
+#calendar-more>summary{
+  display:grid;place-items:center;min-width:44px;min-height:44px;list-style:none;
+  font-size:var(--ui-caption);color:var(--accent-h);cursor:pointer;
+}
+#calendar-more>summary::-webkit-details-marker{display:none;}
+#calendar-more .calendar-more-panel{
+  position:absolute;inset:100% var(--sp-4) auto auto;width:min(280px,calc(100% - 20px));padding:8px;
+  background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r);box-shadow:var(--shadow-pop);
+}
+#panel-cal .calendar-more-panel .cal-course-filter{margin:0 0 6px;min-width:0;}
+.calendar-more-wide-actions{display:grid;gap:4px;}
+.calendar-more-wide-actions button{min-height:44px;text-align:start;}
+@media(min-width:768px){
+  .phone-cal-summary .phone-week{display:none;}
+  .phone-cal-summary .calendar-add-tools{margin-inline-start:auto;}
+}
+@media(max-width:767px){
+  .phone-cal-summary :is(.wide-week,.calendar-add-tools,.calendar-more-wide-actions){display:none;}
+  #calendar-more .calendar-more-panel{inset:100% 10px auto;width:auto;}
+  #panel-cal .cal-head #phone-schedule-open{grid-area:2/3;justify-self:end;}
 }
 </style>
 <!-- Firebase SDK -->
@@ -3398,7 +3425,7 @@ onAuthStateChanged(auth,user=>{
             <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
             <img id="account-photo" alt="" hidden/>
           </button>
-          <div id="account-panel" hidden><button type="button" class="btn popup-close" aria-label="關閉帳號選單" onclick="closeAccountPanel(true)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+          <div id="account-panel" hidden>
             <div class="account-identity"><span id="account-name">尚未登入</span><div class="sync-status"><span id="account-sync-dot" class="sync-dot offline"></span><span id="account-sync-label" role="status">本機</span></div></div>
             <button type="button" class="btn phone-only" id="phone-account-login" onclick="closeAccountPanel(true);doSignIn()">Google 登入同步</button>
             <button type="button" class="btn phone-only" id="phone-account-settings" onclick="closeAccountPanel(true);showFirebaseSetup()">同步設定</button>
@@ -3557,36 +3584,33 @@ onAuthStateChanged(auth,user=>{
           <button type="button" class="jump-today" onclick="jumpToday()">今天</button>
           <button type="button" onclick="navNext()" aria-label="下一頁"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m10 5 7 7-7 7"/></svg></button>
         </div>
+        <button type="button" class="btn phone-only" id="phone-schedule-open" aria-label="安排課程" onclick="openCalendarSchedule()"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <div class="wide-cal-tools phone-cal-summary">
+        <div class="wide-week">
+          <span>本週進度 · <b id="wide-week-count"></b></span>
+          <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
+        </div>
+        <div class="wide-tools calendar-add-tools">
+          <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
+        </div>
+        <div class="phone-week">
+          <span>本週進度 · <b id="phone-week-count"></b></span>
+          <progress id="phone-week-progress" max="100" value="0" aria-label="本週課堂完成進度"></progress>
+        </div>
+        <details id="calendar-more">
+          <summary>更多</summary>
+          <div class="cal-progress calendar-more-panel">
         <div class="cal-course-filter">
           <label for="cal-course-filter">科目</label>
           <div class="cal-course-select">
             <select id="cal-course-filter" aria-label="篩選科目"><option value="">全部課程</option></select>
           </div>
         </div>
-        <button type="button" class="btn phone-only" id="phone-schedule-open" aria-label="安排課程" onclick="openCalendarSchedule()"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
-      </div>
-      <div class="wide-only wide-cal-tools">
-        <div class="wide-week">
-          <span>本週進度 · <b id="wide-week-count"></b></span>
-          <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
-        </div>
-        <div class="wide-tools">
-          <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
+            <div class="calendar-more-wide-actions">
           <button type="button" class="btn btn-sand" id="wide-exam-open" aria-haspopup="dialog" aria-controls="wide-exam-dialog">考試總覽</button>
           <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
-        </div>
-      </div>
-      <section class="wide-only" id="wide-drag" hidden aria-label="拖曳排課">
-        <div class="makeup-head"><h3>拖曳課程到日期格排課</h3><button type="button" class="btn popup-close" aria-label="關閉待排課堂" id="wide-drag-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
-      </section>
-      <div class="phone-only phone-cal-summary">
-        <div class="phone-week">
-          <span>本週進度 · <b id="phone-week-count"></b></span>
-          <progress id="phone-week-progress" max="100" value="0" aria-label="本週課堂完成進度"></progress>
-        </div>
-        <details id="phone-cal-more">
-          <summary>更多</summary>
-          <div class="cal-progress"><button type="button" class="btn popup-close" aria-label="關閉更多" onclick="closeCalendarMore(true)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+            </div>
         <details class="week-progress" id="week-progress">
           <summary id="week-progress-summary">
             <span class="week-progress-heading"><strong>本週進度</strong><span class="week-progress-range" id="week-progress-range"></span></span>
@@ -3609,6 +3633,9 @@ onAuthStateChanged(auth,user=>{
           </div>
         </details>
       </div>
+      <section class="wide-only" id="wide-drag" hidden aria-label="拖曳排課">
+        <div class="makeup-head"><h3>拖曳課程到日期格排課</h3><button type="button" class="btn popup-close" aria-label="關閉待排課堂" id="wide-drag-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+      </section>
       <div class="mobile-schedule" id="mobile-schedule" aria-live="polite" hidden></div>
       <p id="calendar-swipe-hint" hidden>左右滑動切換月份／週次</p>
       <div class="cal-body" id="cal-body" role="region" aria-label="行事曆日期"></div>
@@ -5318,7 +5345,7 @@ let examProgressCourseId=null;
 function focusExamProgress(id){
   if(examProgressOrigin==='calendar'&&focusCalendarExam())return;
   if(examProgressOrigin==='overview'){
-    if(!isMobile()&&!wideExam.open){$id('wide-exam-open').focus({preventScroll:true});return;}
+    if(!isMobile()&&!wideExam.open){focusCalendarMore();return;}
     const row=[...document.querySelectorAll('[data-eo-course]')].find(el=>el.dataset.eoCourse===id);
     if(row){row.focus({preventScroll:true});return;}
   }
@@ -5433,7 +5460,7 @@ examProgressBody.addEventListener('click',event=>{
     closeWideExam();
     if(!isMobile())dayPanelReturnFocus=()=>focusExamProgress(id);
     selectDate(date,{preserveWeek:!isMobile()});
-    if(isMobile())mobileTab('day');
+    if(isMobile())mobileTab('day','detail');
     const panel=document.getElementById('panel-r');
     panel.scrollTop=0;
     if(isMobile())document.getElementById('day-schedule-open').focus({preventScroll:true});
@@ -5556,7 +5583,7 @@ function bindWideDialog(dialog,dismiss){
 function closeWideExam(){
   if(!wideExam.open)return;
   wideExam.close();
-  if(wideMedia.matches)$id('wide-exam-open').focus({preventScroll:true});
+  if(wideMedia.matches)focusCalendarMore();
 }
 bindWideDialog(wideExam,closeWideExam);
 for(const dialog of [examProgressDialog,$id('exam-day-dialog')]){
@@ -5564,6 +5591,7 @@ for(const dialog of [examProgressDialog,$id('exam-day-dialog')]){
 }
 $id('wide-exam-close').addEventListener('click',closeWideExam);
 $id('wide-exam-open').addEventListener('click',()=>{
+  closeCalendarMore(true);
   renderExamOverview();
   showAppDialog(wideExam,closeWideExam);
   wideExam.scrollTop=0;
@@ -5577,11 +5605,18 @@ function openDayPanel(){
     dayPanelReturnFocus=()=>(document.querySelector('#cal-body [data-calendar-date="'+date+'"]')||$id('vt-'+S.view)).focus({preventScroll:true});
   }
   wideDay.dataset.stage='detail';
+  $id('day-panel-close').hidden=false;
   showAppDialog(wideDay,dismissDayPanel);
   wideDay.scrollTop=0;
   $id('day-panel-close').focus({preventScroll:true});
 }
 function closeDayPanel(){
+  if(isMobile()&&$id('panel-r').dataset.mobileDay==='detail'){
+    const date=S.selectedDate;
+    mobileTab('cal');
+    (document.querySelector('#cal-body [data-calendar-date="'+date+'"]')||$id('bn-cal')).focus({preventScroll:true});
+    return;
+  }
   if(!wideDay.open)return;
   if(wideDay.dataset.stage==='edit')finishDayEdit(false);
   if(wideDay.dataset.stage==='move')closeLessonReschedule(false);
@@ -5662,14 +5697,17 @@ $id('wide-course-close').addEventListener('click',closeWideCourse);
 $id('wide-memo-open').addEventListener('click',event=>openMemoModal(wideCourseId,event.currentTarget));
 $id('wide-add-open').addEventListener('click',()=>openWideCourse(null,'add'));
 $id('wide-makeup-open').addEventListener('click',()=>openMakeupList(()=>$id('wide-makeup-open').focus()));
+const calendarMore=$id('calendar-more');
+function focusCalendarMore(){calendarMore.querySelector('summary').focus({preventScroll:true});}
 function closeCalendarMore(restoreFocus=false){
-  const more=document.getElementById('phone-cal-more');
-  more.open=false;
-  if(restoreFocus)more.querySelector('summary').focus({preventScroll:true});
+  calendarMore.open=false;
+  if(restoreFocus)focusCalendarMore();
 }
 document.addEventListener('click',event=>{
-  const more=document.getElementById('phone-cal-more');
-  if(more.open&&!topAppDialog()&&!more.contains(event.target))closeCalendarMore();
+  if(calendarMore.open&&!calendarMore.contains(event.target))closeCalendarMore(calendarMore.contains(document.activeElement));
+});
+calendarMore.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&calendarMore.open){event.preventDefault();event.stopPropagation();closeCalendarMore(true);}
 });
 function setDragShelf(open){
   $id('wide-drag').hidden=!open;
@@ -5677,14 +5715,17 @@ function setDragShelf(open){
 }
 $id('wide-drag-close').addEventListener('click',()=>{
   setDragShelf(false);
-  $id('wide-drag-toggle').focus({preventScroll:true});
+  focusCalendarMore();
 });
 document.addEventListener('click',event=>{
   if(topAppDialog()||$id('wide-drag').hidden)return;
   if(!event.target.closest('#wide-drag,#wide-drag-toggle,#cal-body'))setDragShelf(false);
 });
 $id('wide-drag-toggle').addEventListener('click',()=>{
-  setDragShelf($id('wide-drag').hidden);
+  const open=$id('wide-drag').hidden;
+  closeCalendarMore(true);
+  setDragShelf(open);
+  if(open)$id('wide-drag-close').focus({preventScroll:true});
 });
 for(const button of document.querySelectorAll('[data-wide-page-button]')){
   button.addEventListener('click',()=>setWidePage(button.dataset.widePageButton));
@@ -5694,7 +5735,7 @@ function closeAccountPanel(restoreFocus=false){
   if(accountPanel.hidden)return;
   accountPanel.hidden=true;
   accountToggle.setAttribute('aria-expanded','false');
-  if(restoreFocus)accountToggle.focus();
+  if(restoreFocus)accountToggle.focus({preventScroll:true});
 }
 accountToggle.addEventListener('click',()=>{
   if(!accountPanel.hidden){closeAccountPanel(true);return;}
@@ -5702,10 +5743,12 @@ accountToggle.addEventListener('click',()=>{
   accountToggle.setAttribute('aria-expanded','true');
 });
 document.addEventListener('click',event=>{
-  if(!accountPanel.contains(event.target)&&!accountToggle.contains(event.target))closeAccountPanel();
+  if(!accountPanel.contains(event.target)&&!accountToggle.contains(event.target)){
+    closeAccountPanel(accountPanel.contains(document.activeElement)||document.activeElement===document.body);
+  }
 });
-$id('auth-area').addEventListener('keydown',event=>{
-  if(event.key==='Escape'&&!accountPanel.hidden){event.preventDefault();event.stopPropagation();closeAccountPanel(true);}
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&!accountPanel.hidden&&!topAppDialog()){event.preventDefault();event.stopPropagation();closeAccountPanel(true);}
 });
 for(const [id,action] of [
   ['account-export',showExport],['account-import',showImport],['account-settings',showFirebaseSetup],
@@ -5756,13 +5799,23 @@ window.addEventListener('resize',()=>{
   if(!usesDayDialog()&&document.getElementById('panel-r')?.classList.contains('open'))closeDayPanel();
 });
 let mobileSchedulePickerOpen=false;
-function mobileTab(tab){
+function mobileTab(tab,dayMode='today'){
   if(!isMobile())return;
-  if(tab!=='cal')cancelCalendarSchedule();
+  if(tab!=='cal'){
+    closeCalendarMore();
+    cancelCalendarSchedule();
+  }
   if(tab!=='day')cancelDaySchedule();
   document.getElementById('panel-l').classList.toggle('mob-active',tab==='course');
   document.getElementById('panel-cal').classList.toggle('mob-active',tab==='cal');
   const pr=document.getElementById('panel-r');
+  const isDetail=tab==='day'&&dayMode==='detail';
+  if(tab==='day'&&!isDetail){
+    S.selectedDate=todayStr;
+    renderCalendar();
+  }
+  pr.dataset.mobileDay=tab==='day'?dayMode:'';
+  $id('day-panel-close').hidden=!isDetail;
   pr.classList.toggle('mob-active',tab==='day');
   pr.classList.remove('mob-visible');
   ['bn-course','bn-cal','bn-day'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
@@ -5777,6 +5830,13 @@ function mobileTab(tab){
   if(tab==='day')renderDayPanel();
 }
 
+$id('panel-r').addEventListener('keydown',event=>{
+  if(isMobile()&&event.key==='Escape'&&!event.defaultPrevented&&!event.isComposing&&$id('panel-r').dataset.mobileDay==='detail'){
+    event.preventDefault();
+    event.stopPropagation();
+    closeDayPanel();
+  }
+});
 function cancelCalendarSchedule(){
   S.tapCourseId=null;
   mobileSchedulePickerOpen=false;
@@ -5836,7 +5896,7 @@ function tapCell(date){
   if(!c||remaining(c)<=0){S.tapCourseId=null;renderTodo();renderCalendar();return false;}
   S.tapCourseId=null; // consume the selection before saving or rendering
   addEvent(date,c.id,'');S.selectedDate=date;
-  saveState();render();mobileTab('day');
+  saveState();render();mobileTab('day','detail');
   if(isCalendarCourseHidden(c.id))toast(calendarScheduleMessage('已安排一堂課程',c.id),'success');
   return true;
 }
@@ -6180,7 +6240,7 @@ function wkEv(ev,date){
   const c=course(ev.courseId);if(!c)return'';
   const time=esc(lessonTimeLabel(ev));
   const lbl=esc(courseMark(c.name,3))+(time?'<span class="week-ev-time">'+time+'</span>':'');
-  return`<div class="week-ev${ev.done?' is-done':''}" style="background:${c.color}18" title="${esc(c.name)}${time?' · '+time:''}" onclick="event.stopPropagation();handleCellClick('${date}');${isMobile()?'mobileTab(\'day\')':''}"><span class="dot" style="background:${ev.done?'var(--text-3)':c.color}"></span>${lbl}</div>`;
+  return`<div class="week-ev${ev.done?' is-done':''}" style="background:${c.color}18" title="${esc(c.name)}${time?' · '+time:''}" onclick="event.stopPropagation();handleCellClick('${date}')"><span class="dot" style="background:${ev.done?'var(--text-3)':c.color}"></span>${lbl}</div>`;
 }
 
 function activateCalendarDate(event,date){
@@ -6194,7 +6254,7 @@ function activateCalendarDate(event,date){
 function handleCellClick(date){
   if(tapCell(date))return;  // mobile tap-to-schedule
   selectDate(date,{preserveWeek:!isMobile()});
-  if(isMobile())mobileTab('day');
+  if(isMobile())mobileTab('day','detail');
 }
 
 // Weekly progress reads the full schedule and uses the device's local date.
@@ -6358,7 +6418,7 @@ weekProgressList.addEventListener('click',event=>{
   if(!row)return;
   // Use the date-detail path directly, even if tap-to-schedule mode is active.
   selectDate(row.dataset.weekDate);
-  if(isMobile())mobileTab('day');
+  if(isMobile())mobileTab('day','detail');
   document.getElementById('panel-r').scrollTop=0;
   if(usesDayDialog()){
     dayPanelReturnFocus=()=>weekProgressSummary.focus({preventScroll:true});
@@ -6898,7 +6958,7 @@ function submitLessonReschedule(event){
     S.year=year;
     S.month=month-1;
     selectDate(newDate);
-    if(isMobile())mobileTab('day');
+    if(isMobile())mobileTab('day','detail');
     rescheduleButton(id)?.focus();
   }
   toast(calendarScheduleMessage('已改期',lesson.courseId),'success');
