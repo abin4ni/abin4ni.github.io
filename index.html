@@ -3107,6 +3107,16 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 #panel-r .day-completed > summary{cursor:pointer;align-content:center;min-height:44px;font-size:14px;font-weight:600;color:var(--text-2);}
 #panel-r .day-completed-list .day-lesson{border-top:1px solid var(--border-lt);}
 #panel-r .day-list-status{padding:12px 4px;margin:0;font-size:14px;color:var(--text-2);}
+
+#day-edit-panel [hidden]{display:none!important;}
+#day-edit-panel .day-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
+#day-edit-panel h2{margin:0;font-size:1.25rem;overflow-wrap:anywhere;}
+#day-edit-back{min-height:44px;white-space:nowrap;}
+#day-edit-options{display:grid;gap:8px;}
+#day-edit-options .btn{min-height:44px;text-align:start;}
+#day-edit-date-form label,#day-edit-panel #lesson-time-form label{display:block;margin-bottom:8px;}
+#day-edit-date-form input,#day-edit-panel #lesson-time-input{width:100%;min-height:44px;}
+#wide-day[data-stage=edit] #panel-r > :not(#day-edit-panel){display:none;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3520,6 +3530,26 @@ onAuthStateChanged(auth,user=>{
     <input id="day-schedule-time" type="hidden" value="">
   </div>
 </template>
+<dialog id="day-edit-dialog" class="local-dialog" aria-labelledby="day-edit-title">
+  <section id="day-edit-panel" hidden>
+    <div class="day-edit-head">
+      <button type="button" id="day-edit-back" class="btn btn-sand">‹ 返回</button>
+      <h2 id="day-edit-title">編輯時間</h2>
+      <button type="button" id="day-edit-close" class="btn popup-close" aria-label="關閉當日課程視窗"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+    </div>
+    <div id="day-edit-options">
+      <button type="button" class="btn btn-sand" id="day-edit-date-option">改日期</button>
+      <button type="button" class="btn btn-sand" id="day-edit-time-option">改時間</button>
+    </div>
+    <form id="day-edit-date-form" hidden novalidate>
+      <label for="day-edit-date">新日期</label>
+      <input id="day-edit-date" type="date" required aria-describedby="day-edit-date-error">
+      <p id="day-edit-date-error" class="schedule-time-error" role="alert"></p>
+      <div class="day-schedule-actions"><button class="btn btn-primary">儲存日期</button></div>
+    </form>
+    <div id="day-edit-time-slot" hidden></div>
+  </section>
+</dialog>
 <dialog id="lesson-time-dialog" class="local-dialog" aria-labelledby="lesson-time-title">
   <div class="makeup-head"><h2 id="lesson-time-title">開始時間</h2><button type="button" class="btn popup-close" data-local-close aria-label="取消時間編輯"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <form id="lesson-time-form">
@@ -5224,6 +5254,7 @@ function setWidePage(page){
 
 function mountWideLayout(){
   const wide=wideMedia.matches;
+  if($id('day-edit-dialog').open)finishDayEdit(false);
   if($id('phone-course-dialog').open)closePhoneCourse();
   if(!wide){
     closeDayPanel();
@@ -5316,6 +5347,7 @@ function openDayPanel(){
 }
 function closeDayPanel(){
   if(!wideDay.open)return;
+  if(wideDay.dataset.stage==='edit')finishDayEdit(false);
   if(wideDay.dataset.stage==='move')closeLessonReschedule(false);
   cancelDaySchedule(false);
   wideDay.close();
@@ -6329,19 +6361,22 @@ let lessonTimeDraft=null;
 function padTime(value){return String(value).padStart(2,'0');}
 function closeLessonTime(){
   const opener=lessonTimeDraft?.opener;
+  const inline=lessonTimeDraft?.inline;
   lessonTimeDraft=null;
-  lessonTimeDialog.close();
+  if(inline)lessonTimeDialog.append($id('lesson-time-form'));
+  else lessonTimeDialog.close();
   opener?.focus({preventScroll:true});
 }
-function openLessonTime(time,apply,opener){
-  lessonTimeDraft={opener,apply};
+function openLessonTime(time,apply,opener,inline=null){
+  lessonTimeDraft={opener,apply,inline};
   const wheel=touchWheelLayout();
   lessonTimeWheels.hidden=!wheel;
   lessonTimeManual.hidden=!wheel;
   lessonTimeInput.parentElement.hidden=wheel;
   lessonTimeInput.value=time;
   lessonTimeError.textContent='';
-  showAppDialog(lessonTimeDialog,closeLessonTime);
+  if(inline)inline.append($id('lesson-time-form'));
+  else showAppDialog(lessonTimeDialog,closeLessonTime);
   if(wheel){
     const [hour,minute]=(time||'00:00').split(':').map(Number);
     timeHour.set(hour);
@@ -6363,9 +6398,20 @@ lessonTimeManual.addEventListener('click',()=>{
   lessonTimeInput.focus();
   lessonTimeInput.select();
 });
-lessonTimeDialog.querySelectorAll('[data-local-close]').forEach(button=>button.addEventListener('click',closeLessonTime));
+lessonTimeDialog.querySelectorAll('[data-local-close]').forEach(button=>button.addEventListener('click',()=>{
+  if(lessonTimeDraft?.inline)showDayEditOptions($id('day-edit-time-option'));
+  else closeLessonTime();
+}));
 bindWideDialog(lessonTimeDialog,closeLessonTime);
-$id('lesson-time-clear').addEventListener('click',()=>applyLessonTime(''));
+$id('lesson-time-clear').addEventListener('click',()=>{
+  if(!lessonTimeDraft?.inline){applyLessonTime('');return;}
+  lessonTimeWheels.hidden=true;
+  lessonTimeManual.hidden=true;
+  lessonTimeInput.parentElement.hidden=false;
+  lessonTimeInput.value='';
+  lessonTimeError.textContent='';
+  lessonTimeInput.focus();
+});
 lessonTimeInput.addEventListener('input',()=>{lessonTimeError.textContent='';});
 $id('lesson-time-form').addEventListener('submit',event=>{
   event.preventDefault();
@@ -6508,6 +6554,12 @@ function openLessonReschedule(id,date=S.selectedDate,returnFocus=null){
     rescheduleDate.focus({preventScroll:true});
   }else showAppDialog(rescheduleDialog,closeLessonReschedule);
 }
+function moveScheduledLesson(date,newDate,index){
+  const source=S.calendar[date];
+  const [lesson]=source.splice(index,1);
+  if(!source.length)delete S.calendar[date];
+  (S.calendar[newDate]??=[]).push(lesson);
+}
 function submitLessonReschedule(event){
   event.preventDefault();
   if(!rescheduleDraft)return;
@@ -6536,9 +6588,7 @@ function submitLessonReschedule(event){
 
   closeLessonReschedule(false);
   if(newDate!==date){
-    source.splice(index,1);
-    if(!source.length)delete S.calendar[date];
-    (S.calendar[newDate]??=[]).push(lesson);
+    moveScheduledLesson(date,newDate,index);
   }
   if(time!==currentTime)lesson.time=time;
   invalidateEntriesCache();
@@ -6570,6 +6620,119 @@ rescheduleDialog.addEventListener('cancel',event=>{
 });
 rescheduleDialog.addEventListener('keydown',event=>event.stopPropagation());
 document.getElementById('reschedule-cancel').addEventListener('click',()=>closeLessonReschedule());
+const dayEditDialog=$id('day-edit-dialog');
+const dayEditPanel=$id('day-edit-panel');
+const dayEditDate=$id('day-edit-date');
+let dayEditDraft=null;
+
+function showDayEditStage(stage,focus){
+  $id('day-edit-options').hidden=stage!=='options';
+  $id('day-edit-date-form').hidden=stage!=='date';
+  $id('day-edit-time-slot').hidden=stage!=='time';
+  $id('day-edit-title').textContent={options:'編輯時間',date:'改日期',time:'改時間'}[stage];
+  $id('day-edit-back').onclick=stage==='options'?()=>finishDayEdit():()=>{
+    showDayEditOptions($id('day-edit-'+stage+'-option'));
+  };
+  focus?.focus({preventScroll:true});
+}
+function showDayEditOptions(focus){
+  if(lessonTimeDraft?.inline)closeLessonTime();
+  showDayEditStage('options',focus);
+}
+function finishDayEdit(restoreFocus=true){
+  const draft=dayEditDraft;
+  if(!draft)return;
+  dayEditDraft=null;
+  if(lessonTimeDraft?.inline)closeLessonTime();
+  dayEditPanel.hidden=true;
+  if(draft.wide)wideDay.dataset.stage='detail';
+  else dayEditDialog.close();
+  dayEditDialog.append(dayEditPanel);
+  draft.scroller.scrollTop=draft.scroll;
+  document.scrollingElement.scrollTop=draft.pageScroll;
+  if(restoreFocus){
+    const entry=[...$id('day-events').querySelectorAll('[data-day-edit]')]
+      .find(button=>button.dataset.dayEdit===draft.id);
+    (entry||$id('day-schedule-open')).focus({preventScroll:true});
+  }
+}
+function dismissDayEdit(){
+  if(dayEditDraft?.wide)closeDayPanel();
+  else finishDayEdit();
+}
+function openDayEdit(opener){
+  const date=S.selectedDate;
+  const id=opener.dataset.dayEdit;
+  const wide=wideDay.open;
+  const scroller=wide?wideDay:$id('panel-r');
+  dayEditDraft={date,id,wide,scroller,scroll:scroller.scrollTop,pageScroll:document.scrollingElement.scrollTop};
+  dayEditPanel.hidden=false;
+  showDayEditStage('options');
+  if(wide){
+    $id('panel-r').append(dayEditPanel);
+    wideDay.dataset.stage='edit';
+    wideDay.scrollTop=0;
+  }else showAppDialog(dayEditDialog,dismissDayEdit);
+  $id('day-edit-date-option').focus({preventScroll:true});
+}
+function currentDayEditLesson(){
+  const {date,id}=dayEditDraft;
+  return S.calendar[date]?.find(item=>item.id===id);
+}
+function reportMissingDayEditLesson(){
+  finishDayEdit();
+  toast('原日期已找不到這堂課，可能已被刪除或改期。','warn');
+}
+bindWideDialog(dayEditDialog,dismissDayEdit);
+$id('day-edit-close').addEventListener('click',dismissDayEdit);
+$id('day-edit-date-option').addEventListener('click',()=>{
+  if(!dayEditDraft)return;
+  if(!currentDayEditLesson()){reportMissingDayEditLesson();return;}
+  dayEditDate.value=dayEditDraft.date;
+  $id('day-edit-date-error').textContent='';
+  dayEditDate.removeAttribute('aria-invalid');
+  showDayEditStage('date',dayEditDate);
+});
+dayEditDate.addEventListener('input',()=>{
+  $id('day-edit-date-error').textContent='';
+  dayEditDate.removeAttribute('aria-invalid');
+});
+$id('day-edit-date-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  if(!dayEditDraft)return;
+  const {date,id}=dayEditDraft;
+  const index=S.calendar[date]?.findIndex(item=>item.id===id)??-1;
+  if(index<0){reportMissingDayEditLesson();return;}
+  const newDate=dayEditDate.value;
+  if(!newDate||!dayEditDate.validity.valid){
+    $id('day-edit-date-error').textContent='請選擇有效的新日期。';
+    dayEditDate.setAttribute('aria-invalid','true');
+    dayEditDate.focus();
+    return;
+  }
+  if(newDate!==date){
+    moveScheduledLesson(date,newDate,index);
+    invalidateEntriesCache();
+    saveState();
+    render();
+    const [,month,day]=newDate.split('-').map(Number);
+    toast('已移至 '+month+'/'+day,'success');
+  }
+  finishDayEdit();
+});
+$id('day-edit-time-option').addEventListener('click',()=>{
+  if(!dayEditDraft)return;
+  const lesson=currentDayEditLesson();
+  if(!lesson){reportMissingDayEditLesson();return;}
+  showDayEditStage('time');
+  openLessonTime(lesson.time||'',time=>{
+    const current=currentDayEditLesson();
+    if(!current){reportMissingDayEditLesson();return;}
+    if(time!==(current.time||''))setTime(dayEditDraft.date,dayEditDraft.id,time);
+    finishDayEdit();
+  },null,$id('day-edit-time-slot'));
+});
+
 document.getElementById('day-events').addEventListener('click',event=>{
   const check=event.target.closest('[data-day-toggle]');
   if(check){
@@ -6601,21 +6764,8 @@ document.getElementById('day-events').addEventListener('click',event=>{
     removeEvent(S.selectedDate,remove.dataset.deleteDayLesson);
     return;
   }
-  const timeButton=event.target.closest('[data-edit-lesson-time]');
-  if(timeButton){
-    const date=S.selectedDate;
-    const id=timeButton.dataset.editLessonTime;
-    const lesson=S.calendar[date]?.find(item=>item.id===id);
-    if(lesson)openLessonTime(lesson.time||'',time=>{
-      if(!S.calendar[date]?.some(item=>item.id===id))return;
-      setTime(date,id,time);
-      [...$id('day-events').querySelectorAll('[data-edit-lesson-time]')]
-        .find(button=>button.dataset.editLessonTime===id)?.focus({preventScroll:true});
-    },timeButton);
-    return;
-  }
-  const button=event.target.closest('[data-reschedule-event]');
-  if(button)openLessonReschedule(button.dataset.rescheduleEvent);
+  const edit=event.target.closest('[data-day-edit]');
+  if(edit)openDayEdit(edit);
 });
 
 function renderDayLesson(ev,subject){
@@ -6629,8 +6779,7 @@ function renderDayLesson(ev,subject){
       ${ev.time?`<span class="day-lesson-time">${esc(ev.time)}</span>`:''}
     </div>
     <div class="day-lesson-actions" role="group" aria-label="${name}的其他操作">
-      <button type="button" class="act-btn" data-edit-lesson-time="${id}" aria-haspopup="dialog">${ev.time?'編輯時間':'設定時間'}</button>
-      <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${id}">改期</button>
+      <button type="button" class="act-btn" data-day-edit="${id}">編輯時間</button>
       <button type="button" class="act-btn" data-delete-day-lesson="${id}">刪除</button>
     </div>
   </div>`;
