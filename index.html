@@ -3457,6 +3457,24 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
     -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
   }
 }
+
+.study-mode-options{display:inline-flex;flex-wrap:wrap;gap:0;position:relative;isolation:isolate;padding:3px;background:var(--sunken);border-radius:var(--r);}
+.study-mode-options::before{content:"";position:absolute;pointer-events:none;z-index:0;border-radius:var(--r-sm);background:var(--surface);}
+.study-mode-options label{position:relative;z-index:1;padding-inline:10px;border-radius:var(--r-sm);}
+.study-mode-options label:has(:checked){color:var(--accent-h);}
+.study-mode-options label:focus-within{outline:2px solid var(--accent);outline-offset:-2px;}
+:is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before{
+  inset:0 auto auto 0;
+  width:var(--pill-width);height:var(--pill-height);
+  transform:translate3d(var(--pill-x),var(--pill-y),0);
+  transition:none;
+}
+:is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{
+  transition:transform 250ms cubic-bezier(.2,.7,.25,1),width 250ms cubic-bezier(.2,.7,.25,1),height 250ms cubic-bezier(.2,.7,.25,1);
+}
+@media(prefers-reduced-motion:reduce){
+  :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{transition:none;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -8034,6 +8052,58 @@ function init(){
 
 }
 
+const pillMotion=(()=>{
+  const selector='.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options';
+  const mounted=new Map();
+  function update(group,animate){
+    const state=mounted.get(group);
+    const selected=group.querySelector('[aria-current=page],[aria-pressed=true],label:has(input:checked)');
+    if(!selected||!group.getClientRects().length)return;
+    const frame=group.getBoundingClientRect(),rect=selected.getBoundingClientRect();
+    const values=[rect.left-frame.left-group.clientLeft,rect.top-frame.top-group.clientTop,rect.width,rect.height];
+    if(!values[2]||!values[3]||values.every((value,i)=>value===state.geometry?.[i]))return;
+    // CSS transitions retarget from the current rendered position on each selection.
+    group.toggleAttribute('data-pill-moving',animate&&!!state.geometry);
+    group.setAttribute('data-pill-ready','');
+    ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,values[i]+'px'));
+    state.geometry=values;
+  }
+  window.addEventListener('resize',()=>{
+    for(const group of mounted.keys()){
+      group.removeAttribute('data-pill-moving');
+      update(group,false);
+    }
+  });
+  const resize=new ResizeObserver(entries=>{
+    for(const entry of entries){
+      const group=entry.target.closest(selector);
+      if(group&&mounted.has(group))update(group,false);
+    }
+  });
+  return {
+    mount(root){
+      for(const [group,observer] of mounted){
+        if(group.isConnected)continue;
+        observer.disconnect();
+        resize.unobserve(group);
+        for(const option of group.children)resize.unobserve(option);
+        mounted.delete(group);
+      }
+      for(const group of root.querySelectorAll(selector)){
+        if(mounted.has(group))continue;
+        const observer=new MutationObserver(()=>update(group,true));
+        mounted.set(group,observer);
+        observer.observe(group,{subtree:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
+        group.addEventListener('change',()=>update(group,true));
+        update(group,false);
+        resize.observe(group);
+        for(const option of group.children)resize.observe(option);
+      }
+    }
+  };
+})();
+pillMotion.mount(document);
+
 const studyRoom=(()=>{
   const key='studyos-learning-v1';
   const subjects=['國文','英文','生物','普通化學','有機化學'];
@@ -8090,6 +8160,7 @@ const studyRoom=(()=>{
   function draw(title,body,back=true){
     root.innerHTML='<div class="study-head"><h2 id="study-heading" tabindex="-1">'+title+'</h2>'+
       (back?action('返回學習室','home'):'')+'</div>'+body;
+    pillMotion.mount(root);
   }
   function go(next){
     screen=next;
@@ -8156,9 +8227,9 @@ const studyRoom=(()=>{
   function setup(){
     const available=filtered(weakOnly).length;
     draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+filterMarkup()+
-      '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend>'+
+      '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend><div class="study-mode-options">'+
       ['cards','practice'].map((m,i)=>'<label><input type="radio" name="mode" value="'+m+'"'+(m===setupMode?' checked':'')+'>'+['字卡複習','互動練習'][i]+'</label>').join('')+
-      '</fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
+      '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
       '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>');
   }
   function start(ids,mode){
