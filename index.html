@@ -3499,7 +3499,7 @@ import{
   signInWithPopup,signInWithRedirect,getRedirectResult,
   signOut,onAuthStateChanged
 }from'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import{getFirestore,doc,setDoc,onSnapshot,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import{getFirestore,collection,doc,setDoc,onSnapshot,serverTimestamp,writeBatch}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig={
   apiKey:"AIzaSyASGEfoKCQuxhACu_9CEQICKEHSKe2N3MA",
@@ -3561,6 +3561,15 @@ window._fb={
       },
       e=>console.error('[Firebase] snapshot error',e)
     );
+  },
+  listenLearning:(uid,receive,failed)=>onSnapshot(collection(db,'users',uid,'data','learning','operations'),
+    {includeMetadataChanges:true},snapshot=>{
+      receive(snapshot.docs.filter(row=>!row.metadata.hasPendingWrites).map(row=>[row.id,row.data()]),!snapshot.metadata.fromCache);
+    },failed),
+  writeLearning:(uid,ops)=>{
+    const batch=writeBatch(db);
+    for(const [id,op] of ops)batch.set(doc(db,'users',uid,'data','learning','operations',id),op);
+    return batch.commit();
   },
   stopListen:()=>{if(_unsubscribe){_unsubscribe();_unsubscribe=null;}},
 };
@@ -4148,7 +4157,12 @@ onAuthStateChanged(auth,user=>{
   <form id="study-batch-input" class="study-editor">
     <div class="study-filters"><label class="study-field"><span>科目</span><select id="study-batch-subject" required><option value="">請選擇科目</option><option>國文</option><option>英文</option><option>生物</option><option>普通化學</option><option>有機化學</option></select></label>
     <label class="study-field"><span>章節（選填）</span><select id="study-batch-chapter"></select></label></div>
-    <label class="study-field"><span>JSON 題庫</span><textarea rows="6" id="study-batch-json" required></textarea></label>
+    <div id="study-ai-prompt" hidden class="study-editor">
+      <button type="button" class="btn btn-sand" id="study-ai-copy">1. 複製出題指令</button>
+      <textarea id="study-ai-text" rows="5" aria-label="出題指令" readonly></textarea>
+      <p class="study-meta">在 ChatGPT 或 Gemini 貼上指令並附上筆記。</p>
+    </div>
+    <label class="study-field"><span id="study-batch-json-label">JSON 題庫</span><textarea rows="6" id="study-batch-json" required></textarea></label>
     <details><summary>JSON 範例</summary><textarea aria-label="JSON 範例" id="study-batch-example" rows="2" readonly>[{"question":"「明亮的」英文怎麼說？","answer":"bright"}]</textarea><button type="button" class="btn btn-sand" id="study-batch-copy">複製範例</button></details>
     <div class="study-actions"><button class="btn btn-primary">預覽</button></div>
   </form>
@@ -4526,6 +4540,7 @@ function loadState(){
 
 // ── Auth callbacks (called from Firebase module) ──────────────────
 window.onFirebaseLogin=function(user){
+  studyRoom.switchAccount(user.uid);
   // Show logged-in UI
   document.getElementById('auth-logged-out').style.display='none';
   const li=document.getElementById('auth-logged-in');li.style.display='flex';
@@ -4560,6 +4575,7 @@ window.onFirebaseLogin=function(user){
   });
 };
 window.onFirebaseLogout=function(){
+  studyRoom.switchAccount(null);
   document.getElementById('auth-logged-out').style.display='';
   document.getElementById('auth-logged-in').style.display='none';
   document.getElementById('account-name').textContent='尚未登入';
@@ -4703,19 +4719,23 @@ async function readBackupFiles(files){
   pendingBackup=d;
   backupFilename.textContent=file.name;
   $id('backup-learning-note').hidden=d.learning===undefined;
+  $id('backup-learning-note').textContent=window._fbUser?'此備份也會合併目前帳號的學習資料。':'此備份也會覆蓋本機知識庫及練習進度。';
   backupReview.hidden=false;
   backupConfirm.hidden=false;
 }
 backupConfirm.addEventListener('click',()=>{
   if(!pendingBackup||!backupDialog.open)return;
   const d=pendingBackup;
+  if(d.learning!==undefined&&!studyRoom.restore(d.learning)){
+    backupError.textContent='無法儲存學習資料，請確認儲存空間或登入原帳號後重試。';
+    return;
+  }
   closeBackupImport();
   lastRepeatBatch=null;
   S.courses=d.courses||[];S.calendar=d.calendar||{};
   updateRepeatScheduleForm(repeatForm);
   renderRepeatScheduleResult();
   S.notes=d.notes||{};
-  if(d.learning!==undefined)studyRoom.restore(d.learning);
   S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
   invalidateEntriesCache();
   saveState();render();
@@ -8135,6 +8155,136 @@ const pillMotion=(()=>{
 })();
 pillMotion.mount(document);
 
+
+const learningJournal=(()=>{
+  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer']);
+  const outcomes=new Set(['correct','incorrect','partial','missed','viewed']);
+  const fields=['subject','chapter','question','answer','explanation','accepted'];
+  const text=v=>typeof v==='string';
+  const validProgress=p=>p&&Number.isSafeInteger(p.attempts)&&p.attempts>=0&&Number.isInteger(p.streak)&&p.streak>=0&&p.streak<=Math.min(2,p.attempts)&&typeof p.weak==='boolean';
+  const validPointId=id=>/^k-[0-9a-f]{32}$/.test(id);
+  const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  const fresh=()=>({version:1,points:[],progress:{}});
+  function valid(op){
+    if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
+    const value=op.value;
+    if(op.kind==='answer')return validPointId(op.target)&&outcomes.has(value);
+    if(op.kind==='baseline')return validPointId(op.target)&&validProgress(value);
+    if(op.kind==='delete')return validPointId(op.target)&&value===null;
+    if(op.kind==='point')return validPointId(op.target)&&value&&typeof value==='object'&&!Array.isArray(value)&&
+      Object.keys(value).every(k=>(fields.includes(k)||k==='chapterRef')&&(k==='accepted'?Array.isArray(value[k])&&value[k].every(text):text(value[k])));
+    if(op.kind==='subject')return !!op.target&&value===null;
+    return Array.isArray(value)&&(op.kind==='move'?[3,4].includes(value.length):value.length===2)&&value.every(text)&&!!value[0]&&!!value[1];
+  }
+  const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
+  function project(journal,refs=new Map()){
+    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[];
+    function legacyChapter(subject,name){
+      const key=chapterKey(subject,name);
+      if(!aliases.has(key)){
+        const ref='legacy:'+key;
+        aliases.set(key,ref);
+        refs.set(key,ref);
+        instances.set(ref,{subject,name,listed:false,deleted:false});
+      }
+      return aliases.get(key);
+    }
+    const ordered=Object.entries(journal).filter(([,op])=>valid(op))
+      .sort(([a,x],[b,y])=>x.clock-y.clock||(a<b?-1:a>b?1:0));
+    for(const [id,op] of ordered){
+      const {kind,target,value}=op;
+      if(kind==='point'){
+        const previous=points.get(target);
+        const next={...previous,...value,id:target};
+        if(Object.hasOwn(value,'chapter')||Object.hasOwn(value,'subject')&&value.subject!==previous?.subject){
+          next.chapterRef=value.chapterRef??(next.chapter&&next.subject?legacyChapter(next.subject,next.chapter):'');
+        }
+        points.set(target,next);
+      }
+      else if(kind==='delete')deleted.add(target);
+      else if(kind==='subject'){if(!catalog.has(target))catalog.set(target,{name:target,chapters:[]});}
+      else if(kind==='chapter'){
+        const [subject,name]=value;
+        const key=chapterKey(subject,name);
+        const ref=refs.get(key)||(!aliases.has(key)?legacyChapter(subject,name):id);
+        aliases.set(key,ref);
+        refs.set(key,ref);
+        instances.set(ref,{subject,name,listed:true,deleted:false});
+      }else if(kind==='move'){
+        const [subject,from,to,explicit]=value;
+        const ref=explicit||legacyChapter(subject,from);
+        if(!instances.has(ref))instances.set(ref,{subject,name:from,listed:false,deleted:false});
+        const chapter=instances.get(ref);
+        if(chapter.subject!==subject||chapter.deleted)continue;
+        const previous=chapterKey(subject,chapter.name);
+        if(refs.get(previous)===ref)refs.delete(previous);
+        chapter.deleted=!to;
+        if(to){
+          chapter.name=to;
+          chapter.listed=true;
+          refs.set(chapterKey(subject,to),ref);
+          aliases.set(chapterKey(subject,to),ref);
+        }
+      }else if(kind==='baseline'){
+        if((baseline.get(target)?.attempts??-1)<=value.attempts)baseline.set(target,{...value});
+      }else answers.push(op);
+    }
+    for(const {subject,name,listed,deleted} of instances.values()){
+      if(!listed||deleted)continue;
+      if(!catalog.has(subject))catalog.set(subject,{name:subject,chapters:[]});
+      const list=catalog.get(subject).chapters;
+      if(!list.includes(name))list.push(name);
+    }
+    for(const {target,value} of answers){
+      const p=baseline.get(target)||{attempts:0,streak:0,weak:false};
+      p.attempts++;
+      p.streak=value==='correct'?Math.min(2,p.streak+1):0;
+      p.weak=p.streak>=2?false:value!=='correct'||p.weak;
+      baseline.set(target,p);
+    }
+    const kept=[];
+    for(const p of points.values()){
+      if(deleted.has(p.id)||!p.subject?.trim()||!p.question?.trim()||!p.answer?.trim())continue;
+      const {chapterRef,...value}=p;
+      const chapter=instances.get(chapterRef);
+      value.chapter=chapter&&!chapter.deleted&&chapter.subject===p.subject?chapter.name:'';
+      if(!catalog.has(p.subject))catalog.set(p.subject,{name:p.subject,chapters:[]});
+      kept.push({explanation:'',accepted:[],...value});
+    }
+    const progress=Object.fromEntries(kept.filter(p=>baseline.has(p.id)).map(p=>[p.id,baseline.get(p.id)]));
+    return {version:1,points:kept,progress,catalog:[...catalog.values()]};
+  }
+  function changes(before,after,answer,move,refs=new Map()){
+    const ops=[];
+    const add=(kind,target,value)=>ops.push({kind,target,value});
+    const oldPoints=new Map(before.points.map(p=>[p.id,p]));
+    const newIds=new Set(after.points.map(p=>p.id));
+    for(const p of after.points){
+      const old=oldPoints.get(p.id);
+      const movedByChapter=old&&move&&old.subject===move[0]&&old.chapter===move[1]&&p.chapter===move[2];
+      const patch=Object.fromEntries(fields.filter(k=>!(k==='chapter'&&movedByChapter)&&!same(old?.[k],p[k])).map(k=>[k,p[k]]));
+      if(patch.chapter&&refs.has(chapterKey(p.subject,p.chapter)))patch.chapterRef=refs.get(chapterKey(p.subject,p.chapter));
+      if(Object.keys(patch).length)add('point',p.id,patch);
+    }
+    for(const id of oldPoints.keys())if(!newIds.has(id))add('delete',id,null);
+    const known=new Map((before.catalog||[]).map(row=>[row.name,new Set(row.chapters)]));
+    for(const {name,chapters} of after.catalog||[]){
+      const previous=known.get(name);
+      if(!previous)add('subject',name,null);
+      for(const chapter of chapters)if(!previous?.has(chapter)&&!(move?.[0]===name&&move[2]===chapter))add('chapter',name,[name,chapter]);
+      if(previous)for(const chapter of previous)if(!chapters.includes(chapter)&&!(move?.[0]===name&&move[1]===chapter))add('move',name,[name,chapter,'']);
+    }
+    if(move){
+      const ref=refs.get(chapterKey(move[0],move[1]));
+      add('move',move[0],ref?[...move,ref]:move);
+    }
+    if(answer)add('answer',answer.id,answer.outcome);
+    else for(const [id,p] of Object.entries(after.progress))if(!same(before.progress[id],p))add('baseline',id,p);
+    return ops;
+  }
+  return {fresh,valid,project,changes};
+})();
+
 const studyRoom=(()=>{
   const key='studyos-learning-v1';
   const builtins=['國文','英文','生物','普通化學','有機化學'];
@@ -8153,6 +8303,8 @@ const studyRoom=(()=>{
       object(item)&&text(item.name)&&item.name.trim()===item.name&&!!item.name&&Array.isArray(item.chapters)&&
       item.chapters.every(ch=>text(ch)&&ch.trim()===ch&&!!ch)&&new Set(item.chapters).size===item.chapters.length)||
       new Set(data.catalog.map(item=>item.name)).size!==data.catalog.length))return false;
+    if(data.syncJournal!==undefined&&(!object(data.syncJournal)||!Object.entries(data.syncJournal).every(([id,op])=>
+      /^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op))))return false;
     const subjects=subjectNames(data);
     const ids=new Set();
     for(const point of data.points){
@@ -8167,7 +8319,7 @@ const studyRoom=(()=>{
   let data=fresh(),session=null;
   try{
     const stored=JSON.parse(localStorage.getItem(key));
-    if(valid(stored?.data)){
+    if(!localStorage.getItem(key+'-claim')&&valid(stored?.data)){
       data=stored.data;
       const s=stored.session;
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
@@ -8189,16 +8341,21 @@ const studyRoom=(()=>{
     if(p.streak>=2)return ['已掌握','mastered'];
     return p.weak?['待加強','weak']:['練習中',''];
   };
-  function persist(){
-    try{localStorage.setItem(key,JSON.stringify({data,session}));}
-    catch{toast('無法儲存學習資料，請確認瀏覽器的儲存空間。','warn');}
+  function persist(answer,move){
+    try{saveLearning(data,answer,move);return true;}
+    catch{
+      data=structuredClone(lastSaved);
+      toast('無法儲存學習資料，請確認瀏覽器的儲存空間。','warn');
+      return false;
+    }
   }
   function action(label,name,primary=false,attrs=''){
     return '<button type="button" class="btn '+(primary?'btn-primary':'btn-sand')+'" data-study-action="'+name+'" '+attrs+'>'+label+'</button>';
   }
   function draw(title,body,back=true){
     root.innerHTML='<div class="study-head"><h2 id="study-heading" tabindex="-1">'+title+'</h2>'+
-      (back?action(back===true?'返回學習室':'返回',back===true?'home':back):'')+'</div>'+body;
+      (back?action(back===true?'返回學習室':'返回',back===true?'home':back):'')+'</div><p class="study-local"><span id="study-sync-state" role="status">'+esc(syncText)+'</span> <button type="button" class="btn btn-sand" id="study-sync-retry" data-study-action="sync-retry" hidden>重試同步</button></p>'+body;
+    showLearningSync(syncText,syncFailed);
     pillMotion.mount(root);
   }
   function go(next){
@@ -8234,16 +8391,16 @@ const studyRoom=(()=>{
         (n?'<span class="study-meta">'+n+' 題</span>':'')+'</button>';
     }).join('');
     const resume=session&&session.index<session.queue.length;
-    draw(isLibrary?'知識庫':'學習室','<p class="study-local">學習資料儲存在此瀏覽器，可透過資料備份匯出。</p>'+
+    draw(isLibrary?'知識庫':'學習室',''+
       '<div class="study-subject-grid">'+cards+'<button type="button" class="memo-card study-new-subject" data-study-action="new-subject">＋ 新增科目知識庫</button></div>'+
-      (isLibrary?'':'<div class="study-home-actions">'+action('知識庫','library-hub')+(resume?action('繼續練習','resume'):'')+'</div>'),isLibrary);
+      (resume?'<div class="study-home-actions">'+action('繼續練習','resume')+'</div>':''),false);
   }
   function subjectPage(){
     const ids=data.points.filter(p=>p.subject===filters.subject);
     const stats='<p class="study-stats">待加強 '+ids.filter(p=>status(p.id)[1]==='weak').length+
       ' 題 · 已練習 '+ids.filter(p=>data.progress[p.id]?.attempts).length+'／'+ids.length+' 題</p>';
     draw(esc(filters.subject),stats+'<div class="study-subject-groups">'+
-      '<section class="study-surface"><h3>整理內容</h3><div class="study-home-actions">'+action('知識庫','library')+action('新增知識點','add')+'</div></section>'+
+      '<section class="study-surface"><h3>整理內容</h3><div class="study-home-actions">'+action('知識庫','library')+action('新增知識點','add')+action('AI 快速匯入','ai-batch')+'</div></section>'+
       '<section class="study-surface"><h3>複習練習</h3><div class="study-home-actions">'+action('開始練習','setup',true)+action('待加強','weak')+'</div></section></div>');
   }
   function setChapters(subject,list){
@@ -8275,7 +8432,7 @@ const studyRoom=(()=>{
           '<div class="study-list-buttons">'+action('編輯','edit',false,'data-point="'+p.id+'"')+
           action('刪除','delete',false,'data-point="'+p.id+'"')+'</div></li>';
       }).join('')+'</ul>':'<p class="study-empty">'+(weak?'沒有符合的待加強知識點。':'沒有符合的知識點。')+'</p>')+
-      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):action('管理章節','chapters')+action('批次貼上','batch')+action('新增知識點','add',true))+'</div></div>',weak?'subject':subjectHub==='library-hub'?'library-hub':'subject');
+      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):action('管理章節','chapters')+action('AI 快速匯入','ai-batch')+action('批次貼上','batch')+action('新增知識點','add',true))+'</div></div>','subject');
   }
   const newPointId=()=>'k-'+Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16).padStart(8,'0')).join('');
 const batchDialog=$id('study-batch');
@@ -8302,15 +8459,36 @@ const batchDialog=$id('study-batch');
     (preview?$id('study-batch-summary'):batchText).focus({preventScroll:true});
     batchDialog.scrollTop=0;
   }
-  function openBatch(opener){
+  function openBatch(opener,ai=false){
     batchOpener=opener;
     batchInput.reset();
     batchSubject.replaceChildren(new Option(filters.subject,filters.subject));
     batchChapter.innerHTML=options(['',...chapters(filters.subject)],filters.chapter,'未分類');
+    $id('study-batch-title').textContent=ai?'AI 快速匯入':'批次貼上';
+    $id('study-ai-prompt').hidden=!ai;
+    $id('study-batch-json-label').textContent=ai?'2. 貼上題目（JSON）':'JSON 題庫';
+    updateAiPrompt();
     showAppDialog(batchDialog,closeBatch);
     batchStage(false);
     batchSubject.focus({preventScroll:true});
   }
+  function updateAiPrompt(){
+    const chapter=batchChapter.value;
+    $id('study-ai-text').value=[
+      '請根據我接下來附上的筆記出 5–10 題複習題。',
+      '科目：'+batchSubject.value+(chapter?'，章節：'+chapter:''),
+      '每題必填 question（題目）與 answer（參考答案）。可選填 explanation（解析）及 acceptedAnswers（可接受的其他答案，必須是字串陣列）。',
+      '保留化學式、符號與大小寫，答案中的換行請用 JSON 的換行跳脫。只輸出有效的 JSON 陣列，不要加任何其他文字。',
+      '格式：[{"question":"題目","answer":"參考答案","explanation":"選填解析","acceptedAnswers":["其他答案"]}]',
+      '我的筆記：'
+    ].join('\n');
+  }
+  batchChapter.addEventListener('change',updateAiPrompt);
+  $id('study-ai-copy').addEventListener('click',async()=>{
+    const field=$id('study-ai-text');
+    try{await navigator.clipboard.writeText(field.value);toast('已複製出題指令','success');}
+    catch{field.focus();field.select();toast('請複製已選取的出題指令。','warn');}
+  });
   function batchQuestion(value){return value.normalize('NFC').trim().replace(/\s+/g,' ');}
   function checkBatch(){
     const chapter=batchChapter.value.trim();
@@ -8403,14 +8581,13 @@ const batchDialog=$id('study-batch');
     const points=selected.map(row=>({id:newPointId(),subject,chapter,question:row.question,answer:row.answer,
       explanation:row.explanation,accepted:row.aliases}));
     const next={...data,points:[...data.points,...points]};
-    try{localStorage.setItem(key,JSON.stringify({data:next,session}));}
+    try{saveLearning(next);}
     catch{
       batchSaving=false;
       batchError.textContent='無法儲存。請檢查瀏覽器儲存空間，再重試匯入。';
       checkBatch();
       return;
     }
-    data=next;
     batchSaving=false;
     closeBatch();
     filters={subject,chapter};
@@ -8462,8 +8639,13 @@ const batchDialog=$id('study-batch');
     p.weak=p.streak>=2?false:outcome!=='correct'||p.weak;
     data.progress[id]=p;
     session.results.push({id,outcome});
+    const previousPhase=session.phase;
     session.phase='feedback';
-    persist();
+    if(!persist({id,outcome})){
+      session.results.pop();
+      session.phase=previousPhase;
+      return;
+    }
     go('session');
   }
   function grade(answer,p){
@@ -8508,7 +8690,7 @@ const batchDialog=$id('study-batch');
       '<div class="study-actions">'+(weak?action('重練本次待加強','retry',true):'')+'</div></div>');
   }
   function render(){
-    if(screen==='home'||screen==='library-hub')subjectCards(screen==='library-hub');
+    if(screen==='home')subjectCards(false);
     else if(screen==='subject')subjectPage();
     else if(screen==='new-subject')newSubjectForm();
     else if(screen==='chapters')chapterManager();
@@ -8536,15 +8718,16 @@ const batchDialog=$id('study-batch');
     const button=event.target.closest('[data-study-action]');
     if(!button)return;
     const act=button.dataset.studyAction;
-    if(act==='batch')openBatch(button);
+    if(act==='batch'||act==='ai-batch')openBatch(button,act==='ai-batch');
+    else if(act==='sync-retry'&&account)listenLearning(account);
     else if(act==='home')go('home');
-    else if(act==='library-hub'||act==='library'||act==='weak'||act==='subject'&&!button.dataset.subject){
+    else if(act==='library'||act==='weak'||act==='subject'&&!button.dataset.subject){
       if(act==='library'||act==='weak')filters.chapter='';
       go(act);
     }else if(act==='subject'){
       subjectHub=screen;
       filters={subject:button.dataset.subject,chapter:''};
-      go(screen==='library-hub'?'library':'subject');
+      go('subject');
     }else if(act==='new-subject'){
       subjectHub=screen;
       go('new-subject');
@@ -8560,7 +8743,7 @@ const batchDialog=$id('study-batch');
         setChapters(subject,chapters(subject).filter(name=>name!==ch));
         for(const p of data.points)if(p.subject===subject&&p.chapter===ch)p.chapter='';
         chapterEdit=null;
-        persist();
+        persist(null,[subject,ch,'']);
         go('chapters');
       });
     }
@@ -8615,13 +8798,13 @@ const batchDialog=$id('study-batch');
         setChapters(name,[]);
         filters={subject:name,chapter:''};
         persist();
-        go(subjectHub==='library-hub'?'library':'subject');
+        go('subject');
       }else{
         setChapters(subject,[...existing.filter(ch=>ch!==chapterEdit),name]);
         if(chapterEdit)for(const p of data.points)if(p.subject===subject&&p.chapter===chapterEdit)p.chapter=name;
+        const previous=chapterEdit;
         chapterEdit=null;
-        persist();
-        go('chapters');
+        if(persist(null,previous&&previous!==name?[subject,previous,name]:null))go('chapters');
       }
     }else if(form.id==='study-edit'){
       const subject=filters.subject,question=values.get('question').trim(),answer=values.get('answer').trim();
@@ -8648,16 +8831,259 @@ const batchDialog=$id('study-batch');
       else{session.phase='grade';persist();go('session');}
     }
   });
+
+  let account=null;
+  let lastSaved=structuredClone(data);
+  let syncText='學習資料僅存於此瀏覽器',syncFailed=false;
+  function showLearningSync(message,failed=false){
+    syncText=message;
+    syncFailed=failed;
+    const line=$id('study-sync-state');
+    if(line)line.textContent=message;
+    const retry=$id('study-sync-retry');
+    if(retry)retry.hidden=!failed;
+  }
+  // Unique batch keys preserve concurrent writes without a shared read/modify/write lock.
+  function refreshLearningOutbox(state){
+    const cached=JSON.parse(localStorage.getItem(state.key)||'null');
+    const operations={...cached?.operations,...state.operations};
+    const pending=new Set([...cached?.pending||[],...state.pending]);
+    const prefix=state.key+':outbox:';
+    for(const storedKey of Object.keys(localStorage)){
+      if(!storedKey.startsWith(prefix))continue;
+      const batch=JSON.parse(localStorage.getItem(storedKey)||'{}');
+      for(const [id,op] of Object.entries(batch)){
+        if(!learningJournal.valid(op))continue;
+        operations[id]=op;
+        pending.add(id);
+      }
+    }
+    state.operations=operations;
+    state.pending=[...pending].filter(id=>Object.hasOwn(operations,id)&&!localStorage.getItem(state.key+':ack:'+id));
+  }
+  function storeAccount(state,operations=state.operations,pending=state.pending){
+    const additions=pending.filter(id=>!state.pending.includes(id));
+    if(additions.length){
+      const entries=Object.fromEntries(additions.map(id=>[id,operations[id]]));
+      localStorage.setItem(state.key+':outbox:'+additions[0],JSON.stringify(entries));
+      // The operation batch is already durable. Session caching can fail independently.
+      try{localStorage.setItem(state.key,JSON.stringify({operations,pending,session}));}catch{}
+    }else{
+      localStorage.setItem(state.key,JSON.stringify({operations,pending,session}));
+    }
+  }
+  function appendLearning(state,changes,migration=false){
+    if(!changes.length)return;
+    refreshLearningOutbox(state);
+    const next={...state.operations};
+    const pending=[...state.pending];
+    let clock=Object.values(next).reduce((max,op)=>Math.max(max,op.clock),0);
+    for(const op of changes){
+      const id=newPointId();
+      next[id]={...op,clock:migration?0:++clock};
+      pending.push(id);
+    }
+    storeAccount(state,next,pending);
+    state.operations=next;
+    state.pending=pending;
+    refreshLearningOutbox(state);
+  }
+  function saveLearning(next,answer,move){
+    if(!account){
+      if(next.syncJournal){
+        const journal={...next.syncJournal};
+        let clock=Object.values(journal).reduce((max,op)=>Math.max(max,op.clock),0);
+        const refs=new Map();
+        learningJournal.project(journal,refs);
+        for(const op of learningJournal.changes(lastSaved,next,answer,move,refs))journal[newPointId()]={...op,clock:++clock};
+        next={...learningJournal.project(journal),syncJournal:journal};
+      }
+      localStorage.setItem(key,JSON.stringify({data:next,session}));
+    }else{
+      const refs=new Map();
+      learningJournal.project(account.operations,refs);
+      const changes=learningJournal.changes(lastSaved,next,answer,move,refs);
+      if(changes.length)appendLearning(account,changes);
+      else storeAccount(account);
+      next=learningJournal.project(account.operations);
+      flushLearning();
+    }
+    data=next;
+    lastSaved=structuredClone(next);
+  }
+  function applyLearning(state){
+    const next=learningJournal.project(state.operations);
+    if(JSON.stringify(next)===JSON.stringify(data))return;
+    data=next;
+    lastSaved=structuredClone(next);
+    if(session&&!session.queue.every(id=>point(id))){
+      session=null;
+      if(screen==='session'||screen==='results')screen='subject';
+    }
+    if(!['editor','chapters','new-subject','session'].includes(screen)&&!batchDialog.open)render();
+  }
+  async function flushLearning(){
+    const state=account;
+    if(!state)return;
+    try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);return;}
+    if(!navigator.onLine||!state.ready){
+      showLearningSync(state.pending.length?'學習資料待同步':'學習資料等待連線');
+      return;
+    }
+    if(state.sending)return;
+    if(!state.pending.length){showLearningSync('學習資料已同步');return;}
+    state.sending=true;
+    showLearningSync('學習資料同步中');
+    try{
+      while(account===state&&navigator.onLine&&state.pending.length){
+        const ids=state.pending.slice(0,200);
+        await window._fb.writeLearning(state.uid,ids.map(id=>[id,state.operations[id]]));
+        if(account!==state)return;
+        for(const id of ids)localStorage.setItem(state.key+':ack:'+id,'1');
+        refreshLearningOutbox(state);
+        storeAccount(state);
+      }
+      if(account===state)showLearningSync(state.pending.length?'學習資料待同步':'學習資料已同步');
+    }catch{
+      if(account===state)showLearningSync('學習資料同步失敗',true);
+    }finally{state.sending=false;}
+  }
+  function listenLearning(state){
+    state.stop?.();
+    state.ready=false;
+    state.stop=window._fb.listenLearning(state.uid,(remote,confirmed)=>{
+      if(account!==state||!confirmed)return;
+      try{
+        refreshLearningOutbox(state);
+        const next={...state.operations};
+        for(const [id,op] of remote)if(/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op))next[id]=op;
+        storeAccount(state,next);
+        state.operations=next;
+        if(state.guest){
+          const existing=new Set(Object.values(state.operations).filter(op=>op.kind==='point'||op.kind==='delete').map(op=>op.target));
+          const changes=learningJournal.changes(learningJournal.fresh(),state.guest,null,null).filter(op=>
+            !['point','baseline'].includes(op.kind)||!existing.has(op.target));
+          const history=state.guest.syncJournal||{};
+          const restored=Object.entries(history).filter(([id])=>!Object.hasOwn(state.operations,id));
+          if(restored.length){
+            const merged={...state.operations,...Object.fromEntries(restored)};
+            const pending=[...state.pending,...restored.map(([id])=>id)];
+            storeAccount(state,merged,pending);
+            state.operations=merged;
+            state.pending=pending;
+          }
+          appendLearning(state,changes.filter(op=>!Object.values(history).some(entry=>
+            (entry.kind==='point'||entry.kind==='delete')&&entry.target===op.target)),true);
+          localStorage.removeItem(key);
+          localStorage.removeItem(key+'-claim');
+          state.guest=null;
+        }
+        state.ready=true;
+        applyLearning(state);
+        flushLearning();
+      }catch{showLearningSync('無法儲存同步資料',true);}
+    },()=>{
+      if(account===state){state.ready=false;showLearningSync('學習資料同步失敗',true);}
+    });
+  }
+  function switchLearning(uid){
+    if(account?.uid===uid||(!account&&!uid))return;
+    account?.stop?.();
+    account=null;
+    closeBatch();
+    data=fresh();
+    session=null;
+    filters={subject:'',chapter:''};
+    screen='home';
+    if(!uid){
+      showLearningSync('學習資料僅存於此瀏覽器');
+      try{
+        const stored=JSON.parse(localStorage.getItem(key));
+        if(!localStorage.getItem(key+'-claim')&&valid(stored?.data))data=stored.data;
+      }catch{}
+    }else{
+      const state={uid,key:key+':'+uid,operations:{},pending:[],ready:false,sending:false,guest:null};
+      account=state;
+      try{
+        const saved=JSON.parse(localStorage.getItem(state.key));
+        if(saved){
+          session=saved.session||null;
+          state.operations=Object.fromEntries(Object.entries(saved.operations||{}).filter(([id,op])=>/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op)));
+          state.pending=(saved.pending||[]).filter(id=>Object.hasOwn(state.operations,id));
+        }
+        const owner=localStorage.getItem(key+'-claim');
+        const guest=JSON.parse(localStorage.getItem(key));
+        if((!owner||owner===uid)&&valid(guest?.data)){
+          localStorage.setItem(key+'-claim',uid);
+          state.guest=guest.data;
+        }
+      }catch{}
+      try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);}
+      data=learningJournal.project(state.operations);
+      if(session&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
+      if(session)screen=session.index===session.queue.length?'results':'session';
+      showLearningSync(state.pending.length?'學習資料待同步':'學習資料等待連線');
+      listenLearning(state);
+    }
+    lastSaved=structuredClone(data);
+    render();
+  }
+  window.addEventListener('storage',event=>{
+    const state=account;
+    if(!state||!event.key||!event.key.startsWith(state.key+':'))return;
+    try{
+      refreshLearningOutbox(state);
+      applyLearning(state);
+      flushLearning();
+    }catch{showLearningSync('無法讀取待同步資料',true);}
+  });
+  window.addEventListener('online',()=>{
+    if(account&&!account.ready)listenLearning(account);
+    else flushLearning();
+  });
+  window.addEventListener('offline',()=>{
+    if(account)showLearningSync(account.pending.length?'學習資料待同步':'學習資料等待連線');
+  });
   render();
   return {
     valid,
-    backup:()=>data,
+    switchAccount:switchLearning,
+    backup:()=>account?{...data,syncJournal:account.operations}:data,
     restore(newData){
-      data=newData;
       session=null;
-      persist();
+      if(account){
+        try{
+          if(newData.syncJournal){
+            const next={...account.operations};
+            const pending=[...account.pending];
+            for(const [id,op] of Object.entries(newData.syncJournal)){
+              if(Object.hasOwn(next,id))continue;
+              next[id]=op;
+              pending.push(id);
+            }
+            storeAccount(account,next,pending);
+            account.operations=next;
+            account.pending=pending;
+          }else{
+            const existing=new Set(Object.values(account.operations).filter(op=>op.kind==='point'||op.kind==='delete').map(op=>op.target));
+            appendLearning(account,learningJournal.changes(learningJournal.fresh(),newData,null,null).filter(op=>
+              !['point','baseline'].includes(op.kind)||!existing.has(op.target)),true);
+          }
+          applyLearning(account);
+          flushLearning();
+        }catch{showLearningSync('無法儲存同步資料',true);return false;}
+      }else{
+        if(!localStorage.getItem(key+'-claim')){
+          try{
+            localStorage.setItem(key,JSON.stringify({data:newData,session:null}));
+            data=newData;
+            lastSaved=structuredClone(newData);
+          }catch{return false;}
+        }else return false;
+      }
       screen='home';
       render();
+      return true;
     }
   };
 })();
