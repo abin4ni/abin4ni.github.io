@@ -3142,6 +3142,39 @@ body:has(#lesson-time-dialog[open]) :is(#wide-day #day-panel-close,#day-edit-clo
 #lesson-time-dialog .makeup-head{justify-content:flex-start;}
 #lesson-time-dialog .popup-close{margin:0;}
 #lesson-time-unset{margin:0 0 8px;font-size:13px;color:var(--text-2);}
+/* 課程備忘錄入口卡片：色點與名稱首行對齊、統一內距與間距、預覽使用次要字色（只改樣式） */
+.memo-card{--mc-name:13px;--mc-pv:12px;padding:12px;gap:6px;align-items:stretch;overflow:hidden;}
+:is(#wide-memo-grid,#day-course-memos) .memo-card{--mc-name:14px;--mc-pv:13px;}
+.memo-card-head{display:flex;align-items:flex-start;gap:8px;min-width:0;}
+.memo-card-head .dot{flex:none;margin:calc((1.4 * var(--mc-name) - 9px) / 2) 0 0;}
+.memo-card-name{min-width:0;font-size:var(--mc-name);line-height:1.4;}
+:is(#wide-memo-grid,#day-course-memos) .memo-card-name{font-size:var(--mc-name);}
+.memo-card .memo-preview{display:grid;gap:2px;min-width:0;}
+.memo-card .memo-preview-row{
+  display:grid;grid-template-columns:1.25em minmax(0,1fr);column-gap:6px;align-items:baseline;
+  font-size:var(--mc-pv);line-height:1.45;color:var(--text-2);
+}
+.memo-card .memo-preview-row>span:first-child{text-align:center;}
+.memo-card .memo-preview-row>span:last-child{min-width:0;overflow-wrap:anywhere;word-break:break-word;}
+.memo-card .memo-empty{margin:0;font-size:var(--mc-pv);line-height:1.45;color:var(--text-2);}
+.memo-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+/* 手機巡查修正：編輯時間彈窗、彈窗層級、課程卡色點對齊（只改樣式） */
+.local-dialog{padding:clamp(20px,3vw,24px);}
+#day-edit-panel .day-edit-head{margin-bottom:16px;}
+#day-edit-form .day-edit-field+.day-edit-field{margin-top:16px;}
+#day-edit-form .dialog-actions{margin-top:24px;}
+/* 任何彈窗開啟時，背景的日期詳情 × 暫時隱藏；寬版的日期詳情本身就是彈窗，不受影響 */
+body:has(dialog[open]:not(#wide-day)) #day-panel-close{visibility:hidden;}
+/* iOS Safari 的日期欄預設置中，改為靠左，與時間欄一致 */
+dialog input[type=date],dialog input[type=date]::-webkit-date-and-time-value{text-align:left;}
+/* 設定教學等舊版視窗要在安裝提示（z-index 500）之上，底部按鈕才不會被蓋住 */
+#modal.modal-backdrop{z-index:600;}
+@media(max-width:767px){
+  #course-list .course-card .course-head{align-items:flex-start;}
+  #course-list .course-card .course-head .dot{margin-top:7px;}
+  #course-list .course-card .course-name{flex:1 1 calc(100% - 20px);min-width:0;}
+  #course-list .course-card .course-head .exam-progress{align-self:center;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
