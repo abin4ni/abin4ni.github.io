@@ -3191,6 +3191,11 @@ dialog input[type=date],dialog input[type=date]::-webkit-date-and-time-value{tex
 #panel-r .day-lesson .day-name-text{min-width:0;overflow-wrap:anywhere;}
 #panel-r .day-lesson-number{font-size:.75rem;font-weight:500;color:var(--text-2);max-width:100%;}
 #panel-r .day-lesson .day-name.is-done .day-lesson-number{color:inherit;}
+
+.course-edit-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+#modal-desc :is(#edit-name,#edit-total,#edit-start){min-width:0;width:100%;min-height:44px;}
+#edit-course-range{display:block;color:var(--text-2);margin-top:8px;}
+.wide-course-row .course-lesson-range{grid-column:1;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -4677,31 +4682,57 @@ memoDialog.addEventListener('keydown',event=>event.stopPropagation());
 
 // ── Course inline edit ────────────────────────────────────────────
 function editCourse(id){
-  const c=course(id); if(!c) return;
-  openModal('編輯課程','',
-    [{label:'儲存',primary:true,action:()=>{
-      const newName=document.getElementById('edit-name').value.trim();
-      const newTotal=parseInt(document.getElementById('edit-total').value);
-      if(!newName){toast('請輸入科目名稱','warn');return;}
-      if(!newTotal||newTotal<1){toast('請輸入有效堂數','warn');return;}
-      c.name=newName; c.total=newTotal;
-      invalidateEntriesCache();
-      saveState(); render(); closeModal();
-      toast(`已更新「${newName}」`,'success');
+  const subject=course(id);
+  if(!subject)return;
+  function validateRange(){
+    const startInput=$id('edit-start');
+    const totalInput=$id('edit-total');
+    const lessonStart=positiveInteger(startInput);
+    const total=positiveInteger(totalInput);
+    const lessonEnd=lessonStart&&total?lessonStart+(total-1):null;
+    const count=allEntries(id).length;
+    const overflow=lessonEnd!==null&&!Number.isSafeInteger(lessonEnd);
+    const totalError=!total?'總堂數須為正整數。':
+      total<count?'目前已排 '+count+' 堂，總堂數不得少於 '+count+' 堂。':
+      overflow?'結束編號過大，請調整總堂數或起始編號。':'';
+    const startError=lessonStart?'':'起始編號須為正整數。';
+    startInput.setAttribute('aria-invalid',String(Boolean(startError)));
+    totalInput.setAttribute('aria-invalid',String(Boolean(totalError)));
+    $id('edit-start-error').textContent=startError;
+    $id('edit-total-error').textContent=totalError;
+    $id('edit-course-range').textContent=lessonEnd!==null&&!overflow?'第 '+lessonStart+'–'+lessonEnd+' 堂':'';
+    return startError||totalError?null:{lessonStart,lessonEnd,total};
+  }
+  openModal('編輯課程','',[
+    {label:'儲存',primary:true,action:()=>{
+      const current=course(id);
+      if(!current){closeModal();toast('找不到這門課程。','warn');return;}
+      const range=validateRange();
+      if(!range){
+        $id($id('edit-start').getAttribute('aria-invalid')==='true'?'edit-start':'edit-total').focus();
+        return;
+      }
+      const name=$id('edit-name').value.trim();
+      if(!name){toast('請輸入科目名稱','warn');$id('edit-name').focus();return;}
+      Object.assign(current,range,{name});
+      saveState();render();closeModal();
+      toast('已更新「'+name+'」','success');
     }},
-    {label:'取消',action:closeModal}],
-    null, null,
-    `<div class="form-group" style="margin-bottom:10px">
-      <div class="form-label">科目名稱</div>
-      <input type="text" id="edit-name" value="${esc(c.name)}" style="width:100%;padding:8px 12px;border:1px solid rgba(0,0,0,.14);border-radius:12px;font-size:14px;outline:none;font-family:var(--sans)"/>
-    </div>
-    <div class="form-group">
-      <div class="form-label">總堂數</div>
-      <input type="number" id="edit-total" value="${c.total}" min="1" style="width:100%;padding:8px 12px;border:1px solid rgba(0,0,0,.14);border-radius:12px;font-size:14px;outline:none;font-family:var(--sans)"/>
-    </div>`
-  );
-  // Focus name input after modal opens
-  requestAnimationFrame(()=>document.getElementById('edit-name')?.focus());
+    {label:'取消',action:closeModal}
+  ],null,null,
+  '<div class="form-group"><label class="form-label" for="edit-name">科目名稱</label>'+
+  '<input type="text" id="edit-name" value="'+esc(subject.name)+'"></div>'+
+  '<div class="course-edit-values">'+
+    '<div><label class="form-label" for="edit-start">起始編號</label>'+
+      '<input type="number" id="edit-start" value="'+esc(subject.lessonStart??1)+'" min="1" step="1" aria-describedby="edit-start-error edit-course-range">'+
+      '<p id="edit-start-error" class="schedule-time-error" role="status"></p></div>'+
+    '<div><label class="form-label" for="edit-total">總堂數</label>'+
+      '<input type="number" id="edit-total" value="'+esc(subject.total)+'" min="1" step="1" aria-describedby="edit-total-error edit-course-range">'+
+      '<p id="edit-total-error" class="schedule-time-error" role="status"></p></div>'+
+  '</div><output id="edit-course-range" aria-live="polite"></output>');
+  for(const field of ['edit-start','edit-total'])$id(field).addEventListener('input',validateRange);
+  validateRange();
+  requestAnimationFrame(()=>$id('edit-name')?.focus());
 }
 
 function updateExamDate(id,val){const c=course(id);if(!c)return;c.examDate=val;saveState();renderPartial(renderCourses,renderCalendar);}
@@ -5482,10 +5513,15 @@ wideDay.addEventListener('keydown',event=>{
   else if(wideDay.dataset.stage==='schedule'){event.preventDefault();cancelDaySchedule();}
 });
 
+function courseLessonRange(c){
+  const start=c.lessonStart??1;
+  return '第 '+start+'–'+(c.lessonEnd??(start+c.total-1))+' 堂';
+}
 function renderWideCourses(){
   if(!wideMedia.matches)return;
   const rows=S.courses.map(c=>'<li><button class="wide-course-row" type="button" data-wide-course="'+esc(c.id)+'" aria-haspopup="dialog">'+
     '<strong>'+esc(c.name)+'</strong><span>完成 '+completed(c)+'／'+c.total+' 堂</span>'+
+    '<span class="course-lesson-range">'+courseLessonRange(c)+'</span>'+
     (remaining(c)>=1?'<span class="course-remaining">'+remainingCourseText(remaining(c))+'</span>':'')+'</button></li>').join('');
   if(wideCourses.innerHTML!==rows && rows){
     const focused=wideCourses.contains(document.activeElement)&&document.activeElement.dataset.wideCourse;
@@ -5816,8 +5852,7 @@ function renderCourses(){
 
   const cards=show.map(c=>{
     const done=completed(c),arr=allEntries(c.id).length,rem=remaining(c),pct=Math.min(100,Math.round(done/c.total*100));
-    const ls=c.lessonStart??1, le=c.lessonEnd??c.total;
-    const lessonChip=`<span class="lesson-chip">第 ${ls}–${le} 堂</span>`;
+    const lessonChip=`<span class="lesson-chip">${courseLessonRange(c)}</span>`;
     const dragAttrs=isMobile()&&rem>0?`draggable="true" ondragstart="dragStart(event,'${c.id}')" ondragend="dragEnd(event)" title="拖曳到行事曆排課"`:'';
     const badge=examBadge(c,localToday,plans.get(c.id));
     return`<div class="course-card ${rem>0?'is-draggable':''}" ${dragAttrs}>
@@ -6925,16 +6960,34 @@ document.getElementById('day-events').addEventListener('click',event=>{
   if(edit)openDayEdit(edit);
 });
 
-function renderDayLesson(ev,subject){
+function compareDayLessons(a,b){
+  const byTime=(a.time||'24:00').localeCompare(b.time||'24:00');
+  const firstId=String(a.id),secondId=String(b.id);
+  return byTime||firstId.localeCompare(secondId,'en',{numeric:true})||firstId.localeCompare(secondId,'en');
+}
+function scheduledLessonNumbers(subjects){
+  const next=new Map(subjects.map(c=>[c.id,c.lessonStart??1]));
+  const numbers=new Map();
+  for(const date of Object.keys(S.calendar).sort()){
+    const relevant=S.calendar[date].filter(lesson=>next.has(lesson.courseId));
+    for(const lesson of relevant.sort(compareDayLessons)){
+      const number=next.get(lesson.courseId);
+      numbers.set(lesson,number);
+      next.set(lesson.courseId,number+1);
+    }
+  }
+  return numbers;
+}
+function renderDayLesson(ev,subject,lessonNumber){
   const name=esc(subject.name);
   const id=esc(ev.id);
-  const number=hasLessonNumber(ev)?'第 '+ev.lessonNumber+' 堂':'';
+  const number='第 '+lessonNumber+' 堂';
   return `<div class="day-card day-lesson ${ev.done?'is-done':''} ${ev.time?'':'is-untimed'}">
     <div class="day-card-head">
-      <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}${number?'，'+number:''}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
+      <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}，${number}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
       <span class="dot" style="background:${subject.color}"></span>
       <span class="day-name${ev.done?' is-done':''}">
-        <span class="day-name-text">${name}</span>${number?'<span class="day-lesson-number">'+number+'</span>':''}
+        <span class="day-name-text">${name}</span><span class="day-lesson-number">· ${number}</span>
       </span>
       ${ev.time?`<span class="day-lesson-time">${esc(lessonTimeLabel(ev))}</span>`:''}
     </div>
@@ -6990,13 +7043,11 @@ function renderDayPanel(){
 
   const pending=[];
   const completed=[];
-  const ordered=[...allEvts].sort((a,b)=>{
-    if(a.time&&b.time)return a.time.localeCompare(b.time);
-    return Number(Boolean(b.time))-Number(Boolean(a.time));
-  });
-  for(const lesson of ordered){
-    const subject=course(lesson.courseId);
-    if(subject)(lesson.done?completed:pending).push(renderDayLesson(lesson,subject));
+  const subjects=new Map(allEvts.map(lesson=>[lesson.courseId,course(lesson.courseId)]).filter(([,subject])=>subject));
+  const numbers=scheduledLessonNumbers([...subjects.values()]);
+  for(const lesson of [...allEvts].sort(compareDayLessons)){
+    const subject=subjects.get(lesson.courseId);
+    if(subject)(lesson.done?completed:pending).push(renderDayLesson(lesson,subject,numbers.get(lesson)));
   }
   const keepExpanded=el.dataset.renderedDate===S.selectedDate&&el.querySelector('.day-completed')?.open;
   el.dataset.renderedDate=S.selectedDate;
