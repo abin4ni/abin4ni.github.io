@@ -3116,6 +3116,16 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 #day-edit-form .day-edit-field+.day-edit-field{margin-top:12px;}
 #day-edit-form input[type=date]{min-width:0;}
 #wide-day[data-stage=edit] #panel-r > :not(#day-edit-panel){display:none;}
+
+#wide-memo-area{margin-top:24px;border-top:1px solid var(--border-lt);padding:16px 0;}
+#wide-memo-area h3{margin:0 0 10px;font-size:var(--ui-heading);}
+#wide-memo-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,175px),1fr));gap:10px;}
+#wide-memo-grid .memo-card{min-height:112px;}
+#day-course-memos{display:grid;gap:8px;}
+#day-course-memos .memo-card{min-height:64px;box-shadow:none;}
+:is(#wide-memo-grid,#day-course-memos) .memo-card-name{font-size:14px;white-space:normal;overflow-wrap:anywhere;}
+:is(#wide-memo-grid,#day-course-memos) .memo-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+body:has(#memo-modal[open]) #wide-day #day-panel-close{visibility:hidden;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3322,6 +3332,10 @@ onAuthStateChanged(auth,user=>{
         </div>
       </div>
       <ul class="wide-course-list" id="wide-course-list"></ul>
+      <section id="wide-memo-area" aria-labelledby="wide-memo-title" hidden>
+        <h3 id="wide-memo-title">課程備忘錄</h3>
+        <div class="memo-scroll" id="wide-memo-grid"></div>
+      </section>
     </section>
 
     <aside class="panel panel-l" id="panel-l">
@@ -3447,7 +3461,6 @@ onAuthStateChanged(auth,user=>{
         <div class="wide-tools">
           <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog">＋</button>
           <button type="button" class="btn btn-sand" id="wide-exam-open" aria-haspopup="dialog" aria-controls="wide-exam-dialog">考試總覽</button>
-          <button type="button" class="btn btn-sand" id="wide-memo-calendar" aria-haspopup="dialog">課程備忘錄</button>
           <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
         </div>
       </div>
@@ -3694,10 +3707,6 @@ onAuthStateChanged(auth,user=>{
     <span class="dot" id="memo-modal-dot"></span>
     <h2 class="memo-modal-title" id="memo-modal-title"></h2>
     <button type="button" class="btn popup-close" aria-label="關閉課程備忘錄" id="memo-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
-  </div>
-  <div id="memo-course-picker" hidden>
-    <label for="memo-course-select">科目</label>
-    <select id="memo-course-select"></select>
   </div>
   <div id="memo-items"></div>
   <button type="button" class="btn btn-sand" id="memo-add">＋新增事項</button>
@@ -4391,6 +4400,7 @@ const memoAdd=document.getElementById('memo-add');
 let memoRenderedItems='';
 let memoCourseId=null;
 let memoOpener=null;
+let memoOpenerScope=null;
 let memoDraft=null;
 
 function courseMemoItems(cid){
@@ -4400,28 +4410,27 @@ function courseMemoItems(cid){
   // Keep the original text until a checklist action is saved.
   return note.split(/\r\n|\n|\r/).flatMap((text,index)=>text.trim() ? [{id:'legacy-'+index,text,done:false}] : []);
 }
-function memoPreview(items,compact=false){
-  if(!items.length)return compact?'<span class="memo-empty">尚無事項</span>':'<p class="memo-empty">尚無事項</p>';
-  const tag=compact?'span':'li';
-  return (compact?'<span class="memo-preview">':'<ul class="memo-preview">')+items.map(item=>
-    `<${tag} class="memo-preview-row ${item.done?'is-done':''}"><span role="img" aria-label="${item.done?'已完成':'未完成'}">${item.done?'✓':'○'}</span><span>${esc(item.text)}</span></${tag}>`
-  ).join('')+(compact?'</span>':'</ul>');
+function memoCard(c,showSummary){
+  const items=courseMemoItems(c.id);
+  const done=items.filter(item=>item.done).length;
+  const preview=items.slice(0,2).map(item=>
+    `<span class="memo-preview-row ${item.done?'is-done':''}"><span role="img" aria-label="${item.done?'已完成':'未完成'}">${item.done?'✓':'○'}</span><span>${esc(item.text)}</span></span>`
+  ).join('');
+  return `<button type="button" class="memo-card${items.length?' has-note':''}" data-memo-course="${esc(c.id)}" aria-haspopup="dialog" aria-label="開啟 ${esc(c.name)} 的備忘錄">
+    <span class="memo-card-head">
+      <span class="dot" style="background:${c.color}"></span>
+      <span class="memo-card-name">${esc(c.name)}</span>
+    </span>
+    ${preview?`<span class="memo-preview">${preview}</span>`:'<span class="memo-empty">尚無事項</span>'}
+    ${showSummary&&items.length?`<span class="memo-card-summary">完成 ${done}/${items.length}</span>`:''}
+  </button>`;
 }
 function renderMemo(){
-  const area=document.getElementById('memo-area');
-  area.style.display=S.courses.length?'block':'none';
-  document.getElementById('memo-grid').innerHTML=S.courses.map(c=>{
-    const items=courseMemoItems(c.id);
-    const done=items.filter(item=>item.done).length;
-    return `<button type="button" class="memo-card${items.length?' has-note':''}" data-memo-course="${esc(c.id)}">
-      <span class="memo-card-head">
-        <span class="dot" style="background:${c.color}"></span>
-        <span class="memo-card-name">${esc(c.name)}</span>
-      </span>
-      ${memoPreview(items.slice(0,2),true)}
-      ${items.length?`<span class="memo-card-summary">完成 ${done}/${items.length}</span>`:''}
-    </button>`;
-  }).join('');
+  document.getElementById('memo-area').style.display=S.courses.length?'block':'none';
+  document.getElementById('wide-memo-area').hidden=!S.courses.length;
+  const cards=S.courses.map(c=>memoCard(c,true)).join('');
+  document.getElementById('memo-grid').innerHTML=cards;
+  document.getElementById('wide-memo-grid').innerHTML=cards;
   if(memoDialog.open)renderMemoEditor();
 }
 function renderDayMemo(){
@@ -4429,23 +4438,11 @@ function renderDayMemo(){
   if(!panel)return;
   const lessons=S.calendar[S.selectedDate]||[];
   const courses=[...new Set(lessons.map(lesson=>lesson.courseId))].map(course).filter(Boolean);
-  panel.innerHTML=courses.length ? courses.map(c=>`
-    <div class="day-memo-wrap">
-      <div class="day-memo-title">
-        <span>${esc(c.name)}</span>
-        <button type="button" class="btn btn-sand btn-xs" data-memo-course="${esc(c.id)}" aria-label="開啟 ${esc(c.name)} 的備忘錄">開啟備忘錄</button>
-      </div>
-      ${memoPreview(courseMemoItems(c.id))}
-    </div>`).join('') : '<p class="memo-empty">當天沒有課程備忘錄。</p>';
+  panel.innerHTML=courses.length?courses.map(c=>memoCard(c,false)).join(''):'<p class="memo-empty">當天沒有課程備忘錄。</p>';
 }
 function renderMemoEditor(){
   const c=course(memoCourseId);
   if(!c){closeMemoModal();return;}
-  const select=document.getElementById('memo-course-select');
-  if(!select.parentElement.hidden){
-    select.replaceChildren(...S.courses.map(c=>new Option(c.name,c.id)));
-    select.value=c.id;
-  }
   document.getElementById('memo-modal-dot').style.background=c.color;
   document.getElementById('memo-modal-title').textContent=c.name+' 備忘錄';
   const items=courseMemoItems(c.id);
@@ -4476,10 +4473,10 @@ function resetMemoDraft(){
   memoMessage.textContent='';
 }
 function openMemoModal(cid,opener){
-  document.getElementById('memo-course-picker').hidden=opener?.id!=='wide-memo-calendar';
   if(!course(cid)){toast('請先新增課程','warn');return;}
   memoCourseId=cid;
   memoOpener=opener;
+  memoOpenerScope=opener?.closest('#day-events,#wide-memo-grid,#memo-grid');
   resetMemoDraft();
   renderMemoEditor();
   showAppDialog(memoDialog,closeMemoModal);
@@ -4489,13 +4486,14 @@ function closeMemoModal(){
   if(!memoDialog.open)return;
   memoDialog.close();
   const cid=memoCourseId;
-  const scope=memoOpener?.closest('#day-events')?'#day-events':'#memo-grid';
+  const scope=memoOpenerScope;
   const opener=memoOpener?.isConnected ? memoOpener :
-    [...document.querySelectorAll(scope+' [data-memo-course]')].find(el=>el.dataset.memoCourse===cid);
+    [...scope?.querySelectorAll('[data-memo-course]')||[]].find(el=>el.dataset.memoCourse===cid);
   memoCourseId=null;
   memoOpener=null;
+  memoOpenerScope=null;
   resetMemoDraft();
-  opener?.focus();
+  opener?.focus({preventScroll:true});
 }
 function openMemoDraft(item){
   memoDraft={id:item?.id,text:item?.text};
@@ -4542,7 +4540,7 @@ function submitMemoDraft(event){
   focusMemoItem(id,'edit');
 }
 
-for(const container of ['memo-grid','day-events']){
+for(const container of ['memo-grid','wide-memo-grid','day-events']){
   document.getElementById(container).addEventListener('click',event=>{
     const opener=event.target.closest('button[data-memo-course]');
     if(opener)openMemoModal(opener.dataset.memoCourse,opener);
@@ -4588,12 +4586,6 @@ document.getElementById('memo-item-cancel').addEventListener('click',()=>{
   focusMemoItem(id,'edit');
 });
 document.getElementById('memo-close').addEventListener('click',closeMemoModal);
-document.getElementById('wide-memo-calendar').addEventListener('click',event=>openMemoModal(S.courses[0]?.id,event.currentTarget));
-document.getElementById('memo-course-select').addEventListener('change',event=>{
-  memoCourseId=event.currentTarget.value;
-  resetMemoDraft();
-  renderMemoEditor();
-});
 memoDialog.addEventListener('cancel',event=>{
   event.preventDefault();
   closeMemoModal();
@@ -5254,6 +5246,7 @@ function setWidePage(page){
 
 function mountWideLayout(){
   const wide=wideMedia.matches;
+  if(memoDialog.open)closeMemoModal();
   if($id('day-edit-dialog').open)finishDayEdit(false);
   if($id('phone-course-dialog').open)closePhoneCourse();
   if(!wide){
