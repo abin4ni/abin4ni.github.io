@@ -3203,6 +3203,35 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 #repeat-preview-content #repeat-preview-body{max-height:min(55dvh,560px);}
 #repeat-preview-dates .rp-lessons{display:grid;gap:4px;list-style:none;margin:0;padding:6px 0;}
 #repeat-preview-dates .rp-lessons > li{display:flex;justify-content:space-between;gap:4px 12px;padding:4px 8px;border:0;background:var(--card-2);border-radius:var(--r-xs);}
+/* 課堂列、＋／× 按鈕、手機品牌名稱（只改樣式） */
+#panel-r .day-lesson .day-name{gap:0 8px;}
+#panel-r .day-lesson-number{font-size:.8125rem;line-height:1.4;white-space:nowrap;}
+@media(max-width:370px){
+  #panel-r .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
+  #panel-r .day-lesson .day-lesson-time{grid-column:3;}
+}
+#wide-calendar-add{
+  display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;
+  border-radius:50%;font-size:0;line-height:0;
+}
+@media(max-width:767px){
+  #panel-cal #phone-schedule-open,#phone-course-open{
+    display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;
+    border-radius:50%;font-size:0;line-height:0;background:var(--accent-tint);color:var(--accent-h);
+  }
+}
+:is(#wide-calendar-add,#phone-schedule-open,#phone-course-open) svg{
+  display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;pointer-events:none;
+}
+#panel-cal #phone-schedule-open[hidden]{display:none;}
+:is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#phone-cal-more) .popup-close svg{display:block;}
+#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog,#backup-import-dialog,#confirm-dialog,.modal{padding:clamp(20px,3vw,24px);}
+@media(max-width:767px){
+  #day-panel-close{
+    display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;margin:0 0 0 auto;
+    border-radius:50%;background:var(--sunken);
+  }
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3338,7 +3367,7 @@ onAuthStateChanged(auth,user=>{
 
 <header class="app-header">
   <div class="header-row">
-    <h1><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Zm0 0v12.4"/></svg><span class="phone-brand">課程進度追蹤</span><span class="wide-only wide-brand">StudyOS</span></h1>
+    <h1><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Zm0 0v12.4"/></svg><span class="phone-brand">StudyOS</span><span class="wide-only wide-brand">StudyOS</span></h1>
     <nav class="wide-only wide-tabs" aria-label="主要導覽">
       <button type="button" class="btn" data-wide-page-button="calendar" aria-current="page">行事曆</button>
       <button type="button" class="btn" data-wide-page-button="courses">我的課程</button>
@@ -3416,7 +3445,7 @@ onAuthStateChanged(auth,user=>{
     </section>
 
     <aside class="panel panel-l" id="panel-l">
-      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2>我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog">＋</button></div><p id="course-summary"></p></div>
+      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2>我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></div><p id="course-summary"></p></div>
       <div class="tablet-course-heading">
         <h2>我的課程</h2>
         <button type="button" class="btn btn-sand" id="tablet-course-close" onclick="closeTabletPanel()">關閉</button>
@@ -3531,7 +3560,7 @@ onAuthStateChanged(auth,user=>{
             <select id="cal-course-filter" aria-label="篩選科目"><option value="">全部課程</option></select>
           </div>
         </div>
-        <button type="button" class="btn phone-only" id="phone-schedule-open" aria-label="安排課堂" onclick="openCalendarSchedule()">＋</button>
+        <button type="button" class="btn phone-only" id="phone-schedule-open" aria-label="安排課程" onclick="openCalendarSchedule()"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
       <div class="wide-only wide-cal-tools">
         <div class="wide-week">
@@ -3539,7 +3568,7 @@ onAuthStateChanged(auth,user=>{
           <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
         </div>
         <div class="wide-tools">
-          <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog">＋</button>
+          <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
           <button type="button" class="btn btn-sand" id="wide-exam-open" aria-haspopup="dialog" aria-controls="wide-exam-dialog">考試總覽</button>
           <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
         </div>
@@ -7046,7 +7075,7 @@ function renderDayLesson(ev,subject,lessonNumber){
       <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}，${number}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
       <span class="dot" style="background:${subject.color}"></span>
       <span class="day-name${ev.done?' is-done':''}">
-        <span class="day-name-text">${name}</span><span class="day-lesson-number">· ${number}</span>
+        <span class="day-name-text">${name}</span><span class="day-lesson-number">${number}</span>
       </span>
       ${ev.time?`<span class="day-lesson-time">${esc(lessonTimeLabel(ev))}</span>`:''}
     </div>
