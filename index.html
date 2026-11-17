@@ -3138,7 +3138,9 @@ body:has(#memo-modal[open]) #wide-day #day-panel-close{visibility:hidden;}
 }
 #exam-popover .pop-row .pop-clear{margin:0;padding-inline:8px;}
 #quick-submit{width:auto;}
-body:has(#lesson-time-dialog[open]) :is(#wide-day #day-panel-close,#reschedule-form .popup-close){visibility:hidden;}
+body:has(#lesson-time-dialog[open]) :is(#wide-day #day-panel-close,#day-edit-close,#reschedule-form .popup-close){visibility:hidden;}
+#lesson-time-dialog .makeup-head{justify-content:flex-start;}
+#lesson-time-dialog .popup-close{margin:0;}
 #lesson-time-unset{margin:0 0 8px;font-size:13px;color:var(--text-2);}
 </style>
 <!-- Firebase SDK -->
@@ -3573,24 +3575,21 @@ onAuthStateChanged(auth,user=>{
       </div>
       <div class="day-edit-field">
         <label id="day-edit-time-label" for="day-edit-time-trigger">時間</label>
-        <button type="button" id="day-edit-time-trigger" class="schedule-time-trigger" aria-labelledby="day-edit-time-label day-edit-time-trigger" aria-controls="day-edit-time-slot">未定時間</button>
+        <button type="button" id="day-edit-time-trigger" class="schedule-time-trigger" aria-labelledby="day-edit-time-label day-edit-time-trigger" aria-haspopup="dialog" aria-controls="lesson-time-dialog">未定時間</button>
       </div>
       <div class="day-schedule-actions dialog-actions"><button class="btn btn-primary">儲存</button></div>
     </form>
-    <div id="day-edit-time-slot" hidden></div>
   </section>
 </dialog>
 <dialog id="lesson-time-dialog" class="local-dialog" aria-labelledby="lesson-time-title">
-  <div class="makeup-head"><h2 id="lesson-time-title">開始時間</h2><button type="button" class="btn popup-close" data-local-close aria-label="取消時間編輯"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <div class="makeup-head"><button type="button" class="btn popup-close" id="lesson-time-close" aria-label="關閉時間設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button><h2 id="lesson-time-title">開始時間</h2></div>
   <form id="lesson-time-form">
     <p id="lesson-time-unset" hidden>未定時間 · 滑動或點選以設定</p>
     <div class="picker-wheel-grid" id="lesson-time-wheels" hidden><div class="picker-wheel-column"><span>小時</span><div id="lesson-hour-wheel" class="picker-wheel" tabindex="0" role="listbox" aria-label="小時"></div></div><div class="picker-wheel-column"><span>分鐘</span><div id="lesson-minute-wheel" class="picker-wheel" tabindex="0" role="listbox" aria-label="分鐘"></div></div></div>
     <label>開始時間 <input id="lesson-time-input" type="text" placeholder="例如 19:00" autocomplete="off" aria-describedby="lesson-time-error"></label>
     <p id="lesson-time-error" class="schedule-time-error" role="alert"></p>
     <div class="day-schedule-actions dialog-actions">
-      <button type="button" class="btn btn-sand" id="lesson-time-manual" hidden>手動輸入</button>
       <button type="button" class="btn btn-sand" id="lesson-time-clear">清除時間</button>
-      <button type="button" class="btn btn-sand" data-local-close>取消</button>
       <button class="btn btn-primary">確認</button>
     </div>
   </form>
@@ -5263,7 +5262,7 @@ function setWidePage(page){
 
 function mountWideLayout(){
   const wide=wideMedia.matches;
-  if(lessonTimeDraft?.opener?.id==='day-time-trigger')closeLessonTime();
+  if(lessonTimeDialog.open)closeLessonTime();
   if(memoDialog.open)closeMemoModal();
   if($id('day-edit-dialog').open)finishDayEdit(false);
   if($id('phone-course-dialog').open)closePhoneCourse();
@@ -6309,9 +6308,10 @@ function createPickerWheel(element,min,max,format){
   let selected=min;
   let touching=false;
   let timer;
-  function paint(){
+  let hasSelection=true;
+  function paint(force=false){
     const center=Math.max(min,Math.min(max,min+Math.round(element.scrollTop/rowHeight)));
-    if(center===selected&&track.firstChild)return;
+    if(!force&&center===selected&&track.firstChild)return;
     selected=center;
     const rows=[];
     for(let value=Math.max(min,center-4);value<=Math.min(max,center+4);value++){
@@ -6320,13 +6320,14 @@ function createPickerWheel(element,min,max,format){
       row.dataset.value=value;
       row.id=element.id+'-'+value;
       row.setAttribute('role','option');
-      row.setAttribute('aria-selected',String(value===center));
+      row.setAttribute('aria-selected',String(hasSelection&&value===center));
       row.style.top=((value-min+1)*rowHeight)+'px';
       row.textContent=format(value);
       rows.push(row);
     }
     track.replaceChildren(...rows);
-    element.setAttribute('aria-activedescendant',element.id+'-'+center);
+    if(hasSelection)element.setAttribute('aria-activedescendant',element.id+'-'+center);
+    else element.removeAttribute('aria-activedescendant');
   }
   function set(value){
     clearTimeout(timer);
@@ -6358,13 +6359,20 @@ function createPickerWheel(element,min,max,format){
     event.preventDefault();
     set(event.key==='Home'?min:event.key==='End'?max:selected+delta);
   });
-  return {set,get value(){paint();return selected;}};
+  return {
+    set,
+    showSelection(visible){
+      if(hasSelection===visible)return;
+      hasSelection=visible;
+      paint(true);
+    },
+    get value(){paint();return selected;}
+  };
 }
 
 const lessonTimeDialog=$id('lesson-time-dialog');
 const lessonTimeInput=$id('lesson-time-input');
 const lessonTimeWheels=$id('lesson-time-wheels');
-const lessonTimeManual=$id('lesson-time-manual');
 const lessonTimeError=$id('lesson-time-error');
 const timeHour=createPickerWheel($id('lesson-hour-wheel'),0,23,padTime);
 const timeMinute=createPickerWheel($id('lesson-minute-wheel'),0,59,padTime);
@@ -6372,42 +6380,39 @@ let lessonTimeDraft=null;
 function padTime(value){return String(value).padStart(2,'0');}
 function closeLessonTime(){
   const opener=lessonTimeDraft?.opener;
-  const inline=lessonTimeDraft?.inline;
   lessonTimeDraft=null;
-  if(inline){
-    lessonTimeDialog.append($id('lesson-time-form'));
-    showDayEditTimePicker(false);
-  }else lessonTimeDialog.close();
+  lessonTimeDialog.close();
   opener?.focus({preventScroll:true});
 }
-function openLessonTime(time,apply,opener,inline=null){
+function setLessonWheelSelection(chosen){
+  lessonTimeDraft.wheelChosen=chosen;
+  timeHour.showSelection(chosen);
+  timeMinute.showSelection(chosen);
+  $id('lesson-time-unset').hidden=lessonTimeWheels.hidden||chosen;
+}
+function resetLessonWheels(time){
+  const [hour,minute]=(time||'00:00').split(':').map(Number);
+  timeHour.set(hour);
+  timeMinute.set(minute);
+  setLessonWheelSelection(Boolean(time));
+}
+function openLessonTime(time,apply,opener){
   time=time??'';
-  lessonTimeDraft={opener,apply,inline,wheelChosen:Boolean(time)};
+  lessonTimeDraft={opener,apply,wheelChosen:false};
   const wheel=touchWheelLayout();
   lessonTimeWheels.hidden=!wheel;
-  lessonTimeManual.hidden=!wheel;
   lessonTimeInput.parentElement.hidden=wheel;
   lessonTimeInput.value=time;
   lessonTimeError.textContent='';
-  $id('lesson-time-unset').hidden=!wheel||Boolean(time);
-  if(inline)inline.append($id('lesson-time-form'));
-  else showAppDialog(lessonTimeDialog,closeLessonTime);
+  $id('lesson-time-unset').hidden=true;
+  showAppDialog(lessonTimeDialog,closeLessonTime);
   if(wheel){
-    const [hour,minute]=(time||'00:00').split(':').map(Number);
-    timeHour.set(hour);
-    timeMinute.set(minute);
+    resetLessonWheels(time);
     $id('lesson-hour-wheel').focus({preventScroll:true});
   }else lessonTimeInput.focus({preventScroll:true});
 }
-function readLessonWheelTime(){
-  const hour=timeHour.value;
-  const minute=timeMinute.value;
-  return lessonTimeDraft?.wheelChosen||hour||minute?padTime(hour)+':'+padTime(minute):'';
-}
 function markLessonTimeWheel(){
-  if(!lessonTimeDraft||lessonTimeWheels.hidden)return;
-  lessonTimeDraft.wheelChosen=true;
-  $id('lesson-time-unset').hidden=true;
+  if(lessonTimeDraft&&!lessonTimeWheels.hidden&&!lessonTimeDraft.wheelChosen)setLessonWheelSelection(true);
 }
 for(const wheel of lessonTimeWheels.querySelectorAll('.picker-wheel')){
   wheel.addEventListener('click',markLessonTimeWheel);
@@ -6424,31 +6429,21 @@ function applyLessonTime(time){
   closeLessonTime();
   apply(time);
 }
-lessonTimeManual.addEventListener('click',()=>{
-  lessonTimeInput.value=readLessonWheelTime();
-  $id('lesson-time-unset').hidden=true;
-  lessonTimeWheels.hidden=true;
-  lessonTimeManual.hidden=true;
-  lessonTimeInput.parentElement.hidden=false;
-  lessonTimeInput.focus();
-  lessonTimeInput.select();
-});
-lessonTimeDialog.querySelectorAll('[data-local-close]').forEach(button=>button.addEventListener('click',closeLessonTime));
+$id('lesson-time-close').addEventListener('click',closeLessonTime);
 bindWideDialog(lessonTimeDialog,closeLessonTime);
 $id('lesson-time-clear').addEventListener('click',()=>{
-  $id('lesson-time-unset').hidden=true;
-  lessonTimeWheels.hidden=true;
-  lessonTimeManual.hidden=true;
-  lessonTimeInput.parentElement.hidden=false;
   lessonTimeInput.value='';
   lessonTimeError.textContent='';
-  lessonTimeInput.focus();
+  if(!lessonTimeWheels.hidden)resetLessonWheels('');
+  else lessonTimeInput.focus();
 });
 lessonTimeInput.addEventListener('input',()=>{lessonTimeError.textContent='';});
 $id('lesson-time-form').addEventListener('submit',event=>{
   event.preventDefault();
   if(!lessonTimeWheels.hidden){
-    applyLessonTime(readLessonWheelTime());
+    const hour=timeHour.value;
+    const minute=timeMinute.value;
+    applyLessonTime(lessonTimeDraft?.wheelChosen||hour||minute?padTime(hour)+':'+padTime(minute):'');
     return;
   }
   const input=lessonTimeInput.value.trim();
@@ -6658,17 +6653,11 @@ const dayEditDate=$id('day-edit-date');
 let dayEditDraft=null;
 
 const dayEditTimeTrigger=$id('day-edit-time-trigger');
-function showDayEditTimePicker(open){
-  $id('day-edit-form').hidden=open;
-  $id('day-edit-time-slot').hidden=!open;
-  $id('day-edit-title').textContent=open?'選擇時間':'編輯時間';
-}
-
 function finishDayEdit(restoreFocus=true){
   const draft=dayEditDraft;
   if(!draft)return;
   dayEditDraft=null;
-  if(lessonTimeDraft?.inline)closeLessonTime();
+  if(lessonTimeDraft?.opener===dayEditTimeTrigger)closeLessonTime();
   dayEditPanel.hidden=true;
   if(draft.wide)wideDay.dataset.stage='detail';
   else dayEditDialog.close();
@@ -6699,7 +6688,6 @@ function openDayEdit(opener){
   $id('day-edit-date-error').textContent='';
   dayEditTimeTrigger.textContent=time||'未定時間';
   dayEditPanel.hidden=false;
-  showDayEditTimePicker(false);
   if(wide){
     $id('panel-r').append(dayEditPanel);
     wideDay.dataset.stage='edit';
@@ -6752,11 +6740,10 @@ $id('day-edit-form').addEventListener('submit',event=>{
 });
 dayEditTimeTrigger.addEventListener('click',()=>{
   if(!dayEditDraft)return;
-  showDayEditTimePicker(true);
   openLessonTime(dayEditDraft.time,time=>{
     dayEditDraft.time=time;
     dayEditTimeTrigger.textContent=time||'未定時間';
-  },dayEditTimeTrigger,$id('day-edit-time-slot'));
+  },dayEditTimeTrigger);
 });
 
 document.getElementById('day-events').addEventListener('click',event=>{
