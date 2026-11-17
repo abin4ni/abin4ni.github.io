@@ -3598,7 +3598,7 @@ onAuthStateChanged(auth,user=>{
   <section id="day-edit-panel" hidden>
     <div class="day-edit-head">
       <h2 id="day-edit-title">編輯時間</h2>
-      <button type="button" id="day-edit-close" class="btn popup-close" autofocus aria-label="關閉當日課程視窗"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+      <button type="button" id="day-edit-close" class="btn popup-close" autofocus aria-label="取消編輯並返回當日課程"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
     <form id="day-edit-form" novalidate>
       <div class="day-edit-field">
@@ -5384,7 +5384,7 @@ function openDayPanel(){
     dayPanelReturnFocus=()=>(document.querySelector('#cal-body [data-calendar-date="'+date+'"]')||$id('vt-'+S.view)).focus({preventScroll:true});
   }
   wideDay.dataset.stage='detail';
-  showAppDialog(wideDay,closeDayPanel);
+  showAppDialog(wideDay,dismissDayPanel);
   wideDay.scrollTop=0;
   $id('day-panel-close').focus({preventScroll:true});
 }
@@ -5397,10 +5397,15 @@ function closeDayPanel(){
   dayPanelReturnFocus?.();
   dayPanelReturnFocus=null;
 }
-bindWideDialog(wideDay,closeDayPanel);
+function dismissDayPanel(){
+  if(wideDay.dataset.stage==='edit')finishDayEdit();
+  else closeDayPanel();
+}
+bindWideDialog(wideDay,dismissDayPanel);
 wideDay.addEventListener('keydown',event=>{
   if(event.key!=='Escape'||event.defaultPrevented||event.isComposing)return;
-  if(wideDay.dataset.stage==='move'){event.preventDefault();closeLessonReschedule();}
+  if(wideDay.dataset.stage==='edit'){event.preventDefault();finishDayEdit();}
+  else if(wideDay.dataset.stage==='move'){event.preventDefault();closeLessonReschedule();}
   else if(wideDay.dataset.stage==='schedule'){event.preventDefault();cancelDaySchedule();}
 });
 
@@ -6692,20 +6697,18 @@ function finishDayEdit(restoreFocus=true){
   dayEditDraft=null;
   if(lessonTimeDraft?.opener===dayEditTimeTrigger)closeLessonTime();
   dayEditPanel.hidden=true;
-  if(draft.wide)wideDay.dataset.stage='detail';
-  else dayEditDialog.close();
+  if(draft.wide){
+    wideDay.dataset.stage='detail';
+    wideDay.setAttribute('aria-labelledby','day-label');
+  }else dayEditDialog.close();
   dayEditDialog.append(dayEditPanel);
   draft.scroller.scrollTop=draft.scroll;
   document.scrollingElement.scrollTop=draft.pageScroll;
   if(restoreFocus){
     const entry=[...$id('day-events').querySelectorAll('[data-day-edit]')]
       .find(button=>button.dataset.dayEdit===draft.id);
-    (entry||$id('day-schedule-open')).focus({preventScroll:true});
+    (entry?.getClientRects().length?entry:$id('day-schedule-open')).focus({preventScroll:true});
   }
-}
-function dismissDayEdit(){
-  if(dayEditDraft?.wide)closeDayPanel();
-  else finishDayEdit();
 }
 function openDayEdit(opener){
   const date=S.selectedDate;
@@ -6724,16 +6727,22 @@ function openDayEdit(opener){
   if(wide){
     $id('panel-r').append(dayEditPanel);
     wideDay.dataset.stage='edit';
+    wideDay.setAttribute('aria-labelledby','day-edit-title');
     wideDay.scrollTop=0;
-  }else showAppDialog(dayEditDialog,dismissDayEdit);
+  }else showAppDialog(dayEditDialog,()=>finishDayEdit());
   $id('day-edit-close').focus({preventScroll:true});
 }
 function reportMissingDayEditLesson(){
   finishDayEdit();
   toast('原日期已找不到這堂課，可能已被刪除或改期。','warn');
 }
-bindWideDialog(dayEditDialog,dismissDayEdit);
-$id('day-edit-close').addEventListener('click',dismissDayEdit);
+bindWideDialog(dayEditDialog,()=>finishDayEdit());
+dayEditDialog.addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||event.defaultPrevented||event.isComposing)return;
+  event.preventDefault();
+  finishDayEdit();
+});
+$id('day-edit-close').addEventListener('click',()=>finishDayEdit());
 dayEditDate.addEventListener('click',()=>{
   try{dayEditDate.showPicker?.();}catch{/* Native date control handles the click if showPicker is unavailable. */}
 });
