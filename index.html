@@ -3126,6 +3126,20 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 :is(#wide-memo-grid,#day-course-memos) .memo-card-name{font-size:14px;white-space:normal;overflow-wrap:anywhere;}
 :is(#wide-memo-grid,#day-course-memos) .memo-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 body:has(#memo-modal[open]) #wide-day #day-panel-close{visibility:hidden;}
+
+:is(#confirm-btns,#exam-popover .pop-row,.dialog-actions):not([hidden]){
+  display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px;
+}
+:is(#confirm-btns,#exam-popover .pop-row,.dialog-actions):not([hidden]):not(:has(>button:not([hidden])~button:not([hidden]))){
+  justify-content:center;
+}
+.dialog-actions > button:not([hidden]),#confirm-btns > button,#exam-popover .pop-row > button{
+  min-height:44px;min-width:44px;max-width:100%;white-space:normal;overflow-wrap:anywhere;
+}
+#exam-popover .pop-row .pop-clear{margin:0;padding-inline:8px;}
+#quick-submit{width:auto;}
+body:has(#lesson-time-dialog[open]) :is(#wide-day #day-panel-close,#reschedule-form .popup-close){visibility:hidden;}
+#lesson-time-unset{margin:0 0 8px;font-size:13px;color:var(--text-2);}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3243,9 +3257,9 @@ onAuthStateChanged(auth,user=>{
   <div class="pop-title">設定考試日期</div>
   <input type="date" id="exam-pop-input"/>
   <div class="pop-row">
-    <button class="btn btn-primary btn-xs" onclick="confirmExamDate()">確定</button>
     <button class="btn btn-sand btn-xs" onclick="closeExamPicker()">取消</button>
     <button class="pop-clear" onclick="clearExamDate()">清除日期</button>
+    <button class="btn btn-primary btn-xs" onclick="confirmExamDate()">確定</button>
   </div>
 </div>
 
@@ -3255,7 +3269,7 @@ onAuthStateChanged(auth,user=>{
     <div class="makeup-head"><h2 id="modal-title"></h2><button type="button" class="btn popup-close" aria-label="關閉視窗" onclick="closeModal()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
     <p id="modal-desc"></p>
     <textarea id="modal-ta" style="display:none;"></textarea>
-    <div class="modal-btns" id="modal-btns"></div>
+    <div class="modal-btns dialog-actions" id="modal-btns"></div>
   </div>
 </div>
 
@@ -3371,7 +3385,7 @@ onAuthStateChanged(auth,user=>{
             <p id="quick-plan"></p>
           </div>
           <p id="quick-error" role="status"></p>
-          <button type="button" class="btn btn-primary" id="quick-submit" disabled>建立課程</button>
+          <div class="dialog-actions"><button type="button" class="btn btn-primary" id="quick-submit" disabled>建立課程</button></div>
         </div>
       </div>
       <form class="section course-planning-form fold-card" id="new-course-form" novalidate onsubmit="addCourse(event)">
@@ -3393,7 +3407,10 @@ onAuthStateChanged(auth,user=>{
           <input type="date" id="inp-exam"/>
         </div>
         <label class="phone-only phone-repeat-choice"><input type="checkbox" id="phone-repeat-after-create"> 建立後接著重複排課（選填）</label>
-        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:2px;">新增課程</button>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-sand" id="phone-existing-repeat" hidden>為既有課程排課</button>
+          <button type="submit" class="btn btn-primary">新增課程</button>
+        </div>
         </div>
       </form>
       <form class="section course-planning-form fold-card" id="repeat-schedule-form" novalidate onsubmit="openRepeatPreview(event)">
@@ -3417,7 +3434,7 @@ onAuthStateChanged(auth,user=>{
           <input type="date" id="rep-end" required/>
         </div>
         <p class="course-plan-message" id="repeat-prefill-note" role="status"></p>
-        <button type="submit" id="rep-submit" class="btn btn-sand" style="width:100%;" aria-haspopup="dialog">預覽排課</button>
+        <div class="dialog-actions"><button type="submit" id="rep-submit" class="btn btn-sand" aria-haspopup="dialog">預覽排課</button></div>
         <p class="course-plan-message is-error" id="repeat-schedule-error" role="status"></p>
         <div id="repeat-schedule-result" hidden>
           <p class="course-plan-message" id="repeat-schedule-message" role="status" tabindex="-1"></p>
@@ -3523,9 +3540,9 @@ onAuthStateChanged(auth,user=>{
           <label for="day-schedule-course">選擇既有課程</label>
           <select id="day-schedule-course" required></select>
           <div id="day-time-slot"></div>
-          <div class="day-schedule-actions">
-            <button type="submit" class="btn btn-primary" id="day-schedule-confirm">確認安排一堂</button>
+          <div class="day-schedule-actions dialog-actions">
             <button type="button" class="btn btn-sand" onclick="cancelDaySchedule()">取消</button>
+            <button type="submit" class="btn btn-primary" id="day-schedule-confirm">確認安排一堂</button>
           </div>
         </form>
       </div>
@@ -3558,7 +3575,7 @@ onAuthStateChanged(auth,user=>{
         <label id="day-edit-time-label" for="day-edit-time-trigger">時間</label>
         <button type="button" id="day-edit-time-trigger" class="schedule-time-trigger" aria-labelledby="day-edit-time-label day-edit-time-trigger" aria-controls="day-edit-time-slot">未定時間</button>
       </div>
-      <div class="day-schedule-actions"><button class="btn btn-primary">儲存</button></div>
+      <div class="day-schedule-actions dialog-actions"><button class="btn btn-primary">儲存</button></div>
     </form>
     <div id="day-edit-time-slot" hidden></div>
   </section>
@@ -3566,10 +3583,11 @@ onAuthStateChanged(auth,user=>{
 <dialog id="lesson-time-dialog" class="local-dialog" aria-labelledby="lesson-time-title">
   <div class="makeup-head"><h2 id="lesson-time-title">開始時間</h2><button type="button" class="btn popup-close" data-local-close aria-label="取消時間編輯"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <form id="lesson-time-form">
+    <p id="lesson-time-unset" hidden>未定時間 · 滑動或點選以設定</p>
     <div class="picker-wheel-grid" id="lesson-time-wheels" hidden><div class="picker-wheel-column"><span>小時</span><div id="lesson-hour-wheel" class="picker-wheel" tabindex="0" role="listbox" aria-label="小時"></div></div><div class="picker-wheel-column"><span>分鐘</span><div id="lesson-minute-wheel" class="picker-wheel" tabindex="0" role="listbox" aria-label="分鐘"></div></div></div>
     <label>開始時間 <input id="lesson-time-input" type="text" placeholder="例如 19:00" autocomplete="off" aria-describedby="lesson-time-error"></label>
     <p id="lesson-time-error" class="schedule-time-error" role="alert"></p>
-    <div class="day-schedule-actions">
+    <div class="day-schedule-actions dialog-actions">
       <button type="button" class="btn btn-sand" id="lesson-time-manual" hidden>手動輸入</button>
       <button type="button" class="btn btn-sand" id="lesson-time-clear">清除時間</button>
       <button type="button" class="btn btn-sand" data-local-close>取消</button>
@@ -3584,27 +3602,26 @@ onAuthStateChanged(auth,user=>{
     <div id="calendar-jump-wheels" class="picker-wheel-grid" hidden><div class="picker-wheel-column"><span>年份</span><div id="calendar-year-wheel" class="picker-wheel" tabindex="0" role="listbox" aria-label="年份"></div></div><div class="picker-wheel-column"><span>月份</span><div id="calendar-month-wheel" class="picker-wheel" tabindex="0" role="listbox" aria-label="月份"></div></div></div>
     <label>年份 <input id="calendar-jump-year" type="number" inputmode="numeric" min="100" max="9999" step="1" required></label>
     <label>月份 <select id="calendar-jump-month"></select></label>
-    <div class="day-schedule-actions"><button type="button" class="btn btn-sand" data-local-close>取消</button><button class="btn btn-primary">確認</button></div>
+    <div class="day-schedule-actions dialog-actions"><button type="button" class="btn btn-sand" data-local-close>取消</button><button class="btn btn-primary">確認</button></div>
   </form>
 </dialog>
 <dialog id="phone-course-dialog" class="local-dialog" aria-labelledby="phone-course-title">
   <div class="makeup-head"><h2 id="phone-course-title">新增課程或快速輸入</h2><button type="button" class="btn popup-close" data-local-close aria-label="關閉新增課程視窗"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
-  <div id="phone-course-choices">
+  <div id="phone-course-choices" class="dialog-actions">
     <button type="button" class="btn btn-sand" id="calendar-existing-open" hidden>安排既有課程</button>
-    <button type="button" class="btn btn-primary" id="phone-manual-open">新增課程</button>
     <button type="button" class="btn btn-sand" id="phone-quick-open">快速輸入</button>
+    <button type="button" class="btn btn-primary" id="phone-manual-open">新增課程</button>
   </div>
   <form id="calendar-existing-form" hidden>
     <label>排課日期 <input type="date" id="calendar-existing-date" required></label>
-    <div class="day-schedule-actions">
-      <button type="submit" class="btn btn-primary">安排一堂</button>
+    <div class="day-schedule-actions dialog-actions">
       <button type="button" class="btn btn-sand" id="calendar-existing-repeat">重複排課</button>
+      <button type="submit" class="btn btn-primary">安排一堂</button>
     </div>
   </form>
   <div id="phone-manual-slot" hidden></div>
   <div id="phone-quick-slot" hidden></div>
   <div id="phone-repeat-slot" hidden></div>
-  <button type="button" class="btn btn-sand" id="phone-existing-repeat" hidden>為既有課程排課</button>
 </dialog>
 <dialog id="backup-import-dialog" aria-labelledby="backup-import-title">
   <div class="makeup-head">
@@ -3621,7 +3638,7 @@ onAuthStateChanged(auth,user=>{
     <p id="backup-filename"></p>
     <p>匯入會覆蓋現有課程、課表和備忘錄，已登入時也會同步到雲端。</p>
   </div>
-  <div class="day-schedule-actions">
+  <div class="day-schedule-actions dialog-actions">
     <button type="button" class="btn btn-sand" id="backup-cancel">取消</button>
     <button type="button" class="btn btn-primary" id="backup-confirm" hidden>確認匯入</button>
   </div>
@@ -3656,7 +3673,7 @@ onAuthStateChanged(auth,user=>{
     <ul id="repeat-preview-dates"></ul>
     <div id="repeat-preview-skipped" class="rp-skipped" hidden></div>
   </div>
-  <div class="day-schedule-actions">
+  <div class="day-schedule-actions dialog-actions">
     <button type="button" class="btn btn-sand" id="repeat-preview-cancel" autofocus>取消</button>
     <button type="button" class="btn btn-primary" id="repeat-preview-confirm">確認排課</button>
   </div>
@@ -3694,9 +3711,9 @@ onAuthStateChanged(auth,user=>{
     <input type="date" id="reschedule-date" required autofocus aria-describedby="reschedule-message"/>
     <div id="reschedule-time-slot"></div>
     <p class="course-plan-message is-error" id="reschedule-message" role="alert"></p>
-    <div class="day-schedule-actions">
-      <button type="submit" class="btn btn-primary" id="reschedule-confirm">確認改期</button>
+    <div class="day-schedule-actions dialog-actions">
       <button type="button" class="btn btn-sand" id="reschedule-cancel">取消</button>
+      <button type="submit" class="btn btn-primary" id="reschedule-confirm">確認改期</button>
     </div>
   </form>
 </dialog>
@@ -3709,14 +3726,14 @@ onAuthStateChanged(auth,user=>{
     <button type="button" class="btn popup-close" aria-label="關閉課程備忘錄" id="memo-close" autofocus><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   </div>
   <div id="memo-items"></div>
-  <button type="button" class="btn btn-sand" id="memo-add">＋新增事項</button>
+  <div class="dialog-actions"><button type="button" class="btn btn-sand" id="memo-add">＋新增事項</button></div>
   <form id="memo-item-form" hidden>
     <label for="memo-item-input" id="memo-item-label"></label>
     <textarea id="memo-item-input" rows="2" aria-describedby="memo-item-message"></textarea>
     <p id="memo-item-message" role="alert"></p>
-    <div class="memo-form-actions">
-      <button type="submit" class="btn btn-primary" id="memo-item-submit"></button>
+    <div class="memo-form-actions dialog-actions">
       <button type="button" class="btn btn-sand" id="memo-item-cancel">取消</button>
+      <button type="submit" class="btn btn-primary" id="memo-item-submit"></button>
     </div>
   </form>
 </dialog>
@@ -4310,7 +4327,7 @@ function openModal(title,desc,btns,taVal,htmlBody,extraHtml){
   const ta=document.getElementById('modal-ta');
   if(taVal!=null){ta.style.display='block';ta.value=taVal;}else{ta.style.display='none';}
   document.getElementById('modal-btns').innerHTML='';
-  btns.forEach(b=>{
+  [...btns.filter(b=>!b.primary),...btns.filter(b=>b.primary)].forEach(b=>{
     const el=document.createElement('button');
     el.className='btn '+(b.primary?'btn-primary':'btn-sand');
     el.textContent=b.label;el.onclick=b.action;
@@ -5246,6 +5263,7 @@ function setWidePage(page){
 
 function mountWideLayout(){
   const wide=wideMedia.matches;
+  if(lessonTimeDraft?.opener?.id==='day-time-trigger')closeLessonTime();
   if(memoDialog.open)closeMemoModal();
   if($id('day-edit-dialog').open)finishDayEdit(false);
   if($id('phone-course-dialog').open)closePhoneCourse();
@@ -6363,13 +6381,15 @@ function closeLessonTime(){
   opener?.focus({preventScroll:true});
 }
 function openLessonTime(time,apply,opener,inline=null){
-  lessonTimeDraft={opener,apply,inline};
+  time=time??'';
+  lessonTimeDraft={opener,apply,inline,wheelChosen:Boolean(time)};
   const wheel=touchWheelLayout();
   lessonTimeWheels.hidden=!wheel;
   lessonTimeManual.hidden=!wheel;
   lessonTimeInput.parentElement.hidden=wheel;
   lessonTimeInput.value=time;
   lessonTimeError.textContent='';
+  $id('lesson-time-unset').hidden=!wheel||Boolean(time);
   if(inline)inline.append($id('lesson-time-form'));
   else showAppDialog(lessonTimeDialog,closeLessonTime);
   if(wheel){
@@ -6379,6 +6399,25 @@ function openLessonTime(time,apply,opener,inline=null){
     $id('lesson-hour-wheel').focus({preventScroll:true});
   }else lessonTimeInput.focus({preventScroll:true});
 }
+function readLessonWheelTime(){
+  const hour=timeHour.value;
+  const minute=timeMinute.value;
+  return lessonTimeDraft?.wheelChosen||hour||minute?padTime(hour)+':'+padTime(minute):'';
+}
+function markLessonTimeWheel(){
+  if(!lessonTimeDraft||lessonTimeWheels.hidden)return;
+  lessonTimeDraft.wheelChosen=true;
+  $id('lesson-time-unset').hidden=true;
+}
+for(const wheel of lessonTimeWheels.querySelectorAll('.picker-wheel')){
+  wheel.addEventListener('click',markLessonTimeWheel);
+  wheel.addEventListener('keydown',event=>{
+    if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].includes(event.key))markLessonTimeWheel();
+  });
+  wheel.addEventListener('scroll',()=>{
+    if(timeHour.value||timeMinute.value)markLessonTimeWheel();
+  },{passive:true});
+}
 function applyLessonTime(time){
   const apply=lessonTimeDraft?.apply;
   if(!apply)return;
@@ -6386,7 +6425,8 @@ function applyLessonTime(time){
   apply(time);
 }
 lessonTimeManual.addEventListener('click',()=>{
-  lessonTimeInput.value=padTime(timeHour.value)+':'+padTime(timeMinute.value);
+  lessonTimeInput.value=readLessonWheelTime();
+  $id('lesson-time-unset').hidden=true;
   lessonTimeWheels.hidden=true;
   lessonTimeManual.hidden=true;
   lessonTimeInput.parentElement.hidden=false;
@@ -6396,7 +6436,7 @@ lessonTimeManual.addEventListener('click',()=>{
 lessonTimeDialog.querySelectorAll('[data-local-close]').forEach(button=>button.addEventListener('click',closeLessonTime));
 bindWideDialog(lessonTimeDialog,closeLessonTime);
 $id('lesson-time-clear').addEventListener('click',()=>{
-  if(!lessonTimeDraft?.inline){applyLessonTime('');return;}
+  $id('lesson-time-unset').hidden=true;
   lessonTimeWheels.hidden=true;
   lessonTimeManual.hidden=true;
   lessonTimeInput.parentElement.hidden=false;
@@ -6408,7 +6448,7 @@ lessonTimeInput.addEventListener('input',()=>{lessonTimeError.textContent='';});
 $id('lesson-time-form').addEventListener('submit',event=>{
   event.preventDefault();
   if(!lessonTimeWheels.hidden){
-    applyLessonTime(padTime(timeHour.value)+':'+padTime(timeMinute.value));
+    applyLessonTime(readLessonWheelTime());
     return;
   }
   const input=lessonTimeInput.value.trim();
@@ -6431,7 +6471,7 @@ function initScheduleTime(prefix,onTimeEdit){
   $id(prefix+'-time-slot').replaceWith(content);
   const trigger=$id(prefix+'-time-trigger');
   const value=$id(prefix+'-schedule-time');
-  function setValue(time){
+  function setValue(time=''){
     value.value=time;
     trigger.textContent=time||'設定時間';
   }
