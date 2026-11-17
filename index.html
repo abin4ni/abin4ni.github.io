@@ -3475,6 +3475,7 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 @media(prefers-reduced-motion:reduce){
   :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{transition:none;}
 }
+#study-batch{width:min(650px,calc(100% - 24px));} #study-batch textarea{width:100%;resize:vertical;} #study-batch-list{list-style:none;padding:0;margin:8px 0;max-height:46dvh;overflow:auto;overscroll-behavior:contain;} #study-batch-list fieldset{min-width:0;border:1px solid var(--border-lt);border-radius:var(--r);padding:10px;margin:8px 2px;} #study-batch-list input{accent-color:var(--accent);} #study-batch-summary,.study-batch-status{color:var(--text-2);} #study-batch .study-error{margin-top:8px;} #study-batch .study-error:empty{margin:0;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -4128,6 +4129,22 @@ onAuthStateChanged(auth,user=>{
 <div class="tablet-overlay" id="tablet-overlay" onclick="closeTabletPanel()"></div>
 
 <!-- Bottom nav (mobile) -->
+<dialog id="study-batch" class="local-dialog" aria-labelledby="study-batch-title">
+  <div class="makeup-head"><h2 id="study-batch-title">批次貼上</h2><button type="button" class="btn popup-close" id="study-batch-close" aria-label="關閉批次貼上"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <form id="study-batch-input" class="study-editor">
+    <div class="study-filters"><label class="study-field"><span>科目</span><select id="study-batch-subject" required><option value="">請選擇科目</option><option>國文</option><option>英文</option><option>生物</option><option>普通化學</option><option>有機化學</option></select></label>
+    <label class="study-field"><span>章節（選填）</span><input type="text" id="study-batch-chapter"></label></div>
+    <label class="study-field"><span>JSON 題庫</span><textarea rows="6" id="study-batch-json" required></textarea></label>
+    <details><summary>JSON 範例</summary><textarea aria-label="JSON 範例" id="study-batch-example" rows="2" readonly>[{"question":"「明亮的」英文怎麼說？","answer":"bright"}]</textarea><button type="button" class="btn btn-sand" id="study-batch-copy">複製範例</button></details>
+    <div class="study-actions"><button class="btn btn-primary">預覽</button></div>
+  </form>
+  <p id="study-batch-error" class="study-error" role="alert"></p>
+  <section id="study-batch-preview" hidden>
+    <p id="study-batch-summary" role="status" tabindex="-1"></p>
+    <ol id="study-batch-list"></ol>
+    <div class="study-actions"><button type="button" class="btn btn-sand" id="study-batch-back">返回修改原文</button><button type="button" class="btn btn-primary" id="study-batch-apply">匯入 0 題</button></div>
+  </section>
+</dialog>
 <nav class="bottom-nav" aria-label="主要導覽">
   <button class="bn-btn active" id="bn-course" aria-current="page" onclick="mobileTab('course')">
     <span class="bn-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Zm0 0v12.4"/></svg></span><span class="bn-label">課程</span>
@@ -8207,8 +8224,148 @@ const studyRoom=(()=>{
           '<div class="study-list-buttons">'+action('編輯','edit',false,'data-point="'+p.id+'"')+
           action('刪除','delete',false,'data-point="'+p.id+'"')+'</div></li>';
       }).join('')+'</ul>':'<p class="study-empty">'+(weak?'沒有符合的待加強知識點。':'沒有符合的知識點。')+'</p>')+
-      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):action('新增知識點','add',true))+'</div></div>');
+      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):action('批次貼上','batch')+action('新增知識點','add',true))+'</div></div>');
   }
+  const newPointId=()=>'k-'+Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16).padStart(8,'0')).join('');
+const batchDialog=$id('study-batch');
+  const batchInput=$id('study-batch-input');
+  const batchList=$id('study-batch-list');
+  const batchText=$id('study-batch-json');
+  const batchSubject=$id('study-batch-subject');
+  const batchChapter=$id('study-batch-chapter');
+  const batchError=$id('study-batch-error');
+  const batchApply=$id('study-batch-apply');
+  let batchRows=[],batchOpener=null,batchSaving=false;
+  function closeBatch(){
+    batchDialog.close();
+    batchRows=[];
+    batchInput.reset();
+    batchError.textContent='';
+    batchOpener?.focus({preventScroll:true});
+    batchOpener=null;
+  }
+  function batchStage(preview){
+    batchInput.hidden=preview;
+    $id('study-batch-preview').hidden=!preview;
+    batchError.textContent='';
+    (preview?$id('study-batch-summary'):batchText).focus({preventScroll:true});
+    batchDialog.scrollTop=0;
+  }
+  function openBatch(opener){
+    batchOpener=opener;
+    batchInput.reset();
+    batchSubject.value=filters.subject;
+    batchChapter.value=filters.chapter;
+    showAppDialog(batchDialog,closeBatch);
+    batchStage(false);
+    batchSubject.focus({preventScroll:true});
+  }
+  function batchQuestion(value){return value.normalize('NFC').trim().replace(/\s+/g,' ');}
+  function checkBatch(){
+    const chapter=batchChapter.value.trim();
+    const seen=new Set(data.points.filter(p=>p.subject===batchSubject.value&&p.chapter===chapter).map(p=>batchQuestion(p.question)));
+    let selected=0,valid=0,duplicates=0,invalid=0;
+    for(const row of batchRows){
+      const issues=[];
+      if(!row.question.trim())issues.push('請填寫題目');
+      if(!row.answer.trim())issues.push('請填寫參考答案');
+      for(const key of row.invalid)issues.push(key==='acceptedAnswers'?'acceptedAnswers 須為字串陣列':'欄位 '+key+' 須為字串');
+      const key=batchQuestion(row.question);
+      row.duplicate=!!key&&seen.has(key);
+      row.valid=!issues.length;
+      if(row.valid)seen.add(key);
+      if(row.duplicate)duplicates++;
+      if(row.valid&&!row.duplicate)valid++;
+      if(!row.valid)invalid++;
+      const checked=row.valid&&(row.checked??!row.duplicate);
+      if(checked)selected++;
+      const element=batchList.children[row.index];
+      element.querySelector('input[type=checkbox]').checked=checked;
+      element.querySelector('input[type=checkbox]').disabled=!row.valid;
+      element.querySelector('.study-batch-status').textContent=[...issues,...(row.duplicate?['疑似重複']:[])].join(' · ');
+    }
+    $id('study-batch-summary').textContent='可匯入 '+valid+' 題 · 需修正 '+invalid+' 題 · 疑似重複 '+duplicates+' 題';
+    batchApply.textContent='匯入 '+selected+' 題';
+    batchApply.disabled=!selected||batchSaving;
+    return batchRows.filter(row=>row.valid&&(row.checked??!row.duplicate));
+  }
+  batchInput.addEventListener('submit',event=>{
+    event.preventDefault();
+    let parsed;
+    const raw=batchText.value.trim();
+    const wrapped=raw.match(/^(\x60{3,}|~{3,})[ \t]*(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n\1[ \t]*$/i);
+    try{parsed=JSON.parse(wrapped?wrapped[2]:raw);}
+    catch{batchError.textContent='無法解析 JSON。請貼上完整的 JSON 陣列，或用一對程式碼圍欄包住。';batchText.focus();return;}
+    if(!Array.isArray(parsed)||!parsed.length){batchError.textContent='請貼上至少有一題的 JSON 陣列。';batchText.focus();return;}
+    batchRows=parsed.map((item,index)=>{
+      const value=object(item)?item:{};
+      const invalid=new Set();
+      const row={index,invalid,checked:null};
+      for(const key of ['question','answer','explanation']){
+        const v=value[key];
+        if(Object.hasOwn(value,key)&&!text(v))invalid.add(key);
+        row[key]=text(v)?v:'';
+      }
+      const aliases=value.acceptedAnswers;
+      if(Object.hasOwn(value,'acceptedAnswers')&&(!Array.isArray(aliases)||!aliases.every(text)))invalid.add('acceptedAnswers');
+      row.aliases=Array.isArray(aliases)?aliases.filter(text):[];
+      row.acceptedAnswers=row.aliases.join('\n');
+      return row;
+    });
+    const fields=[['question','題目'],['answer','參考答案'],['explanation','解析'],['acceptedAnswers','其他答案（每行一個）']];
+    batchList.innerHTML=batchRows.map(row=>'<li><fieldset class="study-editor"><legend>第 '+(row.index+1)+' 題</legend>'+
+      '<label><input type="checkbox" aria-label="匯入第 '+(row.index+1)+' 題"> 匯入這題</label>'+
+      '<p class="study-batch-status" role="status"></p>'+fields.map(([key,label])=>
+        '<label class="study-field"><span>'+label+'</span><textarea rows="2" data-batch-field="'+key+'">'+esc(row[key])+'</textarea></label>'
+      ).join('')+'</fieldset></li>').join('');
+    batchStage(true);
+    checkBatch();
+  });
+  batchList.addEventListener('input',event=>{
+    const element=event.target;
+    const row=batchRows[[...batchList.children].indexOf(element.closest('li'))];
+    if(!row)return;
+    const key=element.dataset.batchField;
+    if(key){
+      row[key]=element.value;
+      row.invalid.delete(key);
+      if(key==='acceptedAnswers')row.aliases=element.value.split(/\r?\n/).filter(v=>v.trim());
+      if(key==='question')row.checked=null;
+    }else if(element.type==='checkbox')row.checked=element.checked;
+    checkBatch();
+  });
+  $id('study-batch-back').addEventListener('click',()=>batchStage(false));
+  $id('study-batch-close').addEventListener('click',closeBatch);
+  bindWideDialog(batchDialog,closeBatch);
+  $id('study-batch-copy').addEventListener('click',async()=>{
+    const example=$id('study-batch-example');
+    try{await navigator.clipboard.writeText(example.value);toast('已複製範例','success');}
+    catch{example.focus();example.select();}
+  });
+  batchApply.addEventListener('click',()=>{
+    if(batchSaving||!batchDialog.open)return;
+    const selected=checkBatch();
+    if(!selected.length)return;
+    batchSaving=true;
+    batchApply.disabled=true;
+    const subject=batchSubject.value,chapter=batchChapter.value.trim();
+    const points=selected.map(row=>({id:newPointId(),subject,chapter,question:row.question,answer:row.answer,
+      explanation:row.explanation,accepted:row.aliases}));
+    const next={...data,points:[...data.points,...points]};
+    try{localStorage.setItem(key,JSON.stringify({data:next,session}));}
+    catch{
+      batchSaving=false;
+      batchError.textContent='無法儲存。請檢查瀏覽器儲存空間，再重試匯入。';
+      checkBatch();
+      return;
+    }
+    data=next;
+    batchSaving=false;
+    closeBatch();
+    filters={subject,chapter};
+    go('library');
+    toast('已匯入 '+points.length+' 題','success');
+  });
   function editor(){
     const p=editing?point(editing):null;
     const input=(label,key,area=false,required=false)=>{
@@ -8324,7 +8481,8 @@ const studyRoom=(()=>{
     const button=event.target.closest('[data-study-action]');
     if(!button)return;
     const act=button.dataset.studyAction;
-    if(act==='home')go('home');
+    if(act==='batch')openBatch(button);
+    else if(act==='home')go('home');
     else if(act==='library'||act==='weak')choose(act);
     else if(act==='add'||act==='edit'){
       from=screen;
@@ -8369,7 +8527,7 @@ const studyRoom=(()=>{
         form.querySelector('.study-error').textContent='請填寫科目、問題或提示及參考答案。';
         return;
       }
-      const id=editing||'k-'+Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16).padStart(8,'0')).join('');
+      const id=editing||newPointId();
       const updated={id,subject,question,answer,chapter:values.get('chapter').trim(),explanation:values.get('explanation').trim(),
         accepted:values.get('accepted').split(/\r?\n/).map(v=>v.trim()).filter(Boolean)};
       if(point(id))data.points=data.points.map(p=>p.id===id?updated:p);
