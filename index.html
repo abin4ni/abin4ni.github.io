@@ -6,13 +6,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="課程追蹤">
+<meta name="apple-mobile-web-app-title" content="StudyOS">
 <meta name="theme-color" content="#f6f5f1">
 <!-- PWA Manifest（正式外部檔案，iOS Safari 才能識別並安裝） -->
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" href="./icon-192.png">
-<title>課程進度追蹤</title>
+<title>StudyOS</title>
 <style>
 /* ═══════════════════════════════════════════════════════════════
    Apple-grade UI — 課程進度追蹤
@@ -3206,9 +3206,12 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 /* 課堂列、＋／× 按鈕、手機品牌名稱（只改樣式） */
 #panel-r .day-lesson .day-name{gap:0 8px;}
 #panel-r .day-lesson-number{font-size:.8125rem;line-height:1.4;white-space:nowrap;}
-@media(max-width:370px){
+#panel-r .day-lesson-details{display:contents;}
+@media(max-width:767px){
   #panel-r .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
-  #panel-r .day-lesson .day-lesson-time{grid-column:3;}
+  #panel-r .day-lesson-details{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;min-width:0;}
+  #panel-r .day-lesson-details .day-name{flex:1 1 auto;}
+  #panel-r .day-lesson-details .day-lesson-time{flex:0 0 auto;}
 }
 #wide-calendar-add{
   display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;
@@ -7074,10 +7077,12 @@ function renderDayLesson(ev,subject,lessonNumber){
     <div class="day-card-head">
       <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}，${number}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
       <span class="dot" style="background:${subject.color}"></span>
-      <span class="day-name${ev.done?' is-done':''}">
-        <span class="day-name-text">${name}</span><span class="day-lesson-number">${number}</span>
-      </span>
-      ${ev.time?`<span class="day-lesson-time">${esc(lessonTimeLabel(ev))}</span>`:''}
+      <div class="day-lesson-details">
+        <span class="day-name${ev.done?' is-done':''}">
+          <span class="day-name-text">${name}</span><span class="day-lesson-number">${number}</span>
+        </span>
+        ${ev.time?`<span class="day-lesson-time">${esc(lessonTimeLabel(ev))}</span>`:''}
+      </div>
     </div>
     <div class="day-lesson-actions" role="group" aria-label="${name}的其他操作">
       <button type="button" class="act-btn" data-day-edit="${id}">編輯時間</button>
