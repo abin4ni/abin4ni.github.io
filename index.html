@@ -3196,6 +3196,13 @@ dialog input[type=date],dialog input[type=date]::-webkit-date-and-time-value{tex
 #modal-desc :is(#edit-name,#edit-total,#edit-start){min-width:0;width:100%;min-height:44px;}
 #edit-course-range{display:block;color:var(--text-2);margin-top:8px;}
 .wide-course-row .course-lesson-range{grid-column:1;}
+
+dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!important;}
+#repeat-preview-content{display:flex;flex-direction:column;gap:10px;min-height:0;width:100%;}
+#repeat-preview-content .day-schedule-actions{justify-content:flex-end;flex-shrink:0;}
+#repeat-preview-content #repeat-preview-body{max-height:min(55dvh,560px);}
+#repeat-preview-dates .rp-lessons{display:grid;gap:4px;list-style:none;margin:0;padding:6px 0;}
+#repeat-preview-dates .rp-lessons > li{display:flex;justify-content:space-between;gap:4px 12px;padding:4px 8px;border:0;background:var(--card-2);border-radius:var(--r-xs);}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3736,6 +3743,7 @@ onAuthStateChanged(auth,user=>{
 <dialog class="wide-dialog wide-legacy" id="wide-legacy-confirm" aria-labelledby="confirm-title"></dialog>
 
 <dialog id="repeat-preview" aria-labelledby="repeat-preview-title" aria-describedby="repeat-preview-summary">
+  <div id="repeat-preview-content">
   <div class="makeup-head"><h2 id="repeat-preview-title">預覽排課</h2><button type="button" class="btn popup-close" aria-label="關閉排課預覽" onclick="closeRepeatPreview()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p id="repeat-preview-notice" role="status"></p>
   <p id="repeat-preview-summary"></p>
@@ -3745,8 +3753,9 @@ onAuthStateChanged(auth,user=>{
     <div id="repeat-preview-skipped" class="rp-skipped" hidden></div>
   </div>
   <div class="day-schedule-actions dialog-actions">
-    <button type="button" class="btn btn-sand" id="repeat-preview-cancel" autofocus>取消</button>
+    <button type="button" class="btn btn-sand" id="repeat-preview-cancel">返回調整</button>
     <button type="button" class="btn btn-primary" id="repeat-preview-confirm">確認排課</button>
+  </div>
   </div>
 </dialog>
 
@@ -4863,6 +4872,9 @@ let repeatPreview=null;
 const repeatForm=document.getElementById('repeat-schedule-form');
 const repeatDialog=document.getElementById('repeat-preview');
 const repeatConfirm=document.getElementById('repeat-preview-confirm');
+const repeatContent=document.getElementById('repeat-preview-content');
+let repeatHost=null;
+let repeatHostLabel=null;
 function readRepeatPlan(form){
   return {
     courseId:form.elements['rep-course'].value,
@@ -4957,6 +4969,23 @@ function calculateRepeatBatch({courseId,days,perDay,start,end},skips=[]){
     !added ? (skippedMatches?'符合條件的日期都已跳過。':'這段期間沒有符合所選星期的上課日。') : '';
   return {name:selectedCourse.name,available,dates,added,remaining:available-added,reason,skipped:[...skipSet].sort()};
 }
+function projectRepeatBatch(plan,skips){
+  const batch=calculateRepeatBatch(plan,skips);
+  if(!batch.added)return batch;
+
+  // Match addEvent's ID sequence for ties with existing untimed lessons.
+  let nextId=S.eid;
+  const calendar={...S.calendar};
+  const projected=batch.dates.map(({date,count})=>{
+    const lessons=Array.from({length:count},()=>({id:'e'+nextId++,courseId:plan.courseId,time:''}));
+    calendar[date]=[...(calendar[date]||[]),...lessons];
+    return {date,count,lessons};
+  });
+  const numbers=scheduledLessonNumbers([course(plan.courseId)],calendar);
+  return {...batch,dates:projected.map(({date,count,lessons})=>({
+    date,count,lessons:lessons.map(lesson=>({number:numbers.get(lesson),...lessonTimes(lesson)}))
+  }))};
+}
 function repeatBatchSummary(batch){
   return '本次安排 '+batch.added+' 堂'+(batch.remaining>=1?' · '+remainingCourseText(batch.remaining):'')+(batch.skipped?.length?'（已跳過 '+batch.skipped.length+' 天）':'');
 }
@@ -5000,9 +5029,13 @@ function renderRepeatPreview(batch,notice='',{keepScroll=false}={}){
   document.getElementById('repeat-preview-notice').textContent=notice;
   document.getElementById('repeat-preview-course').textContent=batch.name||'';
   document.getElementById('repeat-preview-summary').textContent=batch.error||
-    repeatBatchSummary(batch)+(batch.reason?'。'+batch.reason:'');
-  document.getElementById('repeat-preview-dates').innerHTML=(batch.dates||[]).map(({date,count})=>
-    '<li><div class="rp-head"><time datetime="'+date+'">'+date+'</time><span>新增 '+count+' 堂</span></div>'+repeatLoadHtml(date,count)+
+    '預計安排 '+batch.added+' 堂 · 截止時剩 '+batch.remaining+' 堂未排'+(batch.reason?'。'+batch.reason:'');
+  document.getElementById('repeat-preview-dates').innerHTML=(batch.dates||[]).map(({date,count,lessons})=>
+    '<li><div class="rp-head"><time datetime="'+date+'">'+date+'</time><span>週'+WDAYS[new Date(date+'T00:00:00Z').getUTCDay()]+'</span></div>'+
+    '<ol class="rp-lessons">'+lessons.map(lesson=>{
+      const time=lessonTimeLabel(lesson);
+      return '<li><span>第 '+lesson.number+' 堂</span>'+(time?'<span>'+esc(time)+'</span>':'')+'</li>';
+    }).join('')+'</ol>'+repeatLoadHtml(date,count)+
     '<div class="rp-tools">'+repeatExamHint(date)+'<button type="button" class="rp-skip" data-rp-skip="'+date+'" aria-label="跳過 '+date+'">跳過這天</button></div></li>'
   ).join('');
   const skipped=batch.skipped||[];
@@ -5018,22 +5051,46 @@ function openRepeatPreview(event){
   event.preventDefault();
   const plan=readRepeatPlan(repeatForm);
   const key=JSON.stringify(plan);
-  if(key===lastRepeatBatch?.key||repeatDialog.open)return;
-  const batch=calculateRepeatBatch(plan);
+  if(key===lastRepeatBatch?.key||repeatPreview)return;
+  const batch=projectRepeatBatch(plan);
   if(batch.error){showRepeatScheduleError(batch.error);return;}
   showRepeatScheduleError('');
   repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips:[]};
   renderRepeatPreview(batch);
-  showAppDialog(repeatDialog,closeRepeatPreview);
+  repeatHost=repeatForm.closest('dialog[open]')||repeatDialog;
+  if(repeatHost===repeatDialog)showAppDialog(repeatDialog,closeRepeatPreview);
+  else{
+    repeatHostLabel=repeatHost.getAttribute('aria-labelledby');
+    repeatHost.setAttribute('aria-labelledby','repeat-preview-title');
+    repeatHost.append(repeatContent);
+    repeatHost.dataset.repeatPreview='';
+    repeatHost.scrollTop=0;
+  }
+  $id('repeat-preview-cancel').focus({preventScroll:true});
 }
-function closeRepeatPreview(){
+function closeRepeatPreview(restoreFocus=true){
+  const host=repeatHost;
+  if(!host)return;
   repeatPreview=null;
-  repeatDialog.close();
+  repeatHost=null;
+  if(host===repeatDialog)repeatDialog.close();
+  else{
+    delete host.dataset.repeatPreview;
+    if(repeatHostLabel)host.setAttribute('aria-labelledby',repeatHostLabel);
+    else host.removeAttribute('aria-labelledby');
+    repeatDialog.append(repeatContent);
+  }
+  repeatHostLabel=null;
+  if(restoreFocus)$id('rep-submit').focus({preventScroll:true});
+}
+function dismissRepeatHost(host,dismiss){
+  if(repeatHost===host)closeRepeatPreview();
+  else dismiss();
 }
 function confirmRepeatSchedule(event){
-  if(!repeatPreview||!repeatDialog.open||repeatConfirm.disabled)return;
+  if(!repeatPreview||!repeatHost?.open||repeatConfirm.disabled)return;
   // A rapid second tap on a refreshed preview must not commit the changed batch.
-  if(event.detail>1||(event.detail>0&&performance.now()<repeatPreview.pointerConfirmAfter))return;
+  if(event.detail>1||performance.now()<repeatPreview.pointerConfirmAfter)return;
   const plan=readRepeatPlan(repeatForm);
   const key=JSON.stringify(plan);
   if(key===lastRepeatBatch?.key){closeRepeatPreview();return;}
@@ -5048,7 +5105,7 @@ function confirmRepeatSchedule(event){
     return;
   }
   const skips=repeatPreview.skips||[];
-  const batch=calculateRepeatBatch(plan,skips);
+  const batch=projectRepeatBatch(plan,skips);
   const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
   if(batchChanged||repeatLoadKey(batch)!==repeatPreview.loadKey){
     repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,pointerConfirmAfter:performance.now()+400};
@@ -5061,12 +5118,12 @@ function confirmRepeatSchedule(event){
   const lessons=new Map();
   lastRepeatBatch={key,message:repeatBatchSummary(batch),courseId:plan.courseId,lessons,count:batch.added};
   repeatForm.elements['rep-submit'].disabled=true;
-  closeRepeatPreview();
+  closeRepeatPreview(false);
   const nextNumber=lessonNumberAllocator(plan.courseId);
-  for(const {date,count} of batch.dates){
+  for(const {date,lessons:planned} of batch.dates){
     const originals=new Map();
-    for(let i=0;i<count;i++){
-      const lesson=addEvent(date,plan.courseId,'','',nextNumber);
+    for(const {time,endTime} of planned){
+      const lesson=addEvent(date,plan.courseId,time,endTime,nextNumber);
       originals.set(lesson.id,{...lesson});
     }
     lessons.set(date,originals);
@@ -5083,14 +5140,14 @@ function updateRepeatConditions(){
   showRepeatScheduleError(wasPreviewing?'排課條件已變更，請重新預覽。':'');
 }
 function changeRepeatSkip(date,skip){
-  if(!repeatPreview||!repeatDialog.open)return;
+  if(!repeatPreview||!repeatHost?.open)return;
   const plan=readRepeatPlan(repeatForm);
   if(JSON.stringify(plan)!==repeatPreview.key)return;
   if(skip&&!repeatPreview.batch.dates.some(d=>d.date===date))return;
   const set=new Set(repeatPreview.skips||[]);
   skip?set.add(date):set.delete(date);
   const skips=[...set].sort();
-  const batch=calculateRepeatBatch(plan,skips);
+  const batch=projectRepeatBatch(plan,skips);
   if(batch.error)return;
   repeatPreview={...repeatPreview,batch,skips,loadKey:repeatLoadKey(batch),pointerConfirmAfter:performance.now()+400,pointerSkipAfter:performance.now()+350};
   renderRepeatPreview(batch,'',{keepScroll:true});
@@ -5108,11 +5165,11 @@ document.getElementById('repeat-preview-body').addEventListener('click',event=>{
   else changeRepeatSkip(b.dataset.rpRestore,false);
 });
 function recheckRepeatPreview(){
-  if(!repeatPreview||!repeatDialog.open)return;
+  if(!repeatPreview||!repeatHost?.open)return;
   const plan=readRepeatPlan(repeatForm);
   if(JSON.stringify(plan)!==repeatPreview.key)return;
   const skips=repeatPreview.skips||[];
-  const batch=calculateRepeatBatch(plan,skips);
+  const batch=projectRepeatBatch(plan,skips);
   if(batch.error)return;
   const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
   if(!batchChanged&&repeatLoadKey(batch)===repeatPreview.loadKey)return;
@@ -5129,7 +5186,7 @@ repeatForm.addEventListener('change',()=>{
 repeatDialog.addEventListener('keydown',event=>event.stopPropagation());
 repeatConfirm.addEventListener('click',confirmRepeatSchedule);
 document.getElementById('repeat-undo').addEventListener('click',undoRepeatSchedule);
-document.getElementById('repeat-preview-cancel').addEventListener('click',closeRepeatPreview);
+document.getElementById('repeat-preview-cancel').addEventListener('click',()=>closeRepeatPreview());
 repeatDialog.addEventListener('cancel',event=>{
   event.preventDefault();
   closeRepeatPreview();
@@ -5549,20 +5606,22 @@ function openWideCourse(id,mode='course'){
     updateRepeatScheduleForm(repeatForm);
   }
   if(!wideCourse.open){
-    showAppDialog(wideCourse,closeWideCourse);
+    showAppDialog(wideCourse,dismissWideCourse);
     wideCourse.scrollTop=0;
   }
   renderCourses();
 }
+function dismissWideCourse(){dismissRepeatHost(wideCourse,closeWideCourse);}
 function closeWideCourse(){
   if(!wideCourse.open)return;
+  if(repeatHost===wideCourse)closeRepeatPreview(false);
   const id=wideCourseId;
   closeExamPicker();
   wideCourseId=null;
   wideCourse.close();
   focusWideCourse(id);
 }
-bindWideDialog(wideCourse,closeWideCourse);
+bindWideDialog(wideCourse,dismissWideCourse);
 wideCourses.addEventListener('click',event=>{
   const row=event.target.closest('[data-wide-course]');
   if(row)openWideCourse(row.dataset.wideCourse);
@@ -6965,11 +7024,11 @@ function compareDayLessons(a,b){
   const firstId=String(a.id),secondId=String(b.id);
   return byTime||firstId.localeCompare(secondId,'en',{numeric:true})||firstId.localeCompare(secondId,'en');
 }
-function scheduledLessonNumbers(subjects){
+function scheduledLessonNumbers(subjects,calendar=S.calendar){
   const next=new Map(subjects.map(c=>[c.id,c.lessonStart??1]));
   const numbers=new Map();
-  for(const date of Object.keys(S.calendar).sort()){
-    const relevant=S.calendar[date].filter(lesson=>next.has(lesson.courseId));
+  for(const date of Object.keys(calendar).sort()){
+    const relevant=calendar[date].filter(lesson=>next.has(lesson.courseId));
     for(const lesson of relevant.sort(compareDayLessons)){
       const number=next.get(lesson.courseId);
       numbers.set(lesson,number);
@@ -7449,7 +7508,9 @@ $id('calendar-jump-form').addEventListener('submit',event=>{
 const phoneCourseDialog=$id('phone-course-dialog');
 let courseDialogOpener=null;
 let calendarCourseFormsMoved=false;
+function dismissPhoneCourse(){dismissRepeatHost(phoneCourseDialog,closePhoneCourse);}
 function closePhoneCourse(){
+  if(repeatHost===phoneCourseDialog)closeRepeatPreview(false);
   phoneCourseDialog.close();
   $id('new-course-form').reset();
   updateNewCourseRange();
@@ -7476,11 +7537,11 @@ function openPhoneCourse(mode,id=''){
     $id('rep-course').value=id;
     updateRepeatConditions();
   }
-  if(!phoneCourseDialog.open)showAppDialog(phoneCourseDialog,closePhoneCourse);
+  if(!phoneCourseDialog.open)showAppDialog(phoneCourseDialog,dismissPhoneCourse);
   phoneCourseDialog.scrollTop=0;
   $id({menu:'phone-manual-open',manual:'inp-name',quick:'quick-input',repeat:'rep-course',existing:'calendar-existing-date'}[mode]).focus();
 }
-bindWideDialog(phoneCourseDialog,closePhoneCourse);
+bindWideDialog(phoneCourseDialog,dismissPhoneCourse);
 phoneCourseDialog.querySelector('[data-local-close]').addEventListener('click',closePhoneCourse);
 for(const [id,mode] of [['phone-course-open','menu'],['phone-manual-open','manual'],['phone-quick-open','quick'],['phone-existing-repeat','repeat']]){
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
