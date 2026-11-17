@@ -3186,6 +3186,11 @@ dialog input[type=date],dialog input[type=date]::-webkit-date-and-time-value{tex
 .cal-cell .cal-tag:has(.cal-tag-time){display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:3px;row-gap:0;}
 .cal-cell .cal-tag .cal-tag-time{display:block;grid-column:1/-1;margin:0;white-space:normal;overflow-wrap:anywhere;line-height:1.2;}
 .week-ev-time{display:block;overflow-wrap:anywhere;white-space:normal;font-variant-numeric:tabular-nums;}
+
+#panel-r .day-lesson .day-name{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;}
+#panel-r .day-lesson .day-name-text{min-width:0;overflow-wrap:anywhere;}
+#panel-r .day-lesson-number{font-size:.75rem;font-weight:500;color:var(--text-2);max-width:100%;}
+#panel-r .day-lesson .day-name.is-done .day-lesson-number{color:inherit;}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -4760,10 +4765,30 @@ function writeLessonTimes(lesson,{time,endTime}){
   if(time&&endTime>time)lesson.endTime=endTime;
   else delete lesson.endTime;
 }
-function addEvent(date,courseId,time='',endTime=''){
+function hasLessonNumber(lesson){
+  return Number.isSafeInteger(lesson.lessonNumber)&&lesson.lessonNumber>0;
+}
+function lessonNumberAllocator(courseId){
+  const subject=course(courseId);
+  const entries=allEntries(courseId);
+  // Legacy entries count toward capacity, but their original numbers are unknown.
+  if(!subject||entries.some(lesson=>!hasLessonNumber(lesson)))return ()=>undefined;
+  const start=subject.lessonStart??1;
+  const end=subject.lessonEnd??(start+subject.total-1);
+  if(!Number.isSafeInteger(start)||start<1||!Number.isSafeInteger(end)||end<start)return ()=>undefined;
+  const used=new Set(entries.map(lesson=>lesson.lessonNumber));
+  let next=start;
+  return ()=>{
+    while(next<=end&&used.has(next))next++;
+    if(next<=end)return next++;
+  };
+}
+function addEvent(date,courseId,time='',endTime='',nextNumber=lessonNumberAllocator(courseId)){
   if(!S.calendar[date])S.calendar[date]=[];
   const lesson={id:`e${S.eid++}`,courseId,done:false};
   writeLessonTimes(lesson,{time,endTime});
+  const number=nextNumber();
+  if(number!==undefined)lesson.lessonNumber=number;
   S.calendar[date].push(lesson);
   invalidateEntriesCache();
   return lesson;
@@ -4831,7 +4856,7 @@ function renderRepeatScheduleResult(){
   document.getElementById('repeat-undo').hidden=!batch?.lessons;
 }
 function matchesRepeatLesson(lesson,original){
-  return original&&lesson.courseId===original.courseId&&sameLessonTimes(lesson,original)&&lesson.done===original.done;
+  return original&&lesson.courseId===original.courseId&&sameLessonTimes(lesson,original)&&lesson.done===original.done&&lesson.lessonNumber===original.lessonNumber;
 }
 function checkRepeatUndoLessons(){
   const recorded=lastRepeatBatch?.lessons;
@@ -5006,10 +5031,11 @@ function confirmRepeatSchedule(event){
   lastRepeatBatch={key,message:repeatBatchSummary(batch),courseId:plan.courseId,lessons,count:batch.added};
   repeatForm.elements['rep-submit'].disabled=true;
   closeRepeatPreview();
+  const nextNumber=lessonNumberAllocator(plan.courseId);
   for(const {date,count} of batch.dates){
     const originals=new Map();
     for(let i=0;i<count;i++){
-      const lesson=addEvent(date,plan.courseId);
+      const lesson=addEvent(date,plan.courseId,'','',nextNumber);
       originals.set(lesson.id,{...lesson});
     }
     lessons.set(date,originals);
@@ -6902,11 +6928,14 @@ document.getElementById('day-events').addEventListener('click',event=>{
 function renderDayLesson(ev,subject){
   const name=esc(subject.name);
   const id=esc(ev.id);
+  const number=hasLessonNumber(ev)?'第 '+ev.lessonNumber+' 堂':'';
   return `<div class="day-card day-lesson ${ev.done?'is-done':''} ${ev.time?'':'is-untimed'}">
     <div class="day-card-head">
-      <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
+      <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}${number?'，'+number:''}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
       <span class="dot" style="background:${subject.color}"></span>
-      <span class="day-name${ev.done?' is-done':''}">${name}</span>
+      <span class="day-name${ev.done?' is-done':''}">
+        <span class="day-name-text">${name}</span>${number?'<span class="day-lesson-number">'+number+'</span>':''}
+      </span>
       ${ev.time?`<span class="day-lesson-time">${esc(lessonTimeLabel(ev))}</span>`:''}
     </div>
     <div class="day-lesson-actions" role="group" aria-label="${name}的其他操作">
