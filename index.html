@@ -3375,6 +3375,55 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 }
 #account-panel .account-theme button[aria-pressed=true]{color:var(--accent-h);}
 @media(prefers-reduced-motion:reduce){.account-theme::before{transition:none;}}
+#study-room[hidden]{display:none;}
+#study-room{width:min(100%,760px);margin-inline:auto;padding:20px 16px 28px;color:var(--text);}
+#study-room h2{font-size:var(--ui-heading);margin:0;}
+#study-room h3{font-size:1rem;margin:0;}
+#study-room .study-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+#study-room .study-local{color:var(--text-3);font-size:var(--ui-caption);margin-bottom:12px;}
+.study-home-actions,.study-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.study-home-actions{margin:16px 0;}
+.study-actions{justify-content:flex-end;margin-top:14px;}
+.study-stats{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--text-2);padding:10px 0;border-bottom:1px solid var(--border-lt);}
+.study-surface{background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);padding:clamp(12px,3vw,22px);}
+.study-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.study-field{display:grid;gap:4px;min-width:0;}
+.study-field span,.study-meta{color:var(--text-2);font-size:var(--ui-caption);}
+.study-field select{appearance:auto;padding-inline:8px;}
+.study-editor{display:grid;gap:10px;}
+.study-editor textarea,.study-answer{width:100%;resize:vertical;}
+.study-list{list-style:none;padding:0;margin:0;}
+.study-list li{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--border-lt);}
+.study-list li:last-child{border:0;}
+.study-list-item{min-width:0;flex:1 1 200px;}
+.study-list-buttons{display:flex;gap:4px;margin-left:auto;}
+.study-list-item h3,.study-copy{overflow-wrap:anywhere;white-space:pre-wrap;}
+.study-copy{margin:8px 0 12px;}
+.study-reference{padding:12px;margin-top:12px;background:var(--card-2);border-radius:var(--r);}
+.study-status{border-radius:var(--r-pill);padding:2px 8px;background:var(--sunken);color:var(--text-2);}
+.study-status.weak{background:var(--warn-bg);color:var(--warn-c);}
+.study-status.mastered{background:var(--done-bg);color:var(--done-c);}
+.study-delete{color:var(--danger-c);}
+.study-empty{color:var(--text-2);padding:12px 0;}
+.study-error{color:var(--danger-c);}
+.study-error:empty{display:none;}
+.study-modes{display:flex;gap:8px 18px;flex-wrap:wrap;border:0;padding:0;margin:0 0 12px;}
+.study-modes label{display:flex;align-items:center;gap:6px;min-height:44px;cursor:pointer;}
+.study-modes input{accent-color:var(--accent);}
+.study-result{display:grid;grid-template-columns:1fr auto;gap:8px 12px;}
+.study-result dt{color:var(--text-2);}
+.study-result dd{font-variant-numeric:tabular-nums;font-weight:600;}
+@media(min-width:768px){
+  .wide-tabs{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .wide-tabs::before{width:calc((100% - 2 * var(--wide-segment-inset)) / 3);}
+  [data-wide-page=study] .wide-tabs{--wide-tab-shift:200%;}
+  [data-wide-page=study] .app-shell{overflow-y:auto!important;}
+  [data-wide-page=study] .layout{height:auto!important;overflow:visible!important;}
+}
+@media(max-width:767px){
+  .bottom-nav::before{width:calc((100% - 10px)/4);}
+  #study-room{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -3514,6 +3563,7 @@ onAuthStateChanged(auth,user=>{
     <nav class="wide-only wide-tabs" aria-label="主要導覽">
       <button type="button" class="btn" data-wide-page-button="calendar" aria-current="page">行事曆</button>
       <button type="button" class="btn" data-wide-page-button="courses">我的課程</button>
+      <button type="button" class="btn" data-wide-page-button="study">學習室</button>
     </nav>
     <div class="header-actions">
       <!-- Auth area -->
@@ -3577,6 +3627,7 @@ onAuthStateChanged(auth,user=>{
 
 <div class="app-shell">
   <div class="layout">
+    <section id="study-room" aria-labelledby="study-heading" hidden></section>
 
     <section class="wide-only" id="wide-courses" hidden inert aria-labelledby="wide-courses-title">
       <div class="wide-course-head">
@@ -3899,6 +3950,7 @@ onAuthStateChanged(auth,user=>{
   <div id="backup-review" hidden>
     <p id="backup-filename"></p>
     <p>匯入會覆蓋現有課程、課表和備忘錄，已登入時也會同步到雲端。</p>
+    <p id="backup-learning-note" hidden>此備份也會覆蓋本機知識庫及練習進度。</p>
   </div>
   <div class="day-schedule-actions dialog-actions">
     <button type="button" class="btn btn-sand" id="backup-cancel">取消</button>
@@ -4034,6 +4086,9 @@ onAuthStateChanged(auth,user=>{
   </button>
   <button class="bn-btn" id="bn-day" onclick="mobileTab('day')">
     <span class="bn-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="m8.3 12.3 2.6 2.6 4.8-5.3"/></svg></span><span class="bn-label">今日</span>
+  </button>
+  <button class="bn-btn" id="bn-study" onclick="mobileTab('study')">
+    <span class="bn-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="4" width="13" height="15" rx="2"/><path d="M4 8v11a3 3 0 0 0 3 3h9m-5-13h5m-5 4h5"/></svg></span><span class="bn-label">學習室</span>
   </button>
 </nav>
 
@@ -4472,7 +4527,7 @@ function showFirebaseSetup(){
 
 // ── Export / Import ───────────────────────────────────────────────
 function exportData(){
-  return JSON.stringify({courses:S.courses,calendar:S.calendar,cid:S.cid,eid:S.eid,colorCursor,notes:S.notes,exportedAt:new Date().toISOString()},null,2);
+  return JSON.stringify({courses:S.courses,calendar:S.calendar,cid:S.cid,eid:S.eid,colorCursor,notes:S.notes,learning:studyRoom.backup(),exportedAt:new Date().toISOString()},null,2);
 }
 function showExport(){
   const url=URL.createObjectURL(new Blob([exportData()],{type:'application/json'}));
@@ -4557,7 +4612,7 @@ async function readBackupFiles(files){
     const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
     if(!Array.isArray(d?.courses)||!d.courses.every(c=>record(c)&&typeof c.id==='string'&&typeof c.name==='string')||
       (d.calendar!=null&&(!record(d.calendar)||!Object.values(d.calendar).every(list=>Array.isArray(list)&&list.every(record))))||
-      (d.notes!=null&&!record(d.notes)))throw new Error('格式錯誤');
+      (d.notes!=null&&!record(d.notes))||(d.learning!==undefined&&!studyRoom.valid(d.learning)))throw new Error('格式錯誤');
   }catch{
     if(version===backupReadVersion)backupError.textContent='無法讀取備份，請選擇有效的 StudyOS JSON 檔案。';
     return;
@@ -4565,6 +4620,7 @@ async function readBackupFiles(files){
   if(version!==backupReadVersion||!backupDialog.open)return;
   pendingBackup=d;
   backupFilename.textContent=file.name;
+  $id('backup-learning-note').hidden=d.learning===undefined;
   backupReview.hidden=false;
   backupConfirm.hidden=false;
 }
@@ -4577,6 +4633,7 @@ backupConfirm.addEventListener('click',()=>{
   updateRepeatScheduleForm(repeatForm);
   renderRepeatScheduleResult();
   S.notes=d.notes||{};
+  if(d.learning!==undefined)studyRoom.restore(d.learning);
   S.cid=d.cid||1;S.eid=d.eid||1;colorCursor=d.colorCursor||0;
   invalidateEntriesCache();
   saveState();render();
@@ -5629,8 +5686,9 @@ function setWidePage(page){
   document.body.dataset.widePage=page;
   calendar.hidden=wide&&!onCalendar;
   calendar.inert=calendar.hidden;
-  courses.hidden=!wide||onCalendar;
+  courses.hidden=!wide||page!=='courses';
   courses.inert=courses.hidden;
+  $id('study-room').hidden=wide?page!=='study':!$id('bn-study').classList.contains('active');
   if(wide&&onCalendar)scroller.scrollTop=wideCalendarScroll;
   for(const button of document.querySelectorAll('[data-wide-page-button]')){
     if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
@@ -5665,6 +5723,7 @@ function mountWideLayout(){
   }
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
   setWidePage(document.body.dataset.widePage);
+  if(!wide&&document.body.dataset.widePage==='study')mobileTab('study');
   render();
   if(wide&&document.body.dataset.widePage==='calendar')document.scrollingElement.scrollTop=wideCalendarScroll;
 }
@@ -5959,11 +6018,12 @@ function mobileTab(tab,dayMode='today'){
   $id('day-panel-close').hidden=!isDetail;
   pr.classList.toggle('mob-active',tab==='day');
   pr.classList.remove('mob-visible');
-  ['bn-course','bn-cal','bn-day'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  $id('study-room').hidden=tab!=='study';
+  ['bn-course','bn-cal','bn-day','bn-study'].forEach(id=>$id(id).classList.remove('active'));
   document.getElementById('bn-'+tab)?.classList.add('active');
   const nav=document.querySelector('.bottom-nav');
-  nav.style.setProperty('--active-tab',String(['course','cal','day'].indexOf(tab)));
-  ['course','cal','day'].forEach(name=>{
+  nav.style.setProperty('--active-tab',String(['course','cal','day','study'].indexOf(tab)));
+  ['course','cal','day','study'].forEach(name=>{
     const button=document.getElementById('bn-'+name);
     if(name===tab)button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
@@ -7940,6 +8000,303 @@ function init(){
   checkIOSInstall();
 
 }
+
+const studyRoom=(()=>{
+  const key='studyos-learning-v1';
+  const subjects=['國文','英文','生物','普通化學','有機化學'];
+  const outcomes={correct:'答對',incorrect:'答錯',partial:'部分答對',missed:'沒答出來',viewed:'直接看答案'};
+  const root=$id('study-room');
+  const fresh=()=>({version:1,points:[],progress:{}});
+  const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+  const text=v=>typeof v==='string';
+  const count=v=>Number.isSafeInteger(v)&&v>=0;
+  function valid(data){
+    if(!object(data)||data.version!==1||!Array.isArray(data.points)||!object(data.progress))return false;
+    const ids=new Set();
+    for(const point of data.points){
+      if(!object(point)||!text(point.id)||!/^k-[a-f0-9]{32}$/.test(point.id)||ids.has(point.id)||!subjects.includes(point.subject)||
+        !['chapter','question','answer','explanation'].every(k=>text(point[k]))||
+        !point.question.trim()||!point.answer.trim()||!Array.isArray(point.accepted)||!point.accepted.every(text))return false;
+      ids.add(point.id);
+    }
+    return Object.entries(data.progress).every(([id,p])=>ids.has(id)&&object(p)&&count(p.attempts)&&
+      count(p.streak)&&p.streak<=2&&p.streak<=p.attempts&&typeof p.weak==='boolean');
+  }
+  let data=fresh(),session=null;
+  try{
+    const stored=JSON.parse(localStorage.getItem(key));
+    if(valid(stored?.data)){
+      data=stored.data;
+      const s=stored.session;
+      if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
+        s.queue.every(id=>data.points.some(p=>p.id===id))&&count(s.index)&&s.index<=s.queue.length&&
+        ['question','revealed','grade','feedback'].includes(s.phase)&&text(s.answer)&&
+        Array.isArray(s.results)&&s.results.every(r=>object(r)&&s.queue.includes(r.id)&&Object.hasOwn(outcomes,r.outcome))){
+        session=s;
+      }
+    }
+  }catch{}
+  let screen=session?(session.index===session.queue.length?'results':'session'):'home';
+  let filters={subject:'',chapter:''};
+  let from='library',editing=null;
+  let setupMode='practice',weakOnly=false;
+  const point=id=>data.points.find(p=>p.id===id);
+  const status=id=>{
+    const p=data.progress[id];
+    if(!p?.attempts)return ['未練習',''];
+    if(p.streak>=2)return ['已掌握','mastered'];
+    return p.weak?['待加強','weak']:['練習中',''];
+  };
+  function persist(){
+    try{localStorage.setItem(key,JSON.stringify({data,session}));}
+    catch{toast('無法儲存學習資料，請確認瀏覽器的儲存空間。','warn');}
+  }
+  function action(label,name,primary=false,attrs=''){
+    return '<button type="button" class="btn '+(primary?'btn-primary':'btn-sand')+'" data-study-action="'+name+'" '+attrs+'>'+label+'</button>';
+  }
+  function draw(title,body,back=true){
+    root.innerHTML='<div class="study-head"><h2 id="study-heading" tabindex="-1">'+title+'</h2>'+
+      (back?action('返回學習室','home'):'')+'</div>'+body;
+  }
+  function go(next){
+    screen=next;
+    render();
+    $id('study-heading').focus({preventScroll:true});
+    root.scrollTop=0;
+    if(!isMobile())root.scrollIntoView({block:'nearest'});
+  }
+  function choose(next){
+    from=next;
+    filters={subject:'',chapter:''};
+    go(next);
+  }
+  function options(items,value,label){
+    return items.map(v=>'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(v||label)+'</option>').join('');
+  }
+  function filterMarkup(){
+    const chapters=[...new Set(data.points.filter(p=>!filters.subject||p.subject===filters.subject).map(p=>p.chapter).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+    return '<div class="study-filters">'+
+      '<label class="study-field"><span>科目</span><select id="study-filter-subject">'+options(['',...subjects],filters.subject,'全部科目')+'</select></label>'+
+      '<label class="study-field"><span>章節</span><select id="study-filter-chapter">'+options(['',...chapters],filters.chapter,'全部章節')+'</select></label></div>';
+  }
+  function filtered(weak){
+    return data.points.filter(p=>(!filters.subject||p.subject===filters.subject)&&
+      (!filters.chapter||p.chapter===filters.chapter)&&(!weak||status(p.id)[1]==='weak'));
+  }
+  function home(){
+    const weak=data.points.filter(p=>status(p.id)[1]==='weak').length;
+    const practiced=data.points.filter(p=>data.progress[p.id]?.attempts).length;
+    const mastered=data.points.filter(p=>status(p.id)[1]==='mastered').length;
+    const resume=session&&session.index<session.queue.length;
+    draw('學習室','<p class="study-local">學習資料儲存在此瀏覽器，可透過資料備份匯出。</p>'+
+      '<div class="study-stats"><span>待加強 <strong>'+weak+'</strong></span><span>已練習 <strong>'+practiced+'／'+data.points.length+'</strong></span><span>已掌握 <strong>'+mastered+'</strong></span></div>'+
+      '<div class="study-home-actions">'+action('開始練習','setup',true)+action('新增知識點','add')+
+      (resume?action('繼續練習','resume'):'')+'</div><div class="study-home-actions">'+action('知識庫','library')+action('待加強','weak')+'</div>',false);
+  }
+  function library(weak){
+    const items=filtered(weak);
+    draw(weak?'待加強':'知識庫','<div class="study-surface">'+filterMarkup()+
+      (items.length?'<ul class="study-list">'+items.map(p=>{
+        const [label,kind]=status(p.id);
+        return '<li><div class="study-list-item"><p class="study-meta">'+esc(p.subject)+(p.chapter?' · '+esc(p.chapter):'')+
+          ' <span class="study-status '+kind+'">'+label+'</span></p><h3>'+esc(p.question)+'</h3></div>'+
+          '<div class="study-list-buttons">'+action('編輯','edit',false,'data-point="'+p.id+'"')+
+          action('刪除','delete',false,'data-point="'+p.id+'"')+'</div></li>';
+      }).join('')+'</ul>':'<p class="study-empty">'+(weak?'沒有符合的待加強知識點。':'沒有符合的知識點。')+'</p>')+
+      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):action('新增知識點','add',true))+'</div></div>');
+  }
+  function editor(){
+    const p=editing?point(editing):null;
+    const input=(label,key,area=false,required=false)=>{
+      const value=esc(key==='accepted'?p?.accepted.join('\n')||'':p?.[key]||'');
+      const attrs=' name="'+key+'"'+(required?' required':'');
+      return '<label class="study-field"><span>'+label+'</span>'+(area?
+        '<textarea'+attrs+' rows="3">'+value+'</textarea>':'<input type="text"'+attrs+' value="'+value+'">')+'</label>';
+    };
+    draw(p?'編輯知識點':'新增知識點','<form id="study-edit" class="study-editor study-surface">'+
+      '<label class="study-field"><span>科目（必填）</span><select name="subject" required>'+options(['',...subjects],p?.subject||'','請選擇科目')+'</select></label>'+
+      input('章節','chapter')+input('問題或提示（必填）','question',true,true)+input('參考答案（必填）','answer',true,true)+
+      input('解析','explanation',true)+input('可接受的其他答案（每行一個）','accepted',true)+
+      '<p class="study-error" role="alert"></p><div class="study-actions">'+action('取消','cancel-edit')+
+      '<button class="btn btn-primary">儲存知識點</button></div></form>');
+  }
+  function setup(){
+    const available=filtered(weakOnly).length;
+    draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+filterMarkup()+
+      '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend>'+
+      ['cards','practice'].map((m,i)=>'<label><input type="radio" name="mode" value="'+m+'"'+(m===setupMode?' checked':'')+'>'+['字卡複習','互動練習'][i]+'</label>').join('')+
+      '</fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
+      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>');
+  }
+  function start(ids,mode){
+    const queue=[...ids];
+    for(let i=queue.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [queue[i],queue[j]]=[queue[j],queue[i]];
+    }
+    session={mode,queue,index:0,results:[],phase:'question',answer:''};
+    persist();
+    go('session');
+  }
+  function record(outcome){
+    if(!session||!['question','grade'].includes(session.phase))return;
+    const id=session.queue[session.index];
+    if(!point(id))return;
+    const p=data.progress[id]||{attempts:0,streak:0,weak:false};
+    p.attempts++;
+    p.streak=outcome==='correct'?Math.min(2,p.streak+1):0;
+    p.weak=p.streak>=2?false:outcome!=='correct'||p.weak;
+    data.progress[id]=p;
+    session.results.push({id,outcome});
+    session.phase='feedback';
+    persist();
+    go('session');
+  }
+  function grade(answer,p){
+    if(!p.accepted.length||answer.includes('\n')||answer.length>120)return null;
+    const eligible=[p.answer,...p.accepted].map(v=>v.trim()).filter(v=>v&&!v.includes('\n')&&v.length<=120);
+    if(!eligible.length)return null;
+    return eligible.some(v=>v===answer||(p.subject==='英文'&&/^[A-Za-z]+$/.test(answer)&&
+      /^[A-Za-z]+$/.test(v)&&/[a-z]/.test(v)&&v.toLowerCase()===answer.toLowerCase()))?'correct':'incorrect';
+  }
+  function play(){
+    const p=point(session?.queue[session.index]);
+    if(!p){go('home');return;}
+    const {mode,index,queue,phase,answer}=session;
+    const cards=mode==='cards';
+    const reference='<div class="study-reference"><h3>參考答案</h3><p class="study-copy">'+esc(p.answer)+'</p>'+
+      (p.explanation?'<h3>解析</h3><p class="study-copy">'+esc(p.explanation)+'</p>':'')+'</div>';
+    let body='<p class="study-meta">'+(index+1)+'／'+queue.length+' · '+esc(p.subject)+(p.chapter?' · '+esc(p.chapter):'')+
+      '</p><h3 class="study-copy">'+esc(p.question)+'</h3>';
+    if(phase==='question'){
+      body+=cards?'<div class="study-actions">'+action('翻面','flip',true)+'</div>':
+        '<form id="study-answer-form"><label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3" required>'+esc(answer)+'</textarea></label>'+
+        '<p class="study-error" role="alert"></p><div class="study-actions">'+action('直接看答案','view')+
+        '<button class="btn btn-primary">送出答案</button></div></form>';
+    }else{
+      if(answer)body+='<p class="study-meta">你的答案</p><p class="study-copy">'+esc(answer)+'</p>';
+      body+=reference;
+      if(phase==='grade')body+='<div class="study-actions">'+action('沒答出來','missed')+action('部分答對','partial')+action('答對','correct',true)+'</div>';
+      else{
+        if(!cards)body+='<p class="study-meta" role="status">'+outcomes[session.results.at(-1).outcome]+'</p>';
+        body+='<div class="study-actions">'+action(index+1===queue.length?'查看結果':'下一題','next',true)+'</div>';
+      }
+    }
+    draw(cards?'字卡複習':'互動練習','<div class="study-surface">'+body+'</div>');
+  }
+  function results(){
+    const r=session?.results||[];
+    const cards=session?.mode==='cards';
+    const weak=r.filter(x=>x.outcome!=='correct').length;
+    draw(cards?'字卡複習完成':'練習結果','<div class="study-surface">'+(cards?
+      '<p>已瀏覽 '+(session?.queue.length||0)+' 張字卡。</p>':
+      '<dl class="study-result">'+Object.entries(outcomes).map(([k,v])=>'<dt>'+v+'</dt><dd>'+r.filter(x=>x.outcome===k).length+'</dd>').join('')+'</dl>')+
+      '<div class="study-actions">'+(weak?action('重練本次待加強','retry',true):'')+'</div></div>');
+  }
+  function render(){
+    if(screen==='home')home();
+    else if(screen==='library'||screen==='weak')library(screen==='weak');
+    else if(screen==='editor')editor();
+    else if(screen==='setup')setup();
+    else if(screen==='session')play();
+    else results();
+  }
+  root.addEventListener('change',event=>{
+    const id=event.target.id;
+    if(id==='study-filter-subject'||id==='study-filter-chapter'){
+      if(id.endsWith('subject'))filters={subject:event.target.value,chapter:''};
+      else filters.chapter=event.target.value;
+      render();
+      $id(id).focus({preventScroll:true});
+    }else if(event.target.name==='mode')setupMode=event.target.value;
+  });
+  root.addEventListener('input',event=>{
+    if(event.target.name==='answer'&&event.target.form?.id==='study-answer-form'){
+      session.answer=event.target.value;
+      persist();
+    }
+  });
+  root.addEventListener('click',event=>{
+    const button=event.target.closest('[data-study-action]');
+    if(!button)return;
+    const act=button.dataset.studyAction;
+    if(act==='home')go('home');
+    else if(act==='library'||act==='weak')choose(act);
+    else if(act==='add'||act==='edit'){
+      from=screen;
+      editing=button.dataset.point||null;
+      go('editor');
+    }else if(act==='cancel-edit')go(from);
+    else if(act==='delete'){
+      const id=button.dataset.point;
+      showConfirm('刪除知識點','此知識點與練習進度將一併刪除。',()=>{
+        data.points=data.points.filter(p=>p.id!==id);
+        delete data.progress[id];
+        if(session?.queue.includes(id))session=null;
+        persist();
+        go(screen);
+      });
+    }else if(act==='setup'||act==='setup-weak'){
+      weakOnly=act==='setup-weak';
+      if(!weakOnly)filters={subject:'',chapter:''};
+      setupMode='practice';
+      go('setup');
+    }else if(act==='resume')go('session');
+    else if(act==='retry'){
+      const ids=session.results.filter(r=>r.outcome!=='correct'&&point(r.id)).map(r=>r.id);
+      if(ids.length)start([...new Set(ids)],'practice');
+    }else if(act==='flip'){
+      session.phase='revealed';persist();go('session');
+    }else if(act==='view'){
+      session.answer='';record('viewed');
+    }else if(act==='next'){
+      session.index++;session.phase='question';session.answer='';
+      persist();
+      go(session.index===session.queue.length?'results':'session');
+    }else if(session?.phase==='grade'&&Object.hasOwn(outcomes,act))record(act);
+  });
+  root.addEventListener('submit',event=>{
+    event.preventDefault();
+    const form=event.target;
+    const values=new FormData(form);
+    if(form.id==='study-edit'){
+      const subject=values.get('subject'),question=values.get('question').trim(),answer=values.get('answer').trim();
+      if(!subjects.includes(subject)||!question||!answer){
+        form.querySelector('.study-error').textContent='請填寫科目、問題或提示及參考答案。';
+        return;
+      }
+      const id=editing||'k-'+Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16).padStart(8,'0')).join('');
+      const updated={id,subject,question,answer,chapter:values.get('chapter').trim(),explanation:values.get('explanation').trim(),
+        accepted:values.get('accepted').split(/\r?\n/).map(v=>v.trim()).filter(Boolean)};
+      if(point(id))data.points=data.points.map(p=>p.id===id?updated:p);
+      else data.points.push(updated);
+      persist();
+      go(from);
+    }else if(form.id==='study-setup'){
+      const ids=filtered(weakOnly).map(p=>p.id);
+      if(ids.length)start(ids,values.get('mode'));
+    }else if(form.id==='study-answer-form'&&session?.phase==='question'){
+      const answer=values.get('answer').trim();
+      if(!answer){form.querySelector('.study-error').textContent='請輸入答案，或直接看參考答案。';return;}
+      session.answer=answer;
+      const result=grade(answer,point(session.queue[session.index]));
+      if(result)record(result);
+      else{session.phase='grade';persist();go('session');}
+    }
+  });
+  render();
+  return {
+    valid,
+    backup:()=>data,
+    restore(newData){
+      data=newData;
+      session=null;
+      persist();
+      screen='home';
+      render();
+    }
+  };
+})();
 
 // 等 DOM 確實就緒才執行
 if(document.readyState==='loading'){
