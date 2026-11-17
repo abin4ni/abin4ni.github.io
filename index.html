@@ -18,7 +18,7 @@ const studyTheme=(()=>{
   function update(){
     const theme=preference==='dark'||preference==='light'?preference:system.matches?'dark':'light';
     document.documentElement.dataset.theme=theme;
-    chromeColor.content=theme==='dark'?'#1b231f':'#f6f5f1';
+    chromeColor.content=theme==='dark'?'#1a1a1c':'#f6f5f1';
     for(const button of document.querySelectorAll('[data-theme-choice]')){
       button.setAttribute('aria-pressed',String(button.dataset.themeChoice===theme));
     }
@@ -3306,29 +3306,29 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 :root{color-scheme:light;}
 :root[data-theme=dark]{
   color-scheme:dark;
-  --bg:#1b231f;
-  --surface:#252f29;
+  --bg:#1a1a1c;
+  --surface:#242426;
   --card:var(--surface);
-  --card-2:#2b3730;
-  --sunken:#313e36;
-  --sunken-h:#3a4a40;
-  --header-bg:rgba(27,35,31,.96);
-  --glass-bg:rgba(37,47,41,.96);
-  --glass-border:rgba(216,232,221,.19);
-  --scrim:rgba(5,9,7,.64);
-  --scrim-lt:rgba(5,9,7,.40);
-  --border:rgba(214,230,220,.26);
-  --border-lt:rgba(214,230,220,.17);
-  --border-strong:rgba(214,230,220,.48);
-  --text:#eff4ef;
-  --text-2:#d5e1d8;
-  --text-3:#b6c6bb;
-  --accent-rgb:135,198,183;
-  --accent:#87c6b7;
-  --accent-h:#a1dacb;
-  --accent-tint:#304941;
-  --nav-bg:#27332c;
-  --nav-sel:#3a5147;
+  --card-2:#2a2a2d;
+  --sunken:#323235;
+  --sunken-h:#3c3c40;
+  --header-bg:rgba(26,26,28,.96);
+  --glass-bg:rgba(36,36,38,.96);
+  --glass-border:rgba(229,229,235,.18);
+  --scrim:rgba(3,3,5,.66);
+  --scrim-lt:rgba(3,3,5,.40);
+  --border:rgba(229,229,235,.25);
+  --border-lt:rgba(229,229,235,.15);
+  --border-strong:rgba(229,229,235,.48);
+  --text:#f1f1f3;
+  --text-2:#d1d1d6;
+  --text-3:#b0b0b8;
+  --accent-rgb:132,190,172;
+  --accent:#84beac;
+  --accent-h:#a1ccbd;
+  --accent-tint:#303d38;
+  --nav-bg:#29292c;
+  --nav-sel:#35463e;
   --success-rgb:140,200,162;
   --success:#8cc8a2;
   --done-bg:#30483a;
@@ -3339,9 +3339,12 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   --danger-c:#ffaaa3;
   --on-accent:#122a23;
   --on-danger:#321a19;
-  --toast-bg:#334239;
+  --toast-bg:#363639;
   --shadow-pop:0 10px 34px rgba(0,0,0,.40);
   background:var(--bg);
+  --elevated:#303033;
+  --field:#222224;
+  --field-border:#707078;
 }
 [data-theme=dark] :is(.btn-primary,.fab-manage,.ib-yes,.day-label-today-badge,.wday-cb:checked+.wday-label,.cal-cell.today .date-num,.wch-day.today-col .wch-date){
   color:var(--on-accent);
@@ -3424,6 +3427,24 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   .bottom-nav::before{width:calc((100% - 10px)/4);}
   #study-room{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;}
 }
+
+[data-theme=dark] :is(#account-panel,#calendar-more-panel,dialog:not(.wide-legacy),.modal,#confirm-dialog,#exam-popover){
+  --surface:var(--elevated);
+  --card:var(--surface);
+}
+[data-theme=dark] :is(#account-panel,#calendar-more-panel,dialog:not(.wide-legacy),.modal,#confirm-dialog){border-color:var(--border);}
+[data-theme=dark] :is(input:is([type=text],[type=number],[type=date]),select:not(.time-sel),textarea,#quick-input,.schedule-time-trigger){
+  background-color:var(--field);border-color:var(--field-border);
+}
+[data-theme=dark] :is(input,select,textarea,[role=listbox]):focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+[data-theme=dark] [aria-invalid="true"]{border-color:var(--danger-c);}
+[data-theme=dark] :is(.cal-tag,.week-ev)[style*="--lesson-color"]{
+  --lesson-bg:color-mix(in srgb,var(--surface),var(--lesson-color) 12%);
+}
+[data-theme=dark] .week-slot-unsched.selected-slot{background:var(--accent-tint);}
+[data-theme=dark] .week-slot-unsched.drag-over{background:var(--nav-sel);}
+[data-theme=dark] .account-theme::before{background:var(--nav-sel);box-shadow:inset 0 0 0 1px var(--border);}
+:root:not([data-theme=dark]) .cal-tag-time{opacity:1;color:var(--text-3);}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -6389,7 +6410,7 @@ function monthMarkup(y,m,slideClass=''){
     const tags=evts.slice(0,3).map(ev=>{
       const c=course(ev.courseId);if(!c)return'';
       const timeStr=ev.time?`<span class="cal-tag-time">${esc(lessonTimeLabel(ev))}</span>`:'';
-      return`<div class="cal-tag${ev.done?' is-done':''}" style="background:${c.color}18">
+      return`<div class="cal-tag${ev.done?' is-done':''}" style="background:var(--lesson-bg,${c.color}18);--lesson-color:${c.color}">
         <span class="cal-tag-dot" style="background:${ev.done?'#b0aea5':c.color}"></span>
         <span class="cal-tag-name" title="${esc(c.name)}">${esc(courseMark(c.name,2))}</span>
         ${timeStr}
@@ -6455,7 +6476,7 @@ function wkEv(ev,date){
   const c=course(ev.courseId);if(!c)return'';
   const time=esc(lessonTimeLabel(ev));
   const lbl=esc(courseMark(c.name,3))+(time?'<span class="week-ev-time">'+time+'</span>':'');
-  return`<div class="week-ev${ev.done?' is-done':''}" style="background:${c.color}18" title="${esc(c.name)}${time?' · '+time:''}" onclick="event.stopPropagation();handleCellClick('${date}')"><span class="dot" style="background:${ev.done?'var(--text-3)':c.color}"></span>${lbl}</div>`;
+  return`<div class="week-ev${ev.done?' is-done':''}" style="background:var(--lesson-bg,${c.color}18);--lesson-color:${c.color}" title="${esc(c.name)}${time?' · '+time:''}" onclick="event.stopPropagation();handleCellClick('${date}')"><span class="dot" style="background:${ev.done?'var(--text-3)':c.color}"></span>${lbl}</div>`;
 }
 
 function activateCalendarDate(event,date){
