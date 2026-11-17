@@ -3096,6 +3096,17 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 #lesson-time-input,#calendar-existing-date{width:100%;}
 #wide-calendar-add{width:44px;padding:0;font-size:1.2rem;}
 #phone-course-dialog .phone-repeat-choice{display:flex;}
+
+#panel-r .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr) auto;}
+#panel-r .day-lesson.is-untimed .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
+#panel-r .day-lesson-time{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-2);white-space:nowrap;}
+#panel-r .day-lesson-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;}
+#panel-r .day-lesson-actions .act-btn{font-weight:500;color:var(--text-2);}
+#panel-r .day-lesson-actions [data-delete-day-lesson]{color:var(--danger-c);}
+#panel-r .day-completed{border-top:1px solid var(--border-lt);}
+#panel-r .day-completed > summary{cursor:pointer;align-content:center;min-height:44px;font-size:14px;font-weight:600;color:var(--text-2);}
+#panel-r .day-completed-list .day-lesson{border-top:1px solid var(--border-lt);}
+#panel-r .day-list-status{padding:12px 4px;margin:0;font-size:14px;color:var(--text-2);}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -6560,6 +6571,36 @@ rescheduleDialog.addEventListener('cancel',event=>{
 rescheduleDialog.addEventListener('keydown',event=>event.stopPropagation());
 document.getElementById('reschedule-cancel').addEventListener('click',()=>closeLessonReschedule());
 document.getElementById('day-events').addEventListener('click',event=>{
+  const check=event.target.closest('[data-day-toggle]');
+  if(check){
+    const list=check.closest('.day-lesson-list');
+    const checks=[...list.querySelectorAll('[data-day-toggle]')];
+    const index=checks.indexOf(check);
+    const neighbor=(checks[index+1]||checks[index-1])?.dataset.dayToggle;
+    const wasDone=check.getAttribute('aria-pressed')==='true';
+    const id=check.dataset.dayToggle;
+    const scroller=usesDayDialog()?wideDay:$id('panel-r');
+    const scrollTop=scroller.scrollTop;
+    const pageScroll=document.scrollingElement.scrollTop;
+    toggleDone(S.selectedDate,id);
+    const dayEvents=$id('day-events');
+    const findCheck=key=>[...dayEvents.querySelectorAll('[data-day-toggle]')]
+      .find(button=>button.dataset.dayToggle===key);
+    const next=findCheck(neighbor)
+      ||dayEvents.querySelector('.day-completed > summary')
+      ||(wasDone?findCheck(id):null)
+      ||$id('day-schedule-open');
+    next.focus({preventScroll:true});
+    scroller.scrollTop=scrollTop;
+    document.scrollingElement.scrollTop=pageScroll;
+    if(next.getClientRects().length)next.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+    return;
+  }
+  const remove=event.target.closest('[data-delete-day-lesson]');
+  if(remove){
+    removeEvent(S.selectedDate,remove.dataset.deleteDayLesson);
+    return;
+  }
   const timeButton=event.target.closest('[data-edit-lesson-time]');
   if(timeButton){
     const date=S.selectedDate;
@@ -6576,6 +6617,24 @@ document.getElementById('day-events').addEventListener('click',event=>{
   const button=event.target.closest('[data-reschedule-event]');
   if(button)openLessonReschedule(button.dataset.rescheduleEvent);
 });
+
+function renderDayLesson(ev,subject){
+  const name=esc(subject.name);
+  const id=esc(ev.id);
+  return `<div class="day-card day-lesson ${ev.done?'is-done':''} ${ev.time?'':'is-untimed'}">
+    <div class="day-card-head">
+      <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
+      <span class="dot" style="background:${subject.color}"></span>
+      <span class="day-name${ev.done?' is-done':''}">${name}</span>
+      ${ev.time?`<span class="day-lesson-time">${esc(ev.time)}</span>`:''}
+    </div>
+    <div class="day-lesson-actions" role="group" aria-label="${name}的其他操作">
+      <button type="button" class="act-btn" data-edit-lesson-time="${id}" aria-haspopup="dialog">${ev.time?'編輯時間':'設定時間'}</button>
+      <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${id}">改期</button>
+      <button type="button" class="act-btn" data-delete-day-lesson="${id}">刪除</button>
+    </div>
+  </div>`;
+}
 
 function renderDayPanel(){
   if(dayScheduleDate){
@@ -6620,73 +6679,28 @@ function renderDayPanel(){
   const dayDone=allEvts.filter(e=>e.done).length;
   const dayRate=dayTotal>0?Math.round(dayDone/dayTotal*100):0;
 
-  const timed=allEvts.filter(e=>e.time).slice().sort((a,b)=>a.time.localeCompare(b.time));
-  const untimed=allEvts.filter(e=>!e.time);
-  const groups={};
-  untimed.forEach(ev=>{if(!groups[ev.courseId])groups[ev.courseId]=[];groups[ev.courseId].push(ev);});
-
-  let courseHtml='';
-
-  timed.forEach(ev=>{
-    const c=course(ev.courseId);if(!c)return;
-    courseHtml+=`<div class="day-card ${ev.done?'is-done':''}">
-      <div class="day-card-head">
-        <button type="button" class="done-check ${ev.done?'checked':''}" onclick="toggleDone('${S.selectedDate}','${ev.id}')" aria-label="完成課堂" aria-pressed="${ev.done}">${ev.done?'✓':''}</button>
-        <span class="dot" style="background:${c.color}"></span>
-        <span class="day-name${ev.done?' is-done':''}">${esc(c.name)}</span>
-      </div>
-      <div class="day-card-tools">
-        <button type="button" class="btn btn-sand" data-edit-lesson-time="${esc(ev.id)}" aria-haspopup="dialog" aria-label="編輯開始時間 ${esc(ev.time)}">${esc(ev.time)}</button>
-        <div class="day-actions">
-          <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${esc(ev.id)}">改期</button>
-          <button class="act-btn" onclick="removeEvent('${S.selectedDate}','${ev.id}')">刪除</button>
-        </div>
-      </div>
-    </div>`;
+  const pending=[];
+  const completed=[];
+  const ordered=[...allEvts].sort((a,b)=>{
+    if(a.time&&b.time)return a.time.localeCompare(b.time);
+    return Number(Boolean(b.time))-Number(Boolean(a.time));
   });
-
-  Object.keys(groups).forEach(cid=>{
-    const c=course(cid);if(!c)return;
-    const items=groups[cid];
-    const doneBefore=Object.entries(S.calendar)
-      .filter(([d])=>d<S.selectedDate)
-      .flatMap(([,evs])=>evs)
-      .filter(e=>e.courseId===cid&&e.done).length;
-    const ls=c.lessonStart??1;
-    const itemsHtml=items.map((ev,idx)=>{
-      const lessonNo=ls+doneBefore+idx;
-      return`<div class="day-group-item ${ev.done?'is-done':''}">
-        <button type="button" class="done-check ${ev.done?'checked':''}" onclick="toggleDone('${S.selectedDate}','${ev.id}')" aria-label="完成課堂" aria-pressed="${ev.done}">${ev.done?'✓':''}</button>
-        <div class="day-group-content">
-          <div class="day-group-controls">
-            <span class="dgi-label ${ev.done?'crossed':''}">課次 ${lessonNo}</span>
-            <div class="dgi-actions">
-              <button type="button" class="act-btn day-reschedule-button" data-reschedule-event="${esc(ev.id)}">改期</button>
-              <button class="act-btn" onclick="removeEvent('${S.selectedDate}','${ev.id}')">刪除</button>
-            </div>
-          </div>
-          <button type="button" class="btn btn-sand" data-edit-lesson-time="${esc(ev.id)}" aria-haspopup="dialog">設定時間</button>
-        </div>
-      </div>`;
-    }).join('');
-    courseHtml+=`<div class="day-group">
-      <div class="day-group-head">
-        <span class="dot" style="background:${c.color}"></span>
-        <span class="day-group-name">${esc(c.name)}</span>
-        <span class="day-group-count">${items.filter(e=>e.done).length}/${items.length} 完成</span>
-      </div>
-      ${itemsHtml}
-    </div>`;
-  });
-
-  if(!courseHtml){
-    courseHtml=`<div class="empty-state"><p>這天還沒有課堂，點「＋安排課程」開始安排。</p></div>`;
+  for(const lesson of ordered){
+    const subject=course(lesson.courseId);
+    if(subject)(lesson.done?completed:pending).push(renderDayLesson(lesson,subject));
   }
+  const keepExpanded=el.dataset.renderedDate===S.selectedDate&&el.querySelector('.day-completed')?.open;
+  el.dataset.renderedDate=S.selectedDate;
+  const status=pending.length?'':`<p class="day-list-status">${completed.length?'當天課程已全部完成。':'這天還沒有課堂。'}</p>`;
+  const doneSection=completed.length?`<details class="day-completed" ${keepExpanded?'open':''}>
+    <summary>已完成（${completed.length}）</summary>
+    <div class="day-lesson-list day-completed-list">${completed.join('')}</div>
+  </details>`:'';
 
   el.innerHTML=`<div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${S.selectedDate===todayStr?'今日課程':'當日課程'}</h3>
-      <div class="day-course-list">${courseHtml}</div>
+      <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
     </section>
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">提醒事項</h3>
