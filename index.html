@@ -3839,6 +3839,104 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   #panel-r .day-heading { flex-wrap: wrap; }
   .wide-course-row :is(strong,span),.study-brief-text { min-inline-size: 0; }
 }
+/* Weekly labels, drop targets and timed lessons share the same grid tracks. */
+.week-wrap {
+  --week-columns: 2.5rem repeat(7,minmax(0,1fr));
+  --week-hour: 3.5rem;
+}
+.week-wrap :is(.week-col-head,.week-unsched-row,.week-hour-grid) {
+  grid-template-columns: var(--week-columns);
+}
+.week-wrap .week-unsched-row { border-bottom: 0; }
+.week-wrap :is(.unsched-lbl,.week-slot-unsched) { border-bottom: 0; }
+.week-wrap .week-unsched-row { padding-bottom: .5rem; }
+.week-hour-grid {
+  position: relative;
+  grid-template-rows: repeat(var(--week-hours),var(--week-hour));
+  border-bottom: 1px solid var(--border-lt);
+}
+.week-wrap :is(.wt-label,.week-slot) {
+  height: var(--week-hour);
+  min-height: 0;
+  border: 0;
+  border-top: 1px solid var(--border-lt);
+}
+.week-wrap .wt-label { top: auto; padding: 0; }
+.wt-label span {
+  position: absolute;
+  top: 0;
+  inset-inline-end: .3rem;
+  transform: translateY(-50%);
+  padding-inline-start: .2rem;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.week-events-layer {
+  position: absolute;
+  grid-column: var(--week-column) / span 1;
+  grid-row: 1 / -1;
+  inset: 0;
+  pointer-events: none;
+}
+.week-wrap .week-ev {
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  line-height: 1.2;
+  text-align: start;
+  color: var(--text);
+}
+.week-wrap .week-ev:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  z-index: 1;
+}
+.week-wrap .week-timed-event {
+  position: absolute;
+  top: var(--week-top);
+  height: var(--week-span);
+  width: calc(var(--week-lane-width) - 2px);
+  inset-inline-start: calc(var(--week-lane-start) + 1px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 0;
+  padding: 2px clamp(2px,.35vw,5px) 0;
+  box-shadow: inset 2px 0 var(--lesson-color);
+  pointer-events: auto;
+}
+.week-ev-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.week-ev-short{display:none;}
+.week-timed-event .week-ev-time {
+  display: flex;
+  flex-wrap: wrap;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.week-timed-event .week-ev-time > span { white-space: nowrap; }
+.week-wrap .week-timed-event.is-start-only { padding-block: 0; font-size: .625rem; }
+.week-timed-event.is-start-only .week-ev-time { flex-wrap: nowrap; }
+body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
+@media (max-width: 767px) {
+  .week-wrap { --week-columns: 2.25rem repeat(7,minmax(0,1fr)); }
+  .week-wrap .week-timed-event[data-week-overlap] { padding-inline: 2px 1px; }
+  .week-timed-event[data-week-overlap] .week-ev-name { display:none; }
+  .week-timed-event[data-week-overlap] .week-ev-short {
+    display:block;
+    font-size:.5625rem;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  .week-timed-event[data-week-overlap] .week-ev-time { display: grid; font-size: .5rem; }
+  .week-timed-event[data-week-overlap] .week-ev-time > span:nth-child(2) { display: none; }
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -6889,43 +6987,115 @@ function weekTitle(first,last){
   const crossYear=sy!==ey;
   return `${crossYear?sy+'/':''}${sm}/${sd}–${crossYear?ey+'/':''}${em}/${ed}`;
 }
+function weekMinute(value){
+  const match=/^(\d{1,2}):([0-5]\d)$/.exec(value||'');
+  if(!match||Number(match[1])>=24)return null;
+  return Number(match[1])*60+Number(match[2]);
+}
+
+function weekTimedLesson(lesson){
+  const start=weekMinute(lesson.time);
+  if(start===null)return null;
+  const end=weekMinute(lesson.endTime);
+  const hasEnd=end!==null&&end>start;
+  return {lesson,start,end:hasEnd?end:start+24,hasEnd};
+}
+
+function weekLessonLanes(lessons){
+  const ordered=lessons.slice().sort((a,b)=>a.start-b.start||b.end-a.end||String(a.lesson.id).localeCompare(String(b.lesson.id)));
+  let group=[],ends=[],groupEnd=-1;
+  const finishGroup=()=>{for(const entry of group)entry.lanes=ends.length;};
+  for(const entry of ordered){
+    if(entry.start>=groupEnd){
+      finishGroup();
+      group=[];
+      ends=[];
+    }
+    let lane=ends.findIndex(end=>end<=entry.start);
+    if(lane<0)lane=ends.length;
+    ends[lane]=entry.end;
+    entry.lane=lane;
+    group.push(entry);
+    groupEnd=Math.max(groupEnd,entry.end);
+  }
+  finishGroup();
+  return ordered;
+}
+
 function weekMarkup(start){
   const weekDays=Array.from({length:7},(_,i)=>addDays(start,i));
   const lessonsByDay=weekDays.map(calendarLessonsForDate);
-  const col='36px repeat(7,minmax(0,1fr))',isTap=!!S.tapCourseId;
-  let headHtml=`<div class="wch-spacer"></div>`;
-  weekDays.forEach((s,i)=>{const d=Number(s.slice(-2));headHtml+=`<div class="wch-day ${s===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${s}，${lessonsByDay[i].length} 堂課" aria-pressed="${s===S.selectedDate}" data-calendar-date="${s}" onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span></button>${examMarkHtml(s)?'<div class="wch-exams">'+examMarkHtml(s)+'</div>':''}</div>`;});
-  let unHtml=`<div class="unsched-lbl" aria-hidden="true"></div>`;
-  weekDays.forEach((s,i)=>{
-    const evts=lessonsByDay[i].filter(e=>!e.time);
-    const cls=['week-slot-unsched',s===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
-    unHtml+=`<div class="${cls}" data-drop-date="${s}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
-  });
+  const timedByDay=lessonsByDay.map(lessons=>lessons.map(weekTimedLesson).filter(Boolean));
+  const timed=timedByDay.flat();
+  const firstHour=Math.min(HOURS[0],...timed.map(entry=>Math.floor(entry.start/60)));
+  const lastHour=Math.min(24,Math.max(HOURS.at(-1)+1,...timed.map(entry=>Math.ceil(entry.end/60))));
+  const firstMinute=firstHour*60,minutes=(lastHour-firstHour)*60;
+  const overhang=Math.max(0,...timed.map(entry=>entry.end-lastHour*60));
+  const isTap=!!S.tapCourseId;
+  let headHtml='<div class="wch-spacer"></div>';
+  let unHtml='<div class="unsched-lbl" aria-hidden="true"></div>';
   let rowsHtml='';
-  const scheduledHours=lessonsByDay.flat().filter(lesson=>lesson.time).map(lesson=>parseInt(lesson.time,10)).filter(hour=>hour>=0&&hour<24);
-  const firstHour=Math.min(HOURS[0],...scheduledHours);
-  const lastHour=Math.max(HOURS.at(-1),...scheduledHours);
-  for(let h=firstHour;h<=lastHour;h++){
-    const t=String(h).padStart(2,'0')+':00';
-    rowsHtml+=`<div class="wt-label">${t}</div>`;
-    weekDays.forEach((s,i)=>{
-      const evts=lessonsByDay[i].filter(e=>e.time&&parseInt(e.time)===h);
-      const cls=['week-slot',s===todayStr?'today-slot':'',s===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
-      rowsHtml+=`<div class="${cls}" data-drop-date="${s}" data-drop-time="${t}" onclick="handleCellClick('${s}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}','${t}')">${evts.map(ev=>wkEv(ev,s)).join('')}</div>`;
-    });
+  weekDays.forEach((date,i)=>{
+    const d=Number(date.slice(-2));
+    const exams=examMarkHtml(date);
+    headHtml+=`<div class="wch-day ${date===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${date}，${lessonsByDay[i].length} 堂課" aria-pressed="${date===S.selectedDate}" data-calendar-date="${date}" onclick="handleCellClick('${date}')" onkeydown="activateCalendarDate(event,'${date}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span></button>${exams?'<div class="wch-exams">'+exams+'</div>':''}</div>`;
+    const untimed=lessonsByDay[i].filter(lesson=>weekMinute(lesson.time)===null);
+    const cls=['week-slot-unsched',date===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
+    unHtml+=`<div class="${cls}" data-drop-date="${date}" onclick="handleCellClick('${date}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${date}','')">${untimed.map(lesson=>wkEv(lesson,date)).join('')}</div>`;
+  });
+  for(let hour=firstHour;hour<lastHour;hour++){
+    const time=String(hour).padStart(2,'0')+':00';
+    rowsHtml+=`<div class="wt-label" data-week-time="${time}"><span>${time}</span></div>`;
+    for(const date of weekDays){
+      const cls=['week-slot',date===todayStr?'today-slot':'',date===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
+      rowsHtml+=`<div class="${cls}" data-drop-date="${date}" data-drop-time="${time}" onclick="handleCellClick('${date}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${date}','${time}')"></div>`;
+    }
   }
-  return `<div class="week-wrap"><div class="week-col-head" style="display:grid;grid-template-columns:${col};">${headHtml}</div><div class="week-scroll"><div class="week-unsched-row" style="grid-template-columns:${col};">${unHtml}</div><div class="week-hour-grid" style="display:grid;grid-template-columns:${col};">${rowsHtml}</div></div></div>`;
+  const layers=timedByDay.map((lessons,i)=>{
+    if(!lessons.length)return '';
+    const events=weekLessonLanes(lessons).map(entry=>wkEv(entry.lesson,weekDays[i],entry,firstMinute,minutes)).join('');
+    return `<div class="week-events-layer" style="--week-column:${i+2}">${events}</div>`;
+  }).join('');
+  return `<div class="week-wrap"><div class="week-col-head">${headHtml}</div><div class="week-scroll"><div class="week-unsched-row">${unHtml}</div><div class="week-hour-grid" style="--week-hours:${lastHour-firstHour};margin-bottom:calc(var(--week-hour) * ${overhang/60})">${rowsHtml}${layers}</div></div></div>`;
 }
 function renderWeekView(){
   $id('cal-title').textContent=weekTitle(S.weekStart,addDays(S.weekStart,6));
   $id('cal-body').innerHTML=weekMarkup(S.weekStart);
 }
 
-function wkEv(ev,date){
-  const c=course(ev.courseId);if(!c)return'';
-  const time=esc(lessonTimeLabel(ev));
-  const lbl=esc(courseMark(c.name,3))+(time?'<span class="week-ev-time">'+time+'</span>':'');
-  return`<div class="week-ev${ev.done?' is-done':''}" style="background:var(--lesson-bg,${c.color}18);--lesson-color:${c.color}" title="${esc(c.name)}${time?' · '+time:''}" onclick="event.stopPropagation();handleCellClick('${date}')"><span class="dot" style="background:${ev.done?'var(--text-3)':c.color}"></span>${lbl}</div>`;
+function wkEv(lesson,date,range,firstMinute,minutes){
+  const subject=course(lesson.courseId);
+  if(!subject)return '';
+  const starts=range?esc(lesson.time):'';
+  const ends=range?.hasEnd?esc(lesson.endTime):'';
+  const time=starts+(ends?'–'+ends:'');
+  const label=esc(subject.name)+(time?' · '+time:'');
+  const position=range?`;--week-top:${(range.start-firstMinute)*100/minutes}%;--week-span:${(range.end-range.start)*100/minutes}%;--week-lane-start:${range.lane*100/range.lanes}%;--week-lane-width:${100/range.lanes}%`:'';
+  const type=range?(range.hasEnd?' week-timed-event':' week-timed-event is-start-only'):'';
+  const lane=range?.lanes>1?' data-week-overlap':'';
+  const timeMarkup=starts?`<span class="week-ev-time"><span>${starts}</span>${ends?`<span>–</span><span>${ends}</span>`:''}</span>`:'';
+  return `<button type="button" class="week-ev${type}${lesson.done?' is-done':''}" data-week-lesson="${esc(lesson.id)}" data-week-date="${date}"${lane}
+    style="background:var(--lesson-bg,${subject.color}18);--lesson-color:${subject.color}${position}" aria-label="${label}" title="${label}" onclick="openWeekLesson(event)">
+    <span class="week-ev-name"><span class="dot" style="background:${lesson.done?'var(--text-3)':subject.color}"></span>${esc(subject.name)}</span>${lane?`<span class="week-ev-short" aria-hidden="true">${esc(courseMark(subject.name,2))}</span>`:''}${timeMarkup}</button>`;
+}
+function openWeekLesson(event){
+  event.stopPropagation();
+  const {weekDate:date,weekLesson:id}=event.currentTarget.dataset;
+  const scheduling=Boolean(S.tapCourseId);
+  if(!scheduling&&usesDayDialog()){
+    dayPanelReturnFocus=()=>{
+      const button=[...$id('cal-body').querySelectorAll('[data-week-lesson]')].find(el=>el.dataset.weekLesson===id&&el.dataset.weekDate===date);
+      (button||$id('vt-week')).focus({preventScroll:true});
+    };
+  }
+  handleCellClick(date);
+  if(scheduling)return;
+  const completion=[...$id('day-events').querySelectorAll('[data-day-toggle]')].find(button=>button.dataset.dayToggle===id);
+  if(completion){
+    const folded=completion.closest('details');
+    if(folded)folded.open=true;
+    completion.focus();
+  }
 }
 
 function activateCalendarDate(event,date){
