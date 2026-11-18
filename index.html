@@ -3474,9 +3474,9 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 /* Shared interface scale. Compact date cells retain their own density. */
 :root {
   --sans: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "LINE Seed TW", "Noto Sans TC", sans-serif;
-  --ui-body: .9375rem;
+  --ui-body: 1rem;
   --ui-title-leading: 1.22;
-  --ui-body-leading: 1.55;
+  --ui-body-leading: 1.58;
   --ui-heading: clamp(1.5rem, 1.2rem + 1vw, 2rem);
   --ui-label: .875rem;
   --ui-caption: .8125rem;
@@ -3502,24 +3502,47 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   --text: #252c28;
   --text-2: #414e47;
   --text-3: #59655e;
+  --ui-section: 1.0625rem;
+  --ui-panel-inset: clamp(1rem,2.8vw,1.5rem);
+  --ui-action-gap: .5rem;
+  --ui-section-leading: 1.4;
+  --ui-caption-leading: 1.45;
+  --ui-menu-inset: .625rem;
+  --ui-focus: var(--accent);
+  --segment-text: var(--text-2);
+  --segment-selected: var(--accent-h);
+  --segment-border: var(--border-lt);
+  --segment-press: var(--sunken-h);
+  --primary-text: #fff;
 }
 :root[data-theme=dark] {
-  --bg: #191a19;
-  --surface: #222422;
-  --card-2: #292c29;
-  --elevated: #303330;
-  --sunken: #303430;
-  --sunken-h: #3b403b;
-  --field: #212421;
-  --header-bg: rgba(25,26,25,.96);
-  --nav-bg: #272a27;
-  --nav-sel: #31463d;
-  --segment-fill: #3a4c43;
-  --accent-tint: #293d34;
-  --text: #f1f3ef;
-  --text-2: #d1d8d2;
-  --text-3: #adb9af;
-  --border-lt: rgba(224,236,225,.13);
+  --bg: #191a1d;
+  --surface: #23252a;
+  --card-2: #2a2d32;
+  --elevated: #34373e;
+  --sunken: #2e3138;
+  --sunken-h: #3a3e47;
+  --field: #23252b;
+  --header-bg: rgba(25,26,29,.97);
+  --nav-bg: #292c33;
+  --nav-sel: #31473f;
+  --segment-fill: #344b42;
+  --accent-tint: #273a35;
+  --text: #f2f3f6;
+  --text-2: #d2d5dc;
+  --text-3: #b3b8c1;
+  --border-lt: rgba(228,233,244,.13);
+  --field-border: #707680;
+  --segment-border: #556d62;
+  --segment-press: #40464f;
+  --segment-text: #c9cdd5;
+  --segment-selected: #c9f7e1;
+  --accent-rgb: 145,230,193;
+  --accent: #91e6c1;
+  --accent-h: #b5f0d6;
+  --on-accent: #142920;
+  --primary-text: var(--on-accent);
+  --border: rgba(228,233,244,.23);
 }
 body { font-size: var(--ui-body); line-height: var(--ui-body-leading); }
 :root { --tracking: 0em; }
@@ -3670,6 +3693,125 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   dialog[data-app-dialog][open]:not(.wide-legacy),dialog[data-app-dialog][open]::backdrop {
     animation: none;
   }
+}
+/* Typography, selection and spacing shared by the four main views. */
+#panel-l .phone-courses-head h2 { font-size: var(--ui-heading); line-height: var(--ui-title-leading); font-weight: 700; }
+#panel-cal .cal-title button,#panel-r #day-label,.wide-course-head h2,#study-room h2 {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+#panel-l .section-label,#panel-r .day-panel-title,#study-room h3 {
+  font-size: var(--ui-section);
+  line-height: var(--ui-section-leading);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+:is(#course-summary,.day-list-status,.study-local,.study-meta,.study-brief-meta,.account-backup-title) {
+  font-size: var(--ui-caption);
+  line-height: var(--ui-caption-leading);
+}
+:is(#course-list .course-name,.wide-course-row strong,#panel-r .day-name-text,.study-subject-grid .memo-card-name) {
+  overflow-wrap: anywhere;
+  line-height: var(--ui-section-leading);
+}
+:is(.wide-course-row,.course-stat,.day-lesson-time,.study-meta,.cal-title) { font-variant-numeric: tabular-nums; }
+#panel-r .day-heading,#study-room .study-head { margin-block-end: var(--sp-3); }
+
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options) {
+  --pill-motion: cubic-bezier(.22,.8,.24,1);
+}
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-moving]::before {
+  transition-timing-function: var(--pill-motion);
+}
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before {
+  box-shadow: inset 0 0 0 1px var(--segment-border);
+}
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button {
+  color: var(--segment-text);
+}
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:is([aria-current=page],[aria-pressed=true]) {
+  color: var(--segment-selected);
+}
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:active {
+  background-color: var(--segment-press);
+  color: var(--text);
+}
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: -2px;
+}
+:where(.btn-primary):not(:disabled) { color: var(--primary-text); }
+[data-theme=dark] :is(.btn-primary,#panel-r #day-schedule-open):not(:disabled):active {
+  background: var(--accent-h);
+  color: var(--primary-text);
+}
+
+#account-panel {
+  width: min(17.5rem,calc(100vw - 1.5rem));
+  max-height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom,0px) - 1.25rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--ui-menu-inset);
+}
+#account-panel .account-identity {
+  padding: var(--sp-2) var(--sp-2) var(--sp-3);
+}
+#account-panel .account-backup-title { margin: var(--sp-2) var(--sp-2) var(--sp-1); }
+#account-panel :is(#account-export,#account-import,#account-settings,#account-login,#account-signout) {
+  min-height: var(--ui-control);
+  padding: var(--sp-2) var(--sp-3);
+  margin: 0;
+  color: var(--text);
+  background: transparent;
+  border-radius: var(--r-sm);
+  font-size: var(--ui-label);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#account-panel #account-login {
+  margin-top: var(--sp-1);
+  color: var(--accent-h);
+  background: var(--accent-tint);
+}
+#account-panel #account-signout { color: var(--danger-c); margin-top: var(--sp-1); }
+#account-panel :is(#account-export,#account-import,#account-settings,#account-login,#account-signout):active { background: var(--sunken-h); }
+#account-panel button:focus-visible { outline: 2px solid var(--ui-focus); outline-offset: -2px; }
+@media (hover: hover) and (pointer: fine) {
+  #account-panel :is(#account-export,#account-import,#account-settings,#account-login,#account-signout):hover { background: var(--sunken); }
+  #account-panel #account-login:hover { background: var(--nav-sel); }
+}
+
+:is(dialog[data-app-dialog][open]:not(.wide-legacy),#confirm-dialog,.modal) {
+  padding: var(--ui-panel-inset);
+}
+:is(dialog[data-app-dialog][open],#confirm-dialog,.modal) :is(.makeup-head,.ed-head,.day-heading) {
+  column-gap: var(--sp-3);
+  margin-block-end: var(--sp-3);
+}
+:is(dialog[data-app-dialog][open],#confirm-dialog,.modal) :is(.makeup-head,.ed-head,.day-heading) > :is(h2,h3) {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+:is(dialog[data-app-dialog][open],#confirm-dialog,.modal) .popup-close { flex: none; }
+:is(#confirm-btns,#exam-popover .pop-row,.dialog-actions):not([hidden]) {
+  gap: var(--ui-action-gap);
+}
+:is(dialog[data-app-dialog][open],.modal) .dialog-actions:not([hidden]) {
+  margin-block-start: var(--sp-4);
+}
+@media (max-width: 420px) {
+  #panel-cal .cal-title { min-inline-size: 0; }
+  #panel-cal .cal-title button { text-align: start; }
+  .bottom-nav .bn-btn { min-inline-size: 0; padding-inline: 2px; }
+  .bottom-nav .bn-label {
+    line-height: 1.25;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+  #panel-r .day-heading { flex-wrap: wrap; }
+  .wide-course-row :is(strong,span),.study-brief-text { min-inline-size: 0; }
 }
 </style>
 <!-- Firebase SDK -->
@@ -8346,8 +8488,16 @@ const pillMotion=(()=>{
     const state=mounted.get(group);
     const selected=group.querySelector('[aria-current=page],[aria-pressed=true],label:has(input:checked)');
     if(!selected||!group.getClientRects().length)return;
-    const frame=group.getBoundingClientRect(),rect=selected.getBoundingClientRect();
-    const values=[rect.left-frame.left-group.clientLeft,rect.top-frame.top-group.clientTop,rect.width,rect.height];
+    // Measure in CSS pixels so an opening popover's scale can't shrink its selection.
+    let values;
+    if(selected.offsetParent===group){
+      values=[selected.offsetLeft,selected.offsetTop,selected.offsetWidth,selected.offsetHeight];
+    }else{
+      const frame=group.getBoundingClientRect(),rect=selected.getBoundingClientRect();
+      const sx=frame.width/group.offsetWidth||1,sy=frame.height/group.offsetHeight||1;
+      values=[(rect.left-frame.left)/sx-group.clientLeft,(rect.top-frame.top)/sy-group.clientTop,rect.width/sx,rect.height/sy];
+      values=values.map(value=>Math.round(value*10)/10);
+    }
     if(!values[2]||!values[3]||values.every((value,i)=>value===state.geometry?.[i]))return;
     // CSS transitions retarget from the current rendered position on each selection.
     group.toggleAttribute('data-pill-moving',animate&&!!state.geometry);
@@ -8369,7 +8519,7 @@ const pillMotion=(()=>{
   });
   return {
     mount(root){
-      for(const [group,observer] of mounted){
+      for(const [group,{observer}] of mounted){
         if(group.isConnected)continue;
         observer.disconnect();
         resize.unobserve(group);
@@ -8379,7 +8529,7 @@ const pillMotion=(()=>{
       for(const group of root.querySelectorAll(selector)){
         if(mounted.has(group))continue;
         const observer=new MutationObserver(()=>update(group,true));
-        mounted.set(group,observer);
+        mounted.set(group,{observer,geometry:null});
         observer.observe(group,{subtree:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
         group.addEventListener('change',()=>update(group,true));
         update(group,false);
