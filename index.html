@@ -3404,11 +3404,37 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-result dt{color:var(--text-2);}
 .study-result dd{font-variant-numeric:tabular-nums;font-weight:600;}
 @media(min-width:768px){
-  .wide-tabs{grid-template-columns:repeat(3,minmax(0,1fr));}
-  .wide-tabs::before{width:calc((100% - 2 * var(--wide-segment-inset)) / 3);}
-  [data-wide-page=study] .wide-tabs{--wide-tab-shift:200%;}
-  [data-wide-page=study] .app-shell{overflow-y:auto!important;}
-  [data-wide-page=study] .layout{height:auto!important;overflow:visible!important;}
+  .wide-tabs{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .wide-tabs::before{width:calc((100% - 2 * var(--wide-segment-inset)) / 4);}
+  [data-wide-page=today] .wide-tabs{--wide-tab-shift:200%;}
+  [data-wide-page=study] .wide-tabs{--wide-tab-shift:300%;}
+  body:is([data-wide-page=study],[data-wide-page=today]) .app-shell{overflow-y:auto!important;}
+  body:is([data-wide-page=study],[data-wide-page=today]) .layout{height:auto!important;overflow:visible!important;}
+  #wide-today:not([hidden]){
+    display:block;
+    width:min(100%,720px);
+    margin-inline:auto;
+    padding:var(--ui-inset);
+  }
+  #wide-today #panel-r{
+    display:block!important;
+    position:static;
+    width:100%;
+    max-width:none;
+    height:auto!important;
+    max-height:none;
+    padding:0;
+    visibility:visible;
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+    overflow:visible!important;
+    background:none;
+    border:0;
+    box-shadow:none;
+  }
+  #wide-today #day-panel-close{display:none;}
+
 }
 @media(max-width:767px){
   .bottom-nav::before{width:calc((100% - 10px)/4);}
@@ -3969,6 +3995,7 @@ onAuthStateChanged(auth,user=>{
     <nav class="wide-only wide-tabs" aria-label="主要導覽">
       <button type="button" class="btn" data-wide-page-button="calendar" aria-current="page">行事曆</button>
       <button type="button" class="btn" data-wide-page-button="courses">我的課程</button>
+      <button type="button" class="btn" data-wide-page-button="today">今日</button>
       <button type="button" class="btn" data-wide-page-button="study">學習室</button>
     </nav>
     <div class="header-actions">
@@ -4018,6 +4045,7 @@ onAuthStateChanged(auth,user=>{
 <div class="app-shell">
   <div class="layout">
     <section id="study-room" aria-labelledby="study-heading" hidden></section>
+    <main class="wide-only" id="wide-today" aria-labelledby="day-label" hidden inert></main>
 
     <section class="wide-only" id="wide-courses" hidden inert aria-labelledby="wide-courses-title">
       <div class="wide-course-head">
@@ -6053,6 +6081,7 @@ function isTablet(){return window.innerWidth>=768&&window.innerWidth<1200;}
 function isMobile(){return window.innerWidth<=767;}
 const $id=id=>document.getElementById(id);
 const wideDay=$id('wide-day');
+const wideToday=$id('wide-today');
 const wideCourse=$id('wide-course-dialog');
 const wideExam=$id('wide-exam-dialog');
 const wideCourses=$id('wide-course-list');
@@ -6075,19 +6104,43 @@ const wideMounts=[
 const quickSection=$id('quick-input').closest('.quick-course-section');
 
 let wideCalendarScroll=0;
+let wideCalendarSelectedDate=null;
 function setWidePage(page){
   const wide=wideMedia.matches;
   const onCalendar=page==='calendar';
+  const onToday=wide&&page==='today';
+  const wasToday=!wideToday.hidden;
   const calendar=$id('panel-cal');
   const courses=$id('wide-courses');
   const scroller=document.scrollingElement;
   if(wide&&!onCalendar&&!calendar.hidden)wideCalendarScroll=scroller.scrollTop;
+  if(onToday&&!wasToday){
+    closeDayPanel();
+    wideCalendarSelectedDate=S.selectedDate;
+    S.selectedDate=todayStr;
+  }else if(wasToday&&!onToday){
+    cancelDaySchedule(false);
+    S.selectedDate=wideCalendarSelectedDate;
+  }
   document.body.dataset.widePage=page;
+  wideToday.hidden=!onToday;
+  wideToday.inert=!onToday;
+  if(wide){
+    const panel=$id('panel-r');
+    const target=onToday?wideToday:wideDay;
+    if(panel.parentElement!==target)target.append(panel);
+    $id('day-panel-close').hidden=!wideDay.open;
+  }
   calendar.hidden=wide&&!onCalendar;
   calendar.inert=calendar.hidden;
   courses.hidden=!wide||page!=='courses';
   courses.inert=courses.hidden;
   $id('study-room').hidden=wide?page!=='study':!$id('bn-study').classList.contains('active');
+  if(onToday){
+    renderDayPanel();
+    if(!wasToday)wideToday.closest('.app-shell').scrollTop=0;
+  }
+  if(wasToday&&wide&&!onToday)renderCalendar();
   if(wide&&onCalendar)scroller.scrollTop=wideCalendarScroll;
   for(const button of document.querySelectorAll('[data-wide-page-button]')){
     if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
@@ -6097,6 +6150,12 @@ function setWidePage(page){
 
 function mountWideLayout(){
   const wide=wideMedia.matches;
+  const activeTab=$id('panel-r').classList.contains('mob-active')?$id('panel-r').dataset.mobileDay:'';
+  let page=document.body.dataset.widePage;
+  if(wide&&activeTab==='today')page='today';
+  else if(wide&&page==='today'&&wideToday.hidden){
+    page=$id('bn-course').classList.contains('active')?'courses':$id('bn-study').classList.contains('active')?'study':'calendar';
+  }
   if(lessonTimeDialog.open)closeLessonTime();
   if(memoDialog.open)closeMemoModal();
   if($id('day-edit-dialog').open)finishDayEdit(false);
@@ -6121,8 +6180,9 @@ function mountWideLayout(){
     $id('phone-repeat-slot').append($id('repeat-schedule-form'));
   }
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
-  setWidePage(document.body.dataset.widePage);
-  if(!wide&&document.body.dataset.widePage==='study')mobileTab('study');
+  setWidePage(page);
+  if(!wide&&page==='study')mobileTab('study');
+  if(!wide&&page==='today')mobileTab('day');
   render();
   if(wide&&document.body.dataset.widePage==='calendar')document.scrollingElement.scrollTop=wideCalendarScroll;
 }
@@ -7777,16 +7837,16 @@ function todayLessonSubjectNames(){
   return [...(S.calendar[todayStr]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
 }
 function studyBriefHTML(){
-  if(S.selectedDate!==todayStr)return '';
-  if(isMobile()&&!document.documentElement.hasAttribute('data-ipad')&&$id('panel-r').dataset.mobileDay==='detail')return '';
+  const panel=$id('panel-r');
+  const onToday=isMobile()?panel.dataset.mobileDay==='today':!wideToday.hidden;
+  if(!onToday||S.selectedDate!==todayStr)return '';
   const brief=studyRoom.todayBrief(todayLessonSubjectNames());
-  if(!brief)return '';
   return `
     <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
       <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
       <div class="study-brief-card">
         <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
-        ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:''}
+        ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
       </div>
     </section>`;
 }
@@ -7798,29 +7858,24 @@ function refreshStudyBrief(){
   const hadFocus=slot.contains(document.activeElement);
   slot.innerHTML=wanted;
   slot.studyBriefMarkup=wanted;
-  if(hadFocus)($id('study-brief-go')||$id('day-label')).focus({preventScroll:true});
+  if(hadFocus)($id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
 }
 function openTodayPractice(){
   if(isMobile())mobileTab('study');
-  else{
-    closeDayPanel();
-    setWidePage('study');
-  }
+  else setWidePage('study');
 }
-function returnToTodayPracticeDay(returnMode){
-  if(isMobile()){
-    S.selectedDate=todayStr;
-    mobileTab('day',returnMode);
-  }
-  else{
-    setWidePage('calendar');
-    selectDate(todayStr,{preserveWeek:true});
-  }
-  ($id('study-brief-go')||$id('day-label')).focus({preventScroll:true});
+function returnToTodayPracticeDay(){
+  if(isMobile())mobileTab('day');
+  else setWidePage('today');
+  ($id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
 }
 $id('day-label').tabIndex=-1;
 $id('day-events').addEventListener('click',event=>{
-  if(event.target.closest('#study-brief-go'))studyRoom.startWeakBrief(todayLessonSubjectNames(),$id('panel-r').dataset.mobileDay==='detail'?'detail':'today');
+  if(event.target.closest('#study-brief-go'))studyRoom.startWeakBrief(todayLessonSubjectNames(),'today');
+  else if(event.target.closest('#study-brief-library')){
+    openTodayPractice();
+    studyRoom.openHome();
+  }
 });
 
 function renderDayPanel(){
@@ -8102,7 +8157,8 @@ function dropWithAnimation(cellEl,date,time){
 
 // ── Keyboard navigation ───────────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if(e.defaultPrevented||document.querySelector('dialog[open]')||(!isMobile()&&document.body.dataset.widePage!=='calendar'))return;
+  if(e.defaultPrevented||document.querySelector('dialog[open]'))return;
+  if(isMobile()?$id('panel-r').dataset.mobileDay==='today':document.body.dataset.widePage!=='calendar')return;
   // Only when not typing in an input
   if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
   const sel = S.selectedDate || todayStr;
@@ -9037,7 +9093,7 @@ const batchDialog=$id('study-batch');
     const rec=weakBrief(todayNames);
     if(rec)return {subject:rec.subject,message:(rec.today?'今日科目':'其他科目')+' · '+rec.count+' 題待加強'};
     if(account&&(!account.ready||account.failure||!navigator.onLine))return {message:syncText};
-    return null;
+    return {message:'目前沒有推薦題目',empty:true};
   }
   function startWeakBrief(todayNames,returnMode){
     if(session?.origin==='today'&&session.index<session.queue.length){
@@ -9204,7 +9260,7 @@ const batchDialog=$id('study-batch');
       setupMode='practice';
       go('setup');
     }else if(act==='today-back'){
-      returnToTodayPracticeDay(session.returnMode);
+      returnToTodayPracticeDay();
     }else if(act==='resume')go('session');
     else if(act==='retry'){
       const ids=session.results.filter(r=>r.outcome!=='correct'&&point(r.id)).map(r=>r.id);
@@ -9545,6 +9601,7 @@ const batchDialog=$id('study-batch');
     valid,
     todayBrief,
     startWeakBrief,
+    openHome:()=>go('home'),
     switchAccount:switchLearning,
     backup:()=>account?{...data,syncJournal:account.operations}:data,
     restore(newData){
