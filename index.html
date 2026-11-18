@@ -1700,6 +1700,18 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .day-panel-notes,.day-panel-meta{border-top:1px solid var(--border-lt);padding-top:14px;}
 }
 
+/* 今日備考 (phone 今日 tab only) */
+.study-brief{display:none;}
+@media(max-width:767px){
+  .study-brief{display:flex;}
+  .study-brief-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 14px;
+    background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);}
+  .study-brief-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;}
+  .study-brief-subject{font-size:16px;font-weight:700;color:var(--text);line-height:1.35;overflow-wrap:anywhere;}
+  .study-brief-meta{font-size:12px;color:var(--text-3);line-height:1.4;}
+  .study-brief-go{flex:none;min-height:44px;white-space:nowrap;}
+}
+
 /* Date-detail scheduling is available at every viewport width. */
 .day-schedule-entry{display:block;margin-bottom:18px;}
   #day-schedule-form{margin-top:10px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);}
@@ -7468,6 +7480,38 @@ function renderDayLesson(ev,subject,lessonNumber){
   </div>`;
 }
 
+// ── 今日備考 (phone) ──────────────────────────────────────────────
+let lastStudyBriefHTML='';
+function todayLessonSubjectNames(){
+  return [...(S.calendar[todayStr]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
+}
+function studyBriefHTML(){
+  lastStudyBriefHTML='';
+  if(!isMobile()||S.selectedDate!==todayStr||$id('panel-r').dataset.mobileDay==='detail')return '';
+  const rec=studyRoom.weakBrief(todayLessonSubjectNames());
+  if(!rec)return '';
+  lastStudyBriefHTML=`
+    <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
+      <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
+      <div class="study-brief-card">
+        <div class="study-brief-text"><span class="study-brief-subject">${esc(rec.subject)}</span><span class="study-brief-meta">${rec.today?'今日科目':'其他科目'} · ${rec.count} 題待加強</span></div>
+        <button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">開始複習</button>
+      </div>
+    </section>`;
+  return lastStudyBriefHTML;
+}
+function refreshStudyBrief(){
+  const pr=$id('panel-r');
+  if(!isMobile()||!pr.classList.contains('mob-active')||pr.dataset.mobileDay==='detail')return;
+  const before=lastStudyBriefHTML;
+  const wanted=studyBriefHTML();
+  if(wanted!==before)renderDayPanel();
+}
+$id('day-events').addEventListener('click',event=>{
+  if(!event.target.closest('#study-brief-go'))return;
+  studyRoom.startWeakBrief(todayLessonSubjectNames());
+});
+
 function renderDayPanel(){
   if(dayScheduleDate){
     if((S.selectedDate||todayStr)!==dayScheduleDate)cancelDaySchedule();
@@ -7531,7 +7575,7 @@ function renderDayPanel(){
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${S.selectedDate===todayStr?'今日課程':'當日課程'}</h3>
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
-    </section>
+    </section>${studyBriefHTML()}
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">提醒事項</h3>
       <div id="day-course-memos"></div>
@@ -8629,6 +8673,36 @@ const batchDialog=$id('study-batch');
     persist();
     go('session');
   }
+  function weakBrief(todayNames=[]){
+    const subjects=subjectNames();
+    const weakIds=name=>data.points.filter(p=>p.subject===name&&status(p.id)[1]==='weak')
+      .sort((a,b)=>(data.progress[a.id]?.streak||0)-(data.progress[b.id]?.streak||0)).map(p=>p.id);
+    const pick=(names,today)=>{
+      let best=null;
+      for(const name of names){
+        const ids=weakIds(name);
+        if(ids.length&&(!best||ids.length>best.all))best={subject:name,all:ids.length,ids:ids.slice(0,5),today};
+      }
+      return best&&{subject:best.subject,ids:best.ids,count:best.ids.length,today:best.today};
+    };
+    const todays=[...new Set(todayNames.map(n=>String(n).trim().normalize('NFC')))].filter(n=>subjects.includes(n));
+    return pick(todays,true)||pick(subjects,false);
+  }
+  function startWeakBrief(todayNames){
+    const rec=weakBrief(todayNames);
+    if(!rec)return false;
+    if(session&&session.index<session.queue.length){
+      showConfirm('已有進行中的練習','目前有一組尚未完成的練習，請先繼續或完成它，再開始今日備考。',()=>{
+        mobileTab('study');
+        go('session');
+      },'繼續練習');
+      return false;
+    }
+    mobileTab('study');
+    start(rec.ids,'practice');
+    return true;
+  }
+  function briefChanged(){if(typeof refreshStudyBrief==='function')refreshStudyBrief();}
   function record(outcome){
     if(!session||!['question','grade'].includes(session.phase))return;
     const id=session.queue[session.index];
@@ -8921,6 +8995,7 @@ const batchDialog=$id('study-batch');
       if(screen==='session'||screen==='results')screen='subject';
     }
     if(!['editor','chapters','new-subject','session'].includes(screen)&&!batchDialog.open)render();
+    briefChanged();
   }
   async function flushLearning(){
     const state=account;
@@ -9027,6 +9102,7 @@ const batchDialog=$id('study-batch');
     }
     lastSaved=structuredClone(data);
     render();
+    briefChanged();
   }
   window.addEventListener('storage',event=>{
     const state=account;
@@ -9047,6 +9123,8 @@ const batchDialog=$id('study-batch');
   render();
   return {
     valid,
+    weakBrief,
+    startWeakBrief,
     switchAccount:switchLearning,
     backup:()=>account?{...data,syncJournal:account.operations}:data,
     restore(newData){
