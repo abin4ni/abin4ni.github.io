@@ -14,5 +14,5 @@
 ## 待驗證與下一步
 
 - 用 iPhone、iPad 實機複查今日備考的入口、續答和返回。
-- 正式 Firebase 的學習同步尚未驗證。先取得 coursesplan-211e8 預設資料庫的 Console 完整生效規則，對照 firestore-learning.rules、課表權限與學習操作集合的查詢、首次寫入及重送。正式環境的失敗原因仍待定位。
+- 正式 Firebase 的學習同步尚未驗證。先取得 coursesplan-211e8 預設資料庫的 Console 完整生效規則，對照 firestore-learning.rules、課表權限與學習操作集合的查詢、首次寫入及重送。本輪用內建瀏覽器開啟 Console 與正式 StudyOS，兩者都需要登入。正式 UID、讀寫錯誤碼、完整規則及失敗根因仍待確認。
 - 用正式環境測試帳號驗證跨瀏覽器讀寫、離線補送與去重、帳號隔離及課表同步。若需修改規則，先交付可審查的合併版本。
