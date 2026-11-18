@@ -1050,27 +1050,9 @@ input:focus,select:focus{
 
 /* ── Auth bar ── */
 .auth-area{display:flex;align-items:center;gap:7px;}
-.auth-btn{
-  display:flex;align-items:center;gap:6px;
-  font-family:var(--sans);font-size:12px;font-weight:500;
-  padding:6px 13px;border:1px solid rgba(0,0,0,.15);border-radius:980px;
-  background:var(--card);color:var(--text-2);cursor:pointer;
-  transition:all .15s var(--ease);white-space:nowrap;
-  box-shadow:var(--shadow-sm);
-}
-.auth-btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 2px 8px rgba(var(--accent-rgb),.2);}
-.user-chip{display:flex;align-items:center;gap:6px;}
-.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.8);box-shadow:var(--shadow-sm);}
-.user-name{font-size:12px;font-weight:500;color:var(--text-2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.signout-btn{
-  background:none;border:none;font-size:11px;color:var(--text-3);
-  cursor:pointer;padding:3px 6px;border-radius:980px;
-  font-family:var(--sans);transition:all .15s;
-}
-.signout-btn:hover{color:var(--danger-c);background:var(--danger-bg);}
 .sync-status{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-3);}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-@media(max-width:600px){.user-name,.sync-status{display:none;}}
+@media(max-width:600px){.sync-status{display:none;}}
 
 /* ── Course list collapse ── */
 .course-list-footer{display:flex;justify-content:center;margin-top:6px;}
@@ -1554,7 +1536,7 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .wday-cb:checked+.wday-label{box-shadow:none;transform:none;}
 
 /* ── Buttons ── */
-.btn,.auth-btn,.act-btn,.signout-btn,.install-banner-btns button,.vt-btn,.course-expand-btn,.cal-nav button{border-radius:var(--r-btn);}
+.btn,.act-btn,.install-banner-btns button,.vt-btn,.course-expand-btn,.cal-nav button{border-radius:var(--r-btn);}
 .view-toggle{border-radius:calc(var(--r-btn) + 3px);}
 .btn:hover{opacity:1;transform:none;}
 .btn:active{transform:scale(.98) !important;}
@@ -1562,8 +1544,6 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .btn-primary:hover{background:var(--accent-h);opacity:1;}
 .btn-sand{background:var(--sunken);color:var(--text-2);}
 .btn-sand:hover{background:var(--sunken-h);color:var(--text);}
-.auth-btn{box-shadow:none;border-color:var(--border);}
-.auth-btn:hover{box-shadow:none;background:var(--accent-tint);}
 .act-btn{background:var(--sunken);}
 .act-btn:hover{background:var(--sunken-h);}
 .vt-btn.active{box-shadow:var(--shadow-sm);}
@@ -1635,7 +1615,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 @media(max-width:420px){
   .header-row{gap:8px;padding:4px 10px;}
   .header-actions{gap:4px;}
-  .auth-btn{padding-inline:8px;}
 }
 
 /* ═══ Phase 2-1 · Course card refinements (CSS only) ═══════════════
@@ -1851,7 +1830,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 }
 
 /* Shared touch layout. Desktop keeps its existing grid and floating detail panel. */
-.auth-short-label,.course-edit-text,.tablet-course-heading{display:none;}
+.course-edit-text,.tablet-course-heading{display:none;}
 .day-name.is-done{text-decoration:line-through;opacity:.5;}
 @media(width < 1200px){
   .panel-l,.panel-r,.cal-panel,#memo-modal,#reschedule-dialog,#repeat-preview{
@@ -1952,8 +1931,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .day-memo-wrap .memo-preview-row{padding-block:4px;}
 }
 @media(max-width:767px){
-  .auth-full-label{display:none;}
-  .auth-short-label{display:inline;}
   .header-row{padding-inline:12px;gap:8px;}
   .app-header h1{min-width:0;line-height:1.25;}
   .panel-l,.panel-r{padding:16px 14px 20px;}
@@ -2262,8 +2239,8 @@ body{font-size:.9375rem;line-height:1.5;letter-spacing:normal;}
 .header-row h1{display:flex;align-items:center;gap:7px;white-space:nowrap;}
 .header-row h1 .ui-icon{color:var(--accent-h);}
 .header-row .header-actions{gap:6px;}
-.header-actions .btn,.header-actions .auth-btn,.signout-btn{font-size:var(--ui-caption);box-shadow:none;}
-.btn,.auth-btn,.signout-btn,.course-expand-btn,.cal-nav button,.fab-manage{
+.header-actions .btn{font-size:var(--ui-caption);box-shadow:none;}
+.btn,.course-expand-btn,.cal-nav button,.fab-manage{
   border-radius:var(--r-pill);font-weight:600;
 }
 .btn:not(.btn-xs){min-height:var(--ui-control);padding:8px 14px;font-size:var(--ui-label);line-height:1.35;}
@@ -2446,7 +2423,7 @@ input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focu
   .header-row{padding-inline:10px;gap:4px;}
   .header-row h1{font-size:.875rem;}
   .header-row .header-actions{gap:3px;}
-  .header-actions .btn,.header-actions .auth-btn{min-height:36px;padding-inline:7px;font-size:.75rem;}
+  .header-actions .btn{min-height:36px;padding-inline:7px;font-size:.75rem;}
   .header-row .ui-icon{width:15px;height:15px;}
   .panel-l,.panel-r{padding:var(--sp-4) var(--sp-3) var(--sp-6);}
   .cal-head{padding:12px;grid-template-columns:minmax(0,1fr) minmax(134px,1fr);}
@@ -2462,7 +2439,7 @@ input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focu
   .course-card .course-actions{gap:2px;}
 }
 @media(max-width:359px){
-  .header-row h1 .ui-icon,.header-actions .auth-btn .ui-icon{display:none;}
+  .header-row h1 .ui-icon{display:none;}
   .cal-head .cal-title{font-size:1.0625rem;}
   .cal-nav button{min-width:40px;width:40px;}
   .cal-nav .jump-today{width:44px;}
@@ -2747,8 +2724,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   .header-row :is(.wide-tabs,.header-actions) button{min-height:var(--wide-header-target);}
   .app-header .wide-brand{display:inline;}
   .app-header .phone-brand,.app-header .progress-track,
-  .header-actions>:not(.auth-area),#auth-logged-in>.sync-status,#auth-logged-in>.user-chip,
-  #auth-logged-in>.signout-btn,.app-header .phone-header-action{display:none!important;}
+  .header-actions>:not(.auth-area),.app-header .phone-header-action{display:none!important;}
   .app-header .header-actions{justify-self:end;}
   .wide-tabs{
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:relative;isolation:isolate;
@@ -2952,7 +2928,7 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 }
 #account-panel button{display:block;width:100%;text-align:left;margin-top:2px;}
 #account-panel .account-signout{color:var(--danger-c);margin-top:8px;}
-#account-panel .account-signout[hidden]{display:none;}
+#account-panel button[hidden]{display:none;}
 .account-identity{padding:5px 8px 10px;border-bottom:1px solid var(--border-lt);overflow-wrap:anywhere;}
 .account-identity .sync-status{margin-top:4px;display:flex;}
 #account-name{display:block;font-weight:600;}
@@ -2960,7 +2936,6 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 #account-panel[hidden]{display:none;}
 .account-backup-title{margin:8px 8px 2px;font-size:var(--ui-caption);color:var(--text-3);font-weight:600;}
 @media(max-width:767px){
-  #auth-logged-in>.user-chip,#auth-logged-in>.signout-btn{display:none;}
   #account-toggle{min-height:44px;}
 }
 
@@ -2986,12 +2961,9 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 #backup-import-dialog .day-schedule-actions{justify-content:flex-end;}
 #backup-confirm[hidden]{display:none;}
 
-.phone-only,#account-panel .phone-only{display:none;}
+.phone-only{display:none;}
 @media(max-width:767px){
-  .app-header .header-actions>:not(.auth-area),#auth-logged-out,#auth-logged-in,
-  #account-panel #account-settings{display:none!important;}
-  #account-panel .phone-only{display:block;}
-  #auth-area:has(#account-signout:not([hidden])) #phone-account-login{display:none;}
+  .app-header .header-actions>:not(.auth-area){display:none!important;}
   #panel-cal .cal-head{
     grid-template-columns:auto minmax(0,1fr) auto;gap:4px 6px;padding:8px 10px;
     align-items:center;
@@ -3860,21 +3832,6 @@ onAuthStateChanged(auth,user=>{
     <div class="header-actions">
       <!-- Auth area -->
       <div class="auth-area" id="auth-area">
-        <!-- Logged out -->
-        <div id="auth-logged-out">
-          <button class="auth-btn" onclick="doSignIn()">
-            <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13 5h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4M4 12h10m-4-4 4 4-4 4"/></svg><span class="auth-full-label">Google 登入同步</span><span class="auth-short-label">登入同步</span>
-          </button>
-        </div>
-        <!-- Logged in -->
-        <div id="auth-logged-in" style="display:none;align-items:center;gap:7px;">
-          <div class="sync-status"><span class="sync-dot offline" id="sync-dot"></span><span id="sync-label">同步中…</span></div>
-          <div class="user-chip">
-            <img class="user-avatar" id="user-avatar" src="" alt=""/>
-            <span class="user-name" id="user-name"></span>
-          </div>
-          <button class="signout-btn" onclick="window._fb&&window._fb.signOut()">登出</button>
-        </div>
         <div class="account-controls">
           <button type="button" class="btn" id="account-toggle" aria-label="帳號" aria-expanded="false" aria-controls="account-panel">
             <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
@@ -3888,14 +3845,13 @@ onAuthStateChanged(auth,user=>{
                 <button type="button" data-theme-choice="dark" aria-label="深色" aria-pressed="false" title="深色"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 14.1A8.9 8.9 0 0 1 9.9 3.2 8.9 8.9 0 1 0 20.8 14.1Z"/></svg></button>
               </div>
             </div><div class="sync-status"><span id="account-sync-dot" class="sync-dot offline"></span><span id="account-sync-label" role="status">本機</span></div></div>
-            <button type="button" class="btn phone-only" id="phone-account-login" onclick="closeAccountPanel(true);doSignIn()">Google 登入同步</button>
-            <button type="button" class="btn phone-only" id="phone-account-settings" onclick="closeAccountPanel(true);showFirebaseSetup()">同步設定</button>
             <div role="group" aria-labelledby="account-backup-title">
               <p class="account-backup-title" id="account-backup-title">資料備份</p>
               <button type="button" class="btn" id="account-export">匯出備份</button>
               <button type="button" class="btn" id="account-import">匯入備份</button>
             </div>
             <button type="button" class="btn" id="account-settings">同步設定</button>
+            <button type="button" class="btn" id="account-login">Google 登入同步</button>
             <button type="button" class="btn account-signout" id="account-signout" hidden>登出</button>
           </div>
         </div>
@@ -4513,7 +4469,6 @@ async function flushOfflineQueue() {
 window.addEventListener('online', () => {
   _isOnline = true;
   console.log('[PWA] Back online');
-  updateNetworkBadge(true);
   flushOfflineQueue();
   // 嘗試 Background Sync（部分瀏覽器支援）
   if (_swReg && 'sync' in _swReg) {
@@ -4523,15 +4478,8 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
   _isOnline = false;
   console.log('[PWA] Went offline');
-  updateNetworkBadge(false);
   setSyncStatus('offline');
 });
-
-function updateNetworkBadge(online) {
-  const lbl = document.getElementById('sync-label');
-  if (!lbl) return;
-  if (!online) lbl.textContent = '離線中';
-}
 
 // 3. 安裝橫幅邏輯 ─────────────────────────────────────────────────
 let _deferredPrompt = null;
@@ -4758,13 +4706,7 @@ function loadState(){
 // ── Auth callbacks (called from Firebase module) ──────────────────
 window.onFirebaseLogin=function(user){
   studyRoom.switchAccount(user.uid);
-  // Show logged-in UI
-  document.getElementById('auth-logged-out').style.display='none';
-  const li=document.getElementById('auth-logged-in');li.style.display='flex';
-  document.getElementById('user-name').textContent=user.displayName||user.email;
-  const av=document.getElementById('user-avatar');
-  if(user.photoURL){av.src=user.photoURL;av.style.removeProperty('display');}
-  else av.style.display='none';
+  document.getElementById('account-login').hidden=true;
   const accountPhoto=document.getElementById('account-photo');
   accountPhoto.hidden=!user.photoURL;
   if(user.photoURL)accountPhoto.src=user.photoURL;
@@ -4793,8 +4735,7 @@ window.onFirebaseLogin=function(user){
 };
 window.onFirebaseLogout=function(){
   studyRoom.switchAccount(null);
-  document.getElementById('auth-logged-out').style.display='';
-  document.getElementById('auth-logged-in').style.display='none';
+  document.getElementById('account-login').hidden=false;
   document.getElementById('account-name').textContent='尚未登入';
   document.getElementById('account-photo').hidden=true;
   document.getElementById('account-signout').hidden=true;
@@ -4803,13 +4744,10 @@ window.onFirebaseLogout=function(){
 };
 
 function setSyncStatus(s){
-  const dot=document.getElementById('sync-dot');
-  const lbl=document.getElementById('sync-label');
-  if(!dot)return;
+  const dot=document.getElementById('account-sync-dot');
+  const lbl=document.getElementById('account-sync-label');
   dot.className='sync-dot '+s;
   lbl.textContent={synced:'已同步 ✓',syncing:'同步中…',offline:'本機',error:'同步失敗'}[s]||'';
-  document.getElementById('account-sync-dot').className=dot.className;
-  document.getElementById('account-sync-label').textContent=lbl.textContent;
 }
 // ── Firebase Setup Guide ──────────────────────────────────────────
 function showFirebaseSetup(){
@@ -6278,7 +6216,7 @@ document.addEventListener('keydown',event=>{
 });
 for(const [id,action] of [
   ['account-export',showExport],['account-import',showImport],['account-settings',showFirebaseSetup],
-  ['account-signout',()=>window._fb?.signOut()],
+  ['account-login',doSignIn],['account-signout',()=>window._fb?.signOut()],
 ]){
   $id(id).addEventListener('click',()=>{closeAccountPanel(true);action();});
 }
@@ -8352,8 +8290,6 @@ function init(){
     globalFill:  ()=>document.getElementById('global-fill'),
     globalPct:   ()=>document.getElementById('global-pct'),
     panelR:      ()=>document.getElementById('panel-r'),
-    syncDot:     ()=>document.getElementById('sync-dot'),
-    syncLabel:   ()=>document.getElementById('sync-label'),
   };
   // Eagerly cache stable elements
   const _d=window._dom;
