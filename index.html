@@ -1700,18 +1700,15 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   .day-panel-notes,.day-panel-meta{border-top:1px solid var(--border-lt);padding-top:14px;}
 }
 
-/* 今日備考 (phone 今日 tab only) */
-.study-brief{display:none;}
+/* 今日備考 */
 .study-brief-summary{margin:0 0 10px;}
-@media(max-width:767px){
-  .study-brief{display:flex;}
-  .study-brief-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 14px;
+.study-brief-slot{display:contents;}
+.study-brief-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 14px;
     background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);}
   .study-brief-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;}
   .study-brief-subject{font-size:16px;font-weight:700;color:var(--text);line-height:1.35;overflow-wrap:anywhere;}
   .study-brief-meta{font-size:12px;color:var(--text-3);line-height:1.4;}
-  .study-brief-go{flex:none;min-height:44px;white-space:nowrap;}
-}
+.study-brief-go{flex:none;min-height:44px;white-space:nowrap;}
 
 /* Date-detail scheduling is available at every viewport width. */
 .day-schedule-entry{display:block;margin-bottom:18px;}
@@ -3557,7 +3554,15 @@ async function smartSignIn(){
   }
 }
 
+const learningOperationsPath='users/{uid}/data/learning/operations';
+const learningOperations=uid=>collection(db,learningOperationsPath.replace('{uid}',()=>uid));
 window._fb={
+  learningInfo:Object.freeze({
+    build:'learning-sync-diagnostics-1',
+    project:firebaseConfig.projectId,
+    database:'(default)',
+    path:learningOperationsPath,
+  }),
   signIn:smartSignIn,
   signOut:()=>signOut(auth),
   saveToCloud:(uid,data)=>setDoc(
@@ -3575,13 +3580,13 @@ window._fb={
       e=>console.error('[Firebase] snapshot error',e)
     );
   },
-  listenLearning:(uid,receive,failed)=>onSnapshot(collection(db,'users',uid,'data','learning','operations'),
+  listenLearning:(uid,receive,failed)=>onSnapshot(learningOperations(uid),
     {includeMetadataChanges:true},snapshot=>{
       receive(snapshot.docs.filter(row=>!row.metadata.hasPendingWrites).map(row=>[row.id,row.data()]),!snapshot.metadata.fromCache);
     },failed),
   writeLearning:(uid,ops)=>{
     const batch=writeBatch(db);
-    for(const [id,op] of ops)batch.set(doc(db,'users',uid,'data','learning','operations',id),op);
+    for(const [id,op] of ops)batch.set(doc(learningOperations(uid),id),op);
     return batch.commit();
   },
   stopListen:()=>{if(_unsubscribe){_unsubscribe();_unsubscribe=null;}},
@@ -7481,36 +7486,55 @@ function renderDayLesson(ev,subject,lessonNumber){
   </div>`;
 }
 
-// ── 今日備考 (phone) ──────────────────────────────────────────────
-let lastStudyBriefHTML='';
+// ── 今日備考 ──────────────────────────────────────────────
 function todayLessonSubjectNames(){
   return [...(S.calendar[todayStr]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
 }
 function studyBriefHTML(){
-  lastStudyBriefHTML='';
-  if(!isMobile()||S.selectedDate!==todayStr||$id('panel-r').dataset.mobileDay==='detail')return '';
-  const rec=studyRoom.weakBrief(todayLessonSubjectNames());
-  if(!rec)return '';
-  lastStudyBriefHTML=`
+  if(S.selectedDate!==todayStr)return '';
+  if(isMobile()&&!document.documentElement.hasAttribute('data-ipad')&&$id('panel-r').dataset.mobileDay==='detail')return '';
+  const brief=studyRoom.todayBrief(todayLessonSubjectNames());
+  if(!brief)return '';
+  return `
     <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
       <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
       <div class="study-brief-card">
-        <div class="study-brief-text"><span class="study-brief-subject">${esc(rec.subject)}</span><span class="study-brief-meta">${rec.today?'今日科目':'其他科目'} · ${rec.count} 題待加強</span></div>
-        <button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">開始複習</button>
+        <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
+        ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:''}
       </div>
     </section>`;
-  return lastStudyBriefHTML;
 }
 function refreshStudyBrief(){
-  const pr=$id('panel-r');
-  if(!isMobile()||!pr.classList.contains('mob-active')||pr.dataset.mobileDay==='detail')return;
-  const before=lastStudyBriefHTML;
+  const slot=$id('study-brief-slot');
+  if(!slot)return;
   const wanted=studyBriefHTML();
-  if(wanted!==before)renderDayPanel();
+  if(slot.studyBriefMarkup===wanted)return;
+  const hadFocus=slot.contains(document.activeElement);
+  slot.innerHTML=wanted;
+  slot.studyBriefMarkup=wanted;
+  if(hadFocus)($id('study-brief-go')||$id('day-label')).focus({preventScroll:true});
 }
+function openTodayPractice(){
+  if(isMobile())mobileTab('study');
+  else{
+    closeDayPanel();
+    setWidePage('study');
+  }
+}
+function returnToTodayPracticeDay(returnMode){
+  if(isMobile()){
+    S.selectedDate=todayStr;
+    mobileTab('day',returnMode);
+  }
+  else{
+    setWidePage('calendar');
+    selectDate(todayStr,{preserveWeek:true});
+  }
+  ($id('study-brief-go')||$id('day-label')).focus({preventScroll:true});
+}
+$id('day-label').tabIndex=-1;
 $id('day-events').addEventListener('click',event=>{
-  if(!event.target.closest('#study-brief-go'))return;
-  studyRoom.startWeakBrief(todayLessonSubjectNames());
+  if(event.target.closest('#study-brief-go'))studyRoom.startWeakBrief(todayLessonSubjectNames(),$id('panel-r').dataset.mobileDay==='detail'?'detail':'today');
 });
 
 function renderDayPanel(){
@@ -7576,7 +7600,7 @@ function renderDayPanel(){
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${S.selectedDate===todayStr?'今日課程':'當日課程'}</h3>
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
-    </section>${studyBriefHTML()}
+    </section><div class="study-brief-slot" id="study-brief-slot"></div>
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">提醒事項</h3>
       <div id="day-course-memos"></div>
@@ -7591,6 +7615,7 @@ function renderDayPanel(){
     </section>
   </div>`;
   renderDayMemo();
+  refreshStudyBrief();
 }
 
 const ghost=document.getElementById('drag-ghost');
@@ -8689,18 +8714,32 @@ const batchDialog=$id('study-batch');
     const todays=[...new Set(todayNames.map(n=>String(n).trim().normalize('NFC')))].filter(n=>subjects.includes(n));
     return pick(todays,true)||pick(subjects,false);
   }
-  function startWeakBrief(todayNames){
+  function todayBrief(todayNames){
+    if(session?.origin==='today'&&session.index<session.queue.length){
+      return {subject:session.subject,resume:true,message:'繼續上次的今日備考'};
+    }
+    const rec=weakBrief(todayNames);
+    if(rec)return {subject:rec.subject,message:(rec.today?'今日科目':'其他科目')+' · '+rec.count+' 題待加強'};
+    if(account&&(!account.ready||account.failure||!navigator.onLine))return {message:syncText};
+    return null;
+  }
+  function startWeakBrief(todayNames,returnMode){
+    if(session?.origin==='today'&&session.index<session.queue.length){
+      openTodayPractice();
+      go('session');
+      return true;
+    }
     const rec=weakBrief(todayNames);
     if(!rec)return false;
     if(session&&session.index<session.queue.length){
       showConfirm('已有進行中的練習','目前有一組尚未完成的練習，請先繼續或完成它，再開始今日備考。',()=>{
-        mobileTab('study');
+        openTodayPractice();
         go('session');
       },'繼續練習');
       return false;
     }
-    mobileTab('study');
-    start(rec.ids,'practice',{origin:'today',subject:rec.subject});
+    openTodayPractice();
+    start(rec.ids,'practice',{origin:'today',subject:rec.subject,returnMode});
     return true;
   }
   function briefChanged(){if(typeof refreshStudyBrief==='function')refreshStudyBrief();}
@@ -8759,7 +8798,7 @@ const batchDialog=$id('study-batch');
     const r=session?.results||[];
     const cards=session?.mode==='cards';
     const weak=r.filter(x=>x.outcome!=='correct').length;
-    const fromToday=session?.origin==='today'&&isMobile();
+    const fromToday=session?.origin==='today';
     draw(cards?'字卡複習完成':'練習結果','<div class="study-surface">'+
       (fromToday?'<p class="study-meta study-brief-summary">今日備考 · '+esc(session.subject||'')+'　完成 '+r.length+' 題</p>':'')+(cards?
       '<p>已瀏覽 '+(session?.queue.length||0)+' 張字卡。</p>':
@@ -8796,7 +8835,7 @@ const batchDialog=$id('study-batch');
     if(!button)return;
     const act=button.dataset.studyAction;
     if(act==='batch'||act==='ai-batch')openBatch(button,act==='ai-batch');
-    else if(act==='sync-retry'&&account)listenLearning(account);
+    else if(act==='sync-retry'&&account)retryLearning(account);
     else if(act==='home')go('home');
     else if(act==='library'||act==='weak'||act==='subject'&&!button.dataset.subject){
       if(act==='library'||act==='weak')filters.chapter='';
@@ -8844,11 +8883,11 @@ const batchDialog=$id('study-batch');
       setupMode='practice';
       go('setup');
     }else if(act==='today-back'){
-      mobileTab('day');
+      returnToTodayPracticeDay(session.returnMode);
     }else if(act==='resume')go('session');
     else if(act==='retry'){
       const ids=session.results.filter(r=>r.outcome!=='correct'&&point(r.id)).map(r=>r.id);
-      if(ids.length)start([...new Set(ids)],'practice',session.origin==='today'?{origin:'today',subject:session.subject}:undefined);
+      if(ids.length)start([...new Set(ids)],'practice',session.origin==='today'?{origin:'today',subject:session.subject,returnMode:session.returnMode}:undefined);
     }else if(act==='flip'){
       session.phase='revealed';persist();go('session');
     }else if(act==='view'){
@@ -8921,6 +8960,29 @@ const batchDialog=$id('study-batch');
     if(line)line.textContent=message;
     const retry=$id('study-sync-retry');
     if(retry)retry.hidden=!failed;
+    briefChanged();
+  }
+  function showLearningOffline(state){
+    showLearningSync(state.pending.length?'學習資料離線待同步':'學習資料離線');
+  }
+  function showLearningFailure(state){
+    if(!navigator.onLine){showLearningOffline(state);return;}
+    const {stage,code}=state.failure;
+    showLearningSync('學習資料同步失敗 · '+stage+'（'+code+'）',true);
+  }
+  function recordLearningFailure(state,stage,error){
+    const code=error?.code||error?.name||'unknown';
+    state.failure={stage,code};
+    console.error('[StudyOS] 學習資料同步失敗',{
+      ...window._fb?.learningInfo,stage,code,message:error?.message||String(error),
+    });
+    showLearningFailure(state);
+  }
+  function retryLearning(state){
+    if(!navigator.onLine){showLearningOffline(state);return;}
+    state.failure=null;
+    if(state.ready)flushLearning();
+    else listenLearning(state);
   }
   // Unique batch keys preserve concurrent writes without a shared read/modify/write lock.
   function refreshLearningOutbox(state){
@@ -8967,6 +9029,23 @@ const batchDialog=$id('study-batch');
     state.pending=pending;
     refreshLearningOutbox(state);
   }
+  function guestLearningChanges(state){
+    const history=state.guest.syncJournal||{};
+    const existing=new Set(Object.values(state.operations).filter(op=>
+      op.kind==='delete'||(op.kind==='point'&&op.value.subject&&op.value.question&&op.value.answer)).map(op=>op.target));
+    const restored=Object.entries(history).filter(([id])=>!Object.hasOwn(state.operations,id));
+    const changes=learningJournal.changes(learningJournal.fresh(),state.guest,null,null).filter(op=>
+      !['point','baseline'].includes(op.kind)||(!existing.has(op.target)&&!Object.values(history).some(entry=>
+        (entry.kind==='point'||entry.kind==='delete')&&entry.target===op.target)));
+    return {restored,changes};
+  }
+  function projectAccount(state,refs){
+    if(!state.guest)return learningJournal.project(state.operations,refs);
+    // Show this account's claimed local library while waiting for the first server snapshot.
+    const {restored,changes}=guestLearningChanges(state);
+    const local=Object.fromEntries(changes.map((op,i)=>['local-preview-'+i,{...op,clock:0}]));
+    return learningJournal.project({...local,...Object.fromEntries(restored),...state.operations},refs);
+  }
   function saveLearning(next,answer,move){
     if(!account){
       if(next.syncJournal){
@@ -8980,18 +9059,19 @@ const batchDialog=$id('study-batch');
       localStorage.setItem(key,JSON.stringify({data:next,session}));
     }else{
       const refs=new Map();
-      learningJournal.project(account.operations,refs);
+      projectAccount(account,refs);
       const changes=learningJournal.changes(lastSaved,next,answer,move,refs);
       if(changes.length)appendLearning(account,changes);
       else storeAccount(account);
-      next=learningJournal.project(account.operations);
+      next=projectAccount(account);
       flushLearning();
     }
     data=next;
     lastSaved=structuredClone(next);
+    briefChanged();
   }
   function applyLearning(state){
-    const next=learningJournal.project(state.operations);
+    const next=projectAccount(state);
     if(JSON.stringify(next)===JSON.stringify(data))return;
     data=next;
     lastSaved=structuredClone(next);
@@ -9005,33 +9085,48 @@ const batchDialog=$id('study-batch');
   async function flushLearning(){
     const state=account;
     if(!state)return;
-    try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);return;}
-    if(!navigator.onLine||!state.ready){
-      showLearningSync(state.pending.length?'學習資料待同步':'學習資料等待連線');
+    try{refreshLearningOutbox(state);}catch(error){
+      recordLearningFailure(state,'讀取本機待送資料',error);
       return;
     }
+    if(!navigator.onLine){showLearningOffline(state);return;}
+    if(state.failure){showLearningFailure(state);return;}
+    if(!state.ready){showLearningSync('學習資料等待伺服器回應');return;}
     if(state.sending)return;
     if(!state.pending.length){showLearningSync('學習資料已同步');return;}
     state.sending=true;
     showLearningSync('學習資料同步中');
+    let stage='批次寫入';
     try{
-      while(account===state&&navigator.onLine&&state.pending.length){
+      while(account===state&&state.ready&&!state.failure&&navigator.onLine&&state.pending.length){
+        stage='批次寫入';
         const ids=state.pending.slice(0,200);
         await window._fb.writeLearning(state.uid,ids.map(id=>[id,state.operations[id]]));
         if(account!==state)return;
+        stage='儲存本機同步確認';
         for(const id of ids)localStorage.setItem(state.key+':ack:'+id,'1');
         refreshLearningOutbox(state);
         storeAccount(state);
       }
-      if(account===state)showLearningSync(state.pending.length?'學習資料待同步':'學習資料已同步');
-    }catch{
-      if(account===state)showLearningSync('學習資料同步失敗',true);
+      if(account!==state)return;
+      if(!navigator.onLine)showLearningOffline(state);
+      else if(state.failure)showLearningFailure(state);
+      else if(state.ready)showLearningSync(state.pending.length?'學習資料待同步':'學習資料已同步');
+    }catch(error){
+      if(account===state)recordLearningFailure(state,stage,error);
     }finally{state.sending=false;}
   }
   function listenLearning(state){
     state.stop?.();
     state.ready=false;
-    state.stop=window._fb.listenLearning(state.uid,(remote,confirmed)=>{
+    if(navigator.onLine)showLearningSync('學習資料等待伺服器回應');
+    else showLearningOffline(state);
+    const failed=error=>{
+      if(account!==state)return;
+      state.ready=false;
+      recordLearningFailure(state,'監聽',error);
+    };
+    const receive=(remote,confirmed)=>{
       if(account!==state||!confirmed)return;
       try{
         refreshLearningOutbox(state);
@@ -9040,11 +9135,7 @@ const batchDialog=$id('study-batch');
         storeAccount(state,next);
         state.operations=next;
         if(state.guest){
-          const existing=new Set(Object.values(state.operations).filter(op=>op.kind==='point'||op.kind==='delete').map(op=>op.target));
-          const changes=learningJournal.changes(learningJournal.fresh(),state.guest,null,null).filter(op=>
-            !['point','baseline'].includes(op.kind)||!existing.has(op.target));
-          const history=state.guest.syncJournal||{};
-          const restored=Object.entries(history).filter(([id])=>!Object.hasOwn(state.operations,id));
+          const {restored,changes}=guestLearningChanges(state);
           if(restored.length){
             const merged={...state.operations,...Object.fromEntries(restored)};
             const pending=[...state.pending,...restored.map(([id])=>id)];
@@ -9052,8 +9143,7 @@ const batchDialog=$id('study-batch');
             state.operations=merged;
             state.pending=pending;
           }
-          appendLearning(state,changes.filter(op=>!Object.values(history).some(entry=>
-            (entry.kind==='point'||entry.kind==='delete')&&entry.target===op.target)),true);
+          appendLearning(state,changes,true);
           localStorage.removeItem(key);
           localStorage.removeItem(key+'-claim');
           state.guest=null;
@@ -9061,10 +9151,13 @@ const batchDialog=$id('study-batch');
         state.ready=true;
         applyLearning(state);
         flushLearning();
-      }catch{showLearningSync('無法儲存同步資料',true);}
-    },()=>{
-      if(account===state){state.ready=false;showLearningSync('學習資料同步失敗',true);}
-    });
+      }catch(error){
+        state.ready=false;
+        recordLearningFailure(state,'儲存本機同步資料',error);
+      }
+    };
+    try{state.stop=window._fb.listenLearning(state.uid,receive,failed);}
+    catch(error){failed(error);}
   }
   function switchLearning(uid){
     if(account?.uid===uid||(!account&&!uid))return;
@@ -9082,7 +9175,7 @@ const batchDialog=$id('study-batch');
         if(!localStorage.getItem(key+'-claim')&&valid(stored?.data))data=stored.data;
       }catch{}
     }else{
-      const state={uid,key:key+':'+uid,operations:{},pending:[],ready:false,sending:false,guest:null};
+      const state={uid,key:key+':'+uid,operations:{},pending:[],ready:false,sending:false,guest:null,failure:null};
       account=state;
       try{
         const saved=JSON.parse(localStorage.getItem(state.key));
@@ -9099,10 +9192,9 @@ const batchDialog=$id('study-batch');
         }
       }catch{}
       try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);}
-      data=learningJournal.project(state.operations);
+      data=projectAccount(state);
       if(session&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
       if(session)screen=session.index===session.queue.length?'results':'session';
-      showLearningSync(state.pending.length?'學習資料待同步':'學習資料等待連線');
       listenLearning(state);
     }
     lastSaved=structuredClone(data);
@@ -9119,16 +9211,15 @@ const batchDialog=$id('study-batch');
     }catch{showLearningSync('無法讀取待同步資料',true);}
   });
   window.addEventListener('online',()=>{
-    if(account&&!account.ready)listenLearning(account);
-    else flushLearning();
+    if(account)retryLearning(account);
   });
   window.addEventListener('offline',()=>{
-    if(account)showLearningSync(account.pending.length?'學習資料待同步':'學習資料等待連線');
+    if(account)showLearningOffline(account);
   });
   render();
   return {
     valid,
-    weakBrief,
+    todayBrief,
     startWeakBrief,
     switchAccount:switchLearning,
     backup:()=>account?{...data,syncJournal:account.operations}:data,
@@ -9166,6 +9257,7 @@ const batchDialog=$id('study-batch');
       }
       screen='home';
       render();
+      briefChanged();
       return true;
     }
   };
