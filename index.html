@@ -3110,7 +3110,6 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 #cal-body.is-swiping .week-col-head{position:static;}
 #cal-body>.calendar-neighbor{position:absolute;inset:0 0 auto;width:100%;pointer-events:none;}
 #cal-body.is-swiping>:first-child,#cal-body>.calendar-neighbor{will-change:transform;}
-#cal-body.is-settling>:first-child,#cal-body.is-settling>.calendar-neighbor{transition:transform 220ms var(--ease-ios);}
 
 .picker-wheel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0;}
 #calendar-jump-wheels{grid-column:1/-1;}
@@ -3500,6 +3499,206 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-subject-grid .study-new-subject{border-style:dashed;color:var(--accent-h);}
 .study-subject-groups{display:grid;gap:12px;}
 .study-chapter-edit{margin-top:12px;}
+/* Shared interface scale. Compact date cells retain their own density. */
+:root {
+  --sans: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "LINE Seed TW", "Noto Sans TC", sans-serif;
+  --ui-body: .9375rem;
+  --ui-title-leading: 1.22;
+  --ui-body-leading: 1.55;
+  --ui-heading: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+  --ui-label: .875rem;
+  --ui-caption: .8125rem;
+  --ui-inset: clamp(1rem, 2.4vw, 1.75rem);
+  --ui-gap: clamp(.75rem, 1.8vw, 1.25rem);
+  --ui-motion: cubic-bezier(.2,.75,.25,1);
+  --ui-pause: 240ms;
+  --segment-fill: var(--surface);
+  --r: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --bg: #f5f4ef;
+  --surface: #fffefa;
+  --card: var(--surface);
+  --card-2: #f6f5f0;
+  --sunken: #edece6;
+  --sunken-h: #e4e7e1;
+  --elevated: #fffefa;
+  --header-bg: rgba(245,244,239,.96);
+  --nav-bg: #fffefa;
+  --nav-sel: #deece5;
+  --accent-tint: #e9f3ed;
+  --text: #252c28;
+  --text-2: #414e47;
+  --text-3: #59655e;
+}
+:root[data-theme=dark] {
+  --bg: #191a19;
+  --surface: #222422;
+  --card-2: #292c29;
+  --elevated: #303330;
+  --sunken: #303430;
+  --sunken-h: #3b403b;
+  --field: #212421;
+  --header-bg: rgba(25,26,25,.96);
+  --nav-bg: #272a27;
+  --nav-sel: #31463d;
+  --segment-fill: #3a4c43;
+  --accent-tint: #293d34;
+  --text: #f1f3ef;
+  --text-2: #d1d8d2;
+  --text-3: #adb9af;
+  --border-lt: rgba(224,236,225,.13);
+}
+body { font-size: var(--ui-body); line-height: var(--ui-body-leading); }
+:root { --tracking: 0em; }
+:where(button,input,textarea,select) { font-family: inherit; }
+:where(button,summary,[role=button]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+:where(.btn,#account-toggle,#calendar-more>summary) { touch-action: manipulation; }
+:where(.btn,#account-toggle,#calendar-more>summary):active { filter: brightness(.94); }
+:where(.course-stat,.wide-course-row,.dts-val,.study-stats,.cal-title,.date-num,.wch-date,.cal-tag-time) {
+  font-variant-numeric: tabular-nums;
+}
+:is(#panel-cal .cal-title,.wide-course-head h2,#panel-r #day-label,#study-room h2) {
+  font-size: var(--ui-heading);
+  font-weight: 700;
+  line-height: var(--ui-title-leading);
+  letter-spacing: -.024em;
+}
+:is(.wide-course-head,.day-heading,#study-room .study-head) { gap: var(--sp-3); }
+:is(.wide-course-head,#study-room .study-head) { margin-bottom: var(--sp-3); }
+
+/* Let the date and the date grid carry the calendar's visual hierarchy. */
+#panel-cal .cal-head { padding-inline: var(--ui-inset); }
+#panel-cal .phone-cal-summary { padding-inline: var(--ui-inset); }
+#panel-cal .cal-lbl { color: var(--text-2); }
+#panel-cal .cal-tag { padding-inline: var(--sp-1); }
+#panel-cal .view-toggle .vt-btn,
+#panel-cal .view-toggle .vt-btn.active { font-weight: 650; }
+:is(.wide-tabs,.bottom-nav,.account-theme) button { font-weight: 650; }
+:is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before {
+  transition: transform var(--ui-pause) var(--ui-motion),
+    width var(--ui-pause) var(--ui-motion), height var(--ui-pause) var(--ui-motion);
+}
+
+/* Course, day and knowledge views share the same surface and spacing. */
+.wide-course-list { overflow: hidden; }
+.wide-course-row { padding: var(--sp-4) var(--ui-inset); }
+.wide-course-row:focus-visible { outline-offset: -3px; }
+.wide-course-row strong::before {
+  display: inline-block;
+  content: "";
+  width: .55rem;
+  height: .55rem;
+  margin-inline-end: var(--sp-2);
+  border-radius: 50%;
+  background: var(--course-mark);
+}
+.wide-course-progress {
+  grid-column: 1 / -1;
+  height: 4px;
+  margin-top: var(--sp-1);
+  border-radius: var(--r-pill);
+  background: var(--sunken);
+}
+.wide-course-progress::before {
+  display: block;
+  content: "";
+  width: var(--course-progress);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+#course-list .course-name,.wide-course-row strong { font-size: 1.0625rem; font-weight: 700; }
+#panel-r .day-panel-shell { gap: var(--ui-gap); }
+#panel-r .day-panel-title { font-size: 1rem; font-weight: 700; line-height: 1.35; }
+#panel-r .day-lesson + .day-lesson { border-top-color: var(--border-lt); }
+#panel-r .day-lesson-time { font-variant-numeric: tabular-nums; }
+.study-brief-card {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--accent-tint);
+  border-color: color-mix(in srgb,var(--accent) 16%,transparent);
+}
+.study-brief-meta { color: var(--text-2); }
+#study-room { width: min(100%, 880px); padding: var(--ui-inset) var(--ui-inset) var(--sp-8); }
+#study-room .study-local { color: var(--text-3); margin-bottom: var(--sp-5); }
+.study-subject-grid {
+  grid-template-columns: repeat(auto-fit,minmax(min(100%,10rem),1fr));
+  gap: var(--ui-gap);
+  margin: var(--sp-3) 0 var(--sp-5);
+}
+.study-subject-grid .memo-card {
+  min-height: clamp(5.75rem,14vw,8rem);
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--sp-4);
+  text-align: start;
+  background: var(--surface);
+  border: 1px solid var(--border-lt);
+  border-radius: var(--r-lg);
+}
+.study-subject-grid .memo-card-name { font-size: 1rem; font-weight: 700; line-height: 1.4; }
+.study-subject-grid .study-new-subject {
+  justify-content: center;
+  background: var(--card-2);
+  border-style: dashed;
+}
+.study-subject-groups { gap: var(--ui-gap); }
+.study-subject-groups .study-home-actions { margin: var(--sp-3) 0 0; }
+@media (min-width: 768px) {
+  .study-subject-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .study-subject-groups { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .study-subject-grid .memo-card:hover { background: var(--accent-tint); border-color: var(--border); }
+}
+
+#account-toggle { background: var(--sunken); border: 1px solid var(--border-lt); }
+:is(.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before {
+  background: var(--segment-fill);
+}
+
+/* A popover opens toward its trigger. Native dialogs keep their focus and dismissal. */
+:is(#account-panel,#calendar-more .calendar-more-panel) {
+  background: var(--elevated);
+  border-radius: var(--r-lg);
+  transform-origin: top right;
+}
+#account-panel:not([hidden]),#calendar-more[open] .calendar-more-panel {
+  animation: studyos-popover-in 150ms var(--ui-motion) both;
+}
+dialog[data-app-dialog][open]:not(.wide-legacy) {
+  background-color: var(--elevated);
+  animation: studyos-dialog-in 175ms var(--ui-motion) both;
+}
+dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-out both; }
+@keyframes studyos-dialog-in {
+  from { opacity: 0; translate: 0 6px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes studyos-popover-in {
+  from { opacity: 0; transform: scale(.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes studyos-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 360px) {
+  .study-subject-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .study-subject-grid .memo-card { padding: var(--sp-3); }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  :root,:root[data-theme=dark] { --header-bg: var(--bg); --blur: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before {
+    transition: none;
+  }
+  #account-panel:not([hidden]),#calendar-more[open] .calendar-more-panel,
+  dialog[data-app-dialog][open]:not(.wide-legacy),dialog[data-app-dialog][open]::backdrop {
+    animation: none;
+  }
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -5857,6 +6056,7 @@ function topAppDialog(){
 function showAppDialog(dialog,dismiss){
   const prior=appDialogStack.findIndex(entry=>entry.dialog===dialog);
   if(prior>=0)appDialogStack.splice(prior,1);
+  dialog.setAttribute('data-app-dialog','');
   dialog.showModal();
   appDialogStack.push({dialog,dismiss});
 }
@@ -5947,10 +6147,16 @@ function courseLessonRange(c){
 }
 function renderWideCourses(){
   if(!wideMedia.matches)return;
-  const rows=S.courses.map(c=>'<li><button class="wide-course-row" type="button" data-wide-course="'+esc(c.id)+'" aria-haspopup="dialog">'+
-    '<strong>'+esc(c.name)+'</strong><span>完成 '+completed(c)+'／'+c.total+' 堂</span>'+
-    '<span class="course-lesson-range">'+courseLessonRange(c)+'</span>'+
-    (remaining(c)>=1?'<span class="course-remaining">'+remainingCourseText(remaining(c))+'</span>':'')+'</button></li>').join('');
+  const rows=S.courses.map(c=>{
+    const done=completed(c),unplanned=remaining(c);
+    const progress=c.total>0?Math.min(100,Math.round(done/c.total*100)):0;
+    return '<li><button class="wide-course-row" type="button" data-wide-course="'+esc(c.id)+'" aria-haspopup="dialog"'+
+      ' style="--course-mark:'+esc(c.color)+';--course-progress:'+progress+'%">'+
+      '<strong>'+esc(c.name)+'</strong><span>完成 '+done+'／'+c.total+' 堂</span>'+
+      '<span class="course-lesson-range">'+courseLessonRange(c)+'</span>'+
+      (unplanned>=1?'<span class="course-remaining">'+remainingCourseText(unplanned)+'</span>':'')+
+      '<span class="wide-course-progress" aria-hidden="true"></span></button></li>';
+  }).join('');
   if(wideCourses.innerHTML!==rows && rows){
     const focused=wideCourses.contains(document.activeElement)&&document.activeElement.dataset.wideCourse;
     wideCourses.innerHTML=rows;
@@ -7836,14 +8042,13 @@ const swipeReducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
 let calendarSwiped=false;
 try{calendarSwiped=sessionStorage.getItem('calendar-swiped')==='1';}catch{}
 let calendarSwipe=null;
-let swipeTimer=null;
 let suppressCalendarClickUntil=0;
 
 function resetCalendarSwipe(){
-  clearTimeout(swipeTimer);
+  cancelAnimationFrame(calendarSwipe?.frame);
   if(calendarSwipe?.current)calendarSwipe.current.style.removeProperty('transform');
   swipeBody.querySelectorAll('.calendar-neighbor').forEach(page=>page.remove());
-  swipeBody.classList.remove('is-swiping','is-settling');
+  swipeBody.classList.remove('is-swiping');
   calendarSwipe=null;
 }
 function calendarNeighbor(state,direction){
@@ -7861,8 +8066,7 @@ function calendarNeighbor(state,direction){
   state.previews.set(direction,page);
   return page;
 }
-function positionCalendarSwipe(state,offset){
-  const direction=offset<0?1:-1;
+function positionCalendarSwipe(state,offset,direction=offset<0?1:-1){
   if(offset!==0)state.direction=direction;
   const page=calendarNeighbor(state,state.direction);
   state.current.style.transform='translate3d('+offset+'px,0,0)';
@@ -7870,15 +8074,15 @@ function positionCalendarSwipe(state,offset){
   page.style.transform='translate3d('+(offset+state.direction*state.width)+'px,0,0)';
   state.offset=offset;
 }
-function settleCalendarSwipe(commit){
+function settleCalendarSwipe(commit,velocity=0){
   const state=calendarSwipe;
   if(!state?.current){resetCalendarSwipe();return;}
-  if(state.settling)return;
+  cancelAnimationFrame(state.frame);
   state.settling=true;
+  state.commit=commit;
   suppressCalendarClickUntil=performance.now()+400;
   const direction=state.direction;
   const finish=()=>{
-    if(calendarSwipe!==state)return;
     resetCalendarSwipe();
     if(commit){
       calendarSwiped=true;
@@ -7887,20 +8091,37 @@ function settleCalendarSwipe(commit){
     }
   };
   if(swipeReducedMotion.matches){finish();return;}
-  state.current.getBoundingClientRect();
-  swipeBody.classList.add('is-settling');
-  positionCalendarSwipe(state,commit?-direction*state.width:0);
-  swipeTimer=setTimeout(finish,230);
+  const edge=-direction*state.width;
+  const target=commit?edge:0;
+  const start=state.offset;
+  const distance=start-target;
+  // Critically damped spring. Velocity is inherited in pixels per millisecond.
+  const frequency=.022;
+  const initialVelocity=Math.max(-2,Math.min(2,velocity));
+  const begun=performance.now();
+  function frame(time){
+    if(calendarSwipe!==state||!state.settling)return;
+    const elapsed=Math.max(0,time-begun);
+    const displacement=(distance+(initialVelocity+frequency*distance)*elapsed)*Math.exp(-frequency*elapsed);
+    if(Math.abs(displacement)<.45&&elapsed>65||elapsed>360){finish();return;}
+    const offset=Math.max(Math.min(0,edge),Math.min(Math.max(0,edge),target+displacement));
+    positionCalendarSwipe(state,offset,direction);
+    state.frame=requestAnimationFrame(frame);
+  }
+  state.frame=requestAnimationFrame(frame);
 }
 swipeBody.addEventListener('touchstart',event=>{
-  if(calendarSwipe?.settling)return;
-  if(calendarSwipe?.current){settleCalendarSwipe(false);return;}
-  resetCalendarSwipe();
   if(event.touches.length!==1||event.target.closest('button,select,input,textarea,a,[contenteditable],dialog')||
     topAppDialog()||S.dragCourseId)return;
   const {clientX:x,clientY:y,identifier:id}=event.touches[0];
   if(x<24||x>innerWidth-24)return;
-  calendarSwipe={x,y,id,samples:[{x,time:performance.now()}],previews:new Map()};
+  const start={x,y,id,samples:[{x,time:performance.now()}],horizontal:false};
+  if(calendarSwipe?.settling){
+    cancelAnimationFrame(calendarSwipe.frame);
+    Object.assign(calendarSwipe,start,{settling:false,grabOffset:calendarSwipe.offset});
+  }else if(!calendarSwipe?.current){
+    calendarSwipe={...start,grabOffset:0,previews:new Map()};
+  }
 },{passive:true});
 swipeBody.addEventListener('touchmove',event=>{
   const state=calendarSwipe;
@@ -7911,9 +8132,13 @@ swipeBody.addEventListener('touchmove',event=>{
     return;
   }
   const dx=t.clientX-state.x,dy=t.clientY-state.y;
-  if(!state.current){
-    if(Math.abs(dy)>12&&Math.abs(dy)>=Math.abs(dx)){resetCalendarSwipe();return;}
+  if(!state.horizontal){
+    if(Math.abs(dy)>12&&Math.abs(dy)>=Math.abs(dx)){
+      settleCalendarSwipe(Boolean(state.commit));
+      return;
+    }
     if(Math.abs(dx)<12||Math.abs(dx)<Math.abs(dy)*1.5)return;
+    state.horizontal=true;
     state.current=swipeBody.firstElementChild;
     state.width=swipeBody.clientWidth;
     swipeBody.classList.add('is-swiping');
@@ -7922,23 +8147,28 @@ swipeBody.addEventListener('touchmove',event=>{
   const time=performance.now();
   state.samples=state.samples.filter(sample=>time-sample.time<=110);
   state.samples.push({x:t.clientX,time});
-  positionCalendarSwipe(state,Math.max(-state.width,Math.min(state.width,dx)));
+  const offset=state.grabOffset+dx;
+  positionCalendarSwipe(state,Math.max(-state.width,Math.min(state.width,offset)));
 },{passive:false});
-swipeBody.addEventListener('touchcancel',()=>settleCalendarSwipe(false),{passive:true});
+swipeBody.addEventListener('touchcancel',()=>{
+  if(!calendarSwipe?.settling)settleCalendarSwipe(false);
+},{passive:true});
 swipeBody.addEventListener('touchend',event=>{
   const state=calendarSwipe;
   if(!state||state.settling)return;
   const t=[...event.changedTouches].find(t=>t.identifier===state.id);
   if(!state.current||!t){resetCalendarSwipe();return;}
+  if(!state.horizontal){settleCalendarSwipe(Boolean(state.commit));return;}
   if(event.cancelable)event.preventDefault();
-  const dx=t.clientX-state.x;
+  const offset=Math.max(-state.width,Math.min(state.width,state.grabOffset+t.clientX-state.x));
   const time=performance.now();
   const sample=state.samples.find(sample=>time-sample.time<=110);
   const velocity=sample?(t.clientX-sample.x)/Math.max(16,time-sample.time):0;
-  const commit=Math.abs(dx)>=state.width*0.28||
-    (Math.abs(dx)>=24&&Math.abs(velocity)>=0.55&&Math.sign(dx)===Math.sign(velocity));
-  positionCalendarSwipe(state,Math.max(-state.width,Math.min(state.width,dx)));
-  settleCalendarSwipe(commit&&!event.touches.length&&!topAppDialog()&&!S.dragCourseId);
+  const projected=offset+velocity*95;
+  const commit=Math.abs(offset)>=state.width*.28||
+    (Math.abs(offset)>=24&&Math.abs(projected)>=state.width*.28&&Math.sign(offset)===Math.sign(velocity));
+  positionCalendarSwipe(state,offset);
+  settleCalendarSwipe(commit&&!event.touches.length&&!topAppDialog()&&!S.dragCourseId,velocity);
 },{passive:false});
 swipeBody.addEventListener('click',event=>{
   if(performance.now()<suppressCalendarClickUntil&&event.detail>0){
