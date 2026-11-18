@@ -8725,22 +8725,26 @@ const batchDialog=$id('study-batch');
   }
   function startWeakBrief(todayNames,returnMode){
     if(session?.origin==='today'&&session.index<session.queue.length){
-      openTodayPractice();
-      go('session');
+      resumeFromToday(returnMode);
       return true;
     }
     const rec=weakBrief(todayNames);
     if(!rec)return false;
     if(session&&session.index<session.queue.length){
       showConfirm('已有進行中的練習','目前有一組尚未完成的練習，請先繼續或完成它，再開始今日備考。',()=>{
-        openTodayPractice();
-        go('session');
+        resumeFromToday(returnMode);
       },'繼續練習');
       return false;
     }
     openTodayPractice();
     start(rec.ids,'practice',{origin:'today',subject:rec.subject,returnMode});
     return true;
+  }
+  function resumeFromToday(returnMode){
+    session.returnMode=returnMode;
+    persist();
+    openTodayPractice();
+    go('session');
   }
   function briefChanged(){if(typeof refreshStudyBrief==='function')refreshStudyBrief();}
   function record(outcome){
@@ -8799,11 +8803,12 @@ const batchDialog=$id('study-batch');
     const cards=session?.mode==='cards';
     const weak=r.filter(x=>x.outcome!=='correct').length;
     const fromToday=session?.origin==='today';
+    const canReturnToday=fromToday||Boolean(session?.returnMode);
     draw(cards?'字卡複習完成':'練習結果','<div class="study-surface">'+
       (fromToday?'<p class="study-meta study-brief-summary">今日備考 · '+esc(session.subject||'')+'　完成 '+r.length+' 題</p>':'')+(cards?
       '<p>已瀏覽 '+(session?.queue.length||0)+' 張字卡。</p>':
       '<dl class="study-result">'+Object.entries(outcomes).map(([k,v])=>'<dt>'+v+'</dt><dd>'+r.filter(x=>x.outcome===k).length+'</dd>').join('')+'</dl>')+
-      '<div class="study-actions">'+(weak?action('重練本次待加強','retry',true):'')+(fromToday?action('返回今日','today-back',!weak):'')+'</div></div>');
+      '<div class="study-actions">'+(weak?action('重練本次待加強','retry',true):'')+(canReturnToday?action('返回今日','today-back',!weak):'')+'</div></div>');
   }
   function render(){
     if(screen==='home')subjectCards(false);
@@ -8887,7 +8892,10 @@ const batchDialog=$id('study-batch');
     }else if(act==='resume')go('session');
     else if(act==='retry'){
       const ids=session.results.filter(r=>r.outcome!=='correct'&&point(r.id)).map(r=>r.id);
-      if(ids.length)start([...new Set(ids)],'practice',session.origin==='today'?{origin:'today',subject:session.subject,returnMode:session.returnMode}:undefined);
+      if(ids.length){
+        const {origin,subject,returnMode}=session;
+        start([...new Set(ids)],'practice',{origin,subject,returnMode});
+      }
     }else if(act==='flip'){
       session.phase='revealed';persist();go('session');
     }else if(act==='view'){
