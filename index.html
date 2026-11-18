@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="StudyOS">
-<meta name="theme-color" content="#f6f5f1">
+<meta name="theme-color" content="#f5f4ef">
 <script>
 const studyTheme=(()=>{
   const key='studyos-theme';
@@ -18,7 +18,7 @@ const studyTheme=(()=>{
   function update(){
     const theme=preference==='dark'||preference==='light'?preference:system.matches?'dark':'light';
     document.documentElement.dataset.theme=theme;
-    chromeColor.content=theme==='dark'?'#1a1a1c':'#f6f5f1';
+    chromeColor.content=theme==='dark'?'#191a1d':'#f5f4ef';
     for(const button of document.querySelectorAll('[data-theme-choice]')){
       button.setAttribute('aria-pressed',String(button.dataset.themeChoice===theme));
     }
@@ -4535,72 +4535,76 @@ onAuthStateChanged(auth,user=>{
 // ── PWA：Service Worker 註冊 + 版本更新通知 + 離線偵測 ─────────
 
 let _swReg = null;
+let lastWorkerCheck = -Infinity;
+let reloadAfterWorkerChange = false;
+
+function checkServiceWorkerUpdate() {
+  if (!_swReg || !navigator.onLine) return;
+  if (_swReg.waiting && navigator.serviceWorker.controller) showUpdateBanner();
+  if (performance.now() - lastWorkerCheck < 30000) return;
+  lastWorkerCheck = performance.now();
+  _swReg.update().catch(error => console.warn('[PWA] Update check failed', error));
+}
+
 if ('serviceWorker' in navigator) {
+  const workers = navigator.serviceWorker;
+  let controlled = Boolean(workers.controller);
+  workers.addEventListener('controllerchange', () => {
+    if (reloadAfterWorkerChange) {
+      location.reload();
+      return;
+    }
+    if (controlled) showUpdateBanner();
+    controlled = Boolean(workers.controller);
+  });
+  workers.addEventListener('message', event => {
+    const type = event.data?.type;
+    if (type === 'FLUSH_SYNC') flushOfflineQueue().then(() => render());
+    if (type === 'SW_UPDATED') showUpdateBanner();
+  });
+
   window.addEventListener('load', async () => {
     try {
-      _swReg = await navigator.serviceWorker.register('./sw.js');
+      _swReg = await workers.register('./sw.js', { updateViaCache: 'none' });
+      lastWorkerCheck = performance.now();
       console.log('[PWA] SW registered:', _swReg.scope);
-
-      // 監聽 SW 送來的訊息
-      navigator.serviceWorker.addEventListener('message', e => {
-        const type = e.data?.type;
-
-        // 收到背景同步指令 → 把離線佇列推上 Firebase
-        if (type === 'FLUSH_SYNC') {
-          console.log('[PWA] FLUSH_SYNC received');
-          flushOfflineQueue().then(() => render()); // re-render UI 確保同步
-        }
-
-        // 新版 SW 啟動完成 → 提示使用者更新
-        if (type === 'SW_UPDATED') {
-          console.log('[PWA] New SW activated');
-          showUpdateBanner();
-        }
+      const watch = worker => worker?.addEventListener('statechange', () => {
+        if (worker.state === 'installed' && workers.controller) showUpdateBanner();
       });
-
-      // 偵測有新版 SW 等待中（使用者尚未重整）
-      _swReg.addEventListener('updatefound', () => {
-        const newWorker = _swReg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // 有新版等待 → 顯示更新橫幅
-            console.log('[PWA] New version ready');
-            showUpdateBanner();
-          }
-        });
-      });
-
-    } catch (e) {
-      console.warn('[PWA] SW registration failed', e);
+      _swReg.addEventListener('updatefound', () => watch(_swReg.installing));
+      watch(_swReg.installing);
+      if (_swReg.waiting && workers.controller) showUpdateBanner();
+    } catch (error) {
+      console.warn('[PWA] SW registration failed', error);
     }
+  });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) checkServiceWorkerUpdate();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkServiceWorkerUpdate();
   });
 }
 
-// 版本更新橫幅
-function showUpdateBanner(){
-  // 避免重複顯示
+function showUpdateBanner() {
   if (document.getElementById('update-banner')) return;
-  const el = document.createElement('div');
-  el.id = 'update-banner';
-  el.style.cssText = `
-    position:fixed;top:calc(var(--nav-h,52px) + 8px);left:50%;transform:translateX(-50%);
-    background:rgba(0,113,227,.94);color:#fff;border-radius:980px;
-    padding:8px 18px;font-size:12px;font-weight:600;letter-spacing:-.1px;
-    box-shadow:0 4px 16px rgba(0,113,227,.35);z-index:9999;
-    display:flex;align-items:center;gap:10px;cursor:pointer;
-    white-space:nowrap;
-  `;
-  el.innerHTML = '🆕 有新版本 <span style="text-decoration:underline;opacity:.85">點此更新</span>';
-  el.onclick = () => {
-    // 通知 SW 立即接管，然後重整
-    if (_swReg?.waiting) _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
-    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-    el.remove();
-  };
-  document.body.appendChild(el);
-  // 30 秒後自動消失
-  setTimeout(() => el?.remove(), 30000);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'update-banner';
+  button.className = 'btn btn-primary';
+  button.textContent = '有新版本，點此更新';
+  button.style.cssText = 'position:fixed;top:calc(var(--nav-h,52px) + 8px);left:50%;transform:translateX(-50%);z-index:9999;max-width:calc(100% - 24px)';
+  button.addEventListener('click', () => {
+    const waiting = _swReg?.waiting;
+    if (!waiting) {
+      location.reload();
+      return;
+    }
+    reloadAfterWorkerChange = true;
+    button.disabled = true;
+    waiting.postMessage({ type: 'SKIP_WAITING' });
+  });
+  document.body.appendChild(button);
 }
 
 // 2. 離線變更佇列 ─────────────────────────────────────────────────

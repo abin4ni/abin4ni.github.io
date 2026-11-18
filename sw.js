@@ -1,30 +1,30 @@
-// ── 課程進度追蹤 Service Worker v6 ───────────────────────────────
-// 策略：HTML → network-first（永遠取得最新版，離線時用快取）
+// ── StudyOS Service Worker v7 ──────────────────────────────────
+// HTML 先向網路重新驗證，離線時才讀取頁面快取。介面發版時一併更新快取版本。
 //        同源靜態資源 → cache-first（加速載入）
 //        Firebase / Google → 直接穿透
 // 全部使用相對路徑，放在 GitHub Pages 子路徑（/repo-name/）也能正常運作
 
-const CACHE_NAME  = 'course-tracker-v6';
+const CACHE_NAME  = 'course-tracker-v7';
 const STATIC_EXTS = ['.js', '.css', '.png', '.jpg', '.svg', '.ico', '.woff2', '.json'];
-const PRECACHE    = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const PRECACHE    = ['./manifest.json', './icon-192.png', './icon-512.png'];
 const EXTERNAL    = ['firebase', 'google', 'gstatic', 'googleapis', 'firebaseio'];
 
-// ── Install：預先快取外殼，個別失敗不影響安裝 ──────────────────────
+// Keep the previous worker active until the new HTML is cached and the client updates.
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => Promise.all(
-        PRECACHE.map(u => cache.add(u).catch(err => console.warn('[SW] precache skip', u, err)))
-      ))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.add(new Request('./index.html', { cache: 'reload' }));
+    await Promise.all(PRECACHE.map(url =>
+      cache.add(new Request(url, { cache: 'reload' })).catch(error => console.warn('[SW] precache skip', url, error))
+    ));
+  })());
 });
 
 // ── Activate：清除舊快取並接管；只有「升級」時才通知頁面 ──────────────
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    const old  = keys.filter(k => k !== CACHE_NAME);
+    const old = keys.filter(key => /^course-tracker-v\d+$/.test(key) && key !== CACHE_NAME);
     await Promise.all(old.map(k => caches.delete(k)));
     await self.clients.claim();
     if (old.length) {
@@ -53,10 +53,15 @@ self.addEventListener('fetch', event => {
   if (isHTML) {
     event.respondWith((async () => {
       try {
-        const resp = await fetch(req);
-        if (resp && resp.status === 200) {
+        const resp = await fetch(req, { cache: 'no-cache' });
+        if (resp.ok) {
           const copy = resp.clone();
-          caches.open(CACHE_NAME).then(c => c.put(req, copy));
+          try {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(req, copy);
+          } catch (error) {
+            console.warn('[SW] Could not cache HTML', error);
+          }
         }
         return resp;
       } catch (err) {
@@ -75,7 +80,7 @@ self.addEventListener('fetch', event => {
   // 4. 同源靜態資源：cache-first
   if (STATIC_EXTS.some(ext => url.pathname.endsWith(ext))) {
     event.respondWith(
-      caches.match(req).then(cached => {
+      caches.open(CACHE_NAME).then(cache => cache.match(req)).then(cached => {
         if (cached) return cached;
         return fetch(req).then(resp => {
           if (resp && resp.status === 200 && resp.type === 'basic') {
