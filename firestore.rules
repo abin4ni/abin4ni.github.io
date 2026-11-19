@@ -16,7 +16,7 @@ service cloud.firestore {
         && opId.matches('k-[a-f0-9]{32}')
         && request.resource.data.keys().hasAll(['kind', 'target', 'value', 'clock'])
         && request.resource.data.keys().hasOnly(['kind', 'target', 'value', 'clock'])
-        && request.resource.data.kind in ['point', 'delete', 'subject', 'chapter', 'move', 'baseline', 'answer']
+        && request.resource.data.kind in ['point', 'delete', 'subject', 'chapter', 'move', 'baseline', 'answer', 'today-round', 'today-answer']
         && request.resource.data.target is string
         && request.resource.data.clock is int
         && request.resource.data.clock >= 0;

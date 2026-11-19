@@ -8845,7 +8845,7 @@ pillMotion.mount(document);
 
 
 const learningJournal=(()=>{
-  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer']);
+  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer']);
   const outcomes=new Set(['correct','incorrect','partial','missed','viewed']);
   const fields=['subject','chapter','question','answer','explanation','accepted'];
   const text=v=>typeof v==='string';
@@ -8857,6 +8857,13 @@ const learningJournal=(()=>{
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
     const value=op.value;
     if(op.kind==='answer')return validPointId(op.target)&&outcomes.has(value);
+    if(op.kind==='today-round')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject&&
+      Array.isArray(value.queue)&&value.queue.length>0&&value.queue.length<=5&&value.queue.every(validPointId)&&
+      new Set(value.queue).size===value.queue.length&&Array.isArray(value.results)&&
+      value.results.every(r=>r&&value.queue.includes(r.id)&&outcomes.has(r.outcome))&&
+      new Set(value.results.map(r=>r.id)).size===value.results.length;
+    if(op.kind==='today-answer')return validPointId(op.target)&&Array.isArray(value)&&value.length===2&&
+      validPointId(value[0])&&outcomes.has(value[1]);
     if(op.kind==='baseline')return validPointId(op.target)&&validProgress(value);
     if(op.kind==='delete')return validPointId(op.target)&&value===null;
     if(op.kind==='point')return validPointId(op.target)&&value&&typeof value==='object'&&!Array.isArray(value)&&
@@ -8866,7 +8873,7 @@ const learningJournal=(()=>{
   }
   const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
   function project(journal,refs=new Map()){
-    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[];
+    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],rounds=new Map();
     function legacyChapter(subject,name){
       const key=chapterKey(subject,name);
       if(!aliases.has(key)){
@@ -8915,6 +8922,9 @@ const learningJournal=(()=>{
         }
       }else if(kind==='baseline'){
         if((baseline.get(target)?.attempts??-1)<=value.attempts)baseline.set(target,{...value});
+      }else if(kind==='today-round'){
+        if(!rounds.has(target))rounds.set(target,{id:target,subject:value.subject,queue:value.queue,
+          results:new Map(value.results.map(r=>[r.id,r.outcome]))});
       }else answers.push(op);
     }
     for(const {subject,name,listed,deleted} of instances.values()){
@@ -8923,7 +8933,14 @@ const learningJournal=(()=>{
       const list=catalog.get(subject).chapters;
       if(!list.includes(name))list.push(name);
     }
-    for(const {target,value} of answers){
+    for(const op of answers){
+      let {target,value}=op;
+      if(op.kind==='today-answer'){
+        const round=rounds.get(target);
+        [target,value]=value;
+        if(!round?.queue.includes(target)||round.results.has(target))continue;
+        round.results.set(target,value);
+      }
       const p=baseline.get(target)||{attempts:0,streak:0,weak:false};
       p.attempts++;
       p.streak=value==='correct'?Math.min(2,p.streak+1):0;
@@ -8940,7 +8957,10 @@ const learningJournal=(()=>{
       kept.push({explanation:'',accepted:[],...value});
     }
     const progress=Object.fromEntries(kept.filter(p=>baseline.has(p.id)).map(p=>[p.id,baseline.get(p.id)]));
-    return {version:1,points:kept,progress,catalog:[...catalog.values()]};
+    const lastRound=[...rounds.values()].at(-1);
+    const todayRound=lastRound&&{id:lastRound.id,subject:lastRound.subject,queue:lastRound.queue,
+      results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
+    return {version:1,points:kept,progress,catalog:[...catalog.values()],...(todayRound?{todayRound}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -8966,7 +8986,8 @@ const learningJournal=(()=>{
       const ref=refs.get(chapterKey(move[0],move[1]));
       add('move',move[0],ref?[...move,ref]:move);
     }
-    if(answer)add('answer',answer.id,answer.outcome);
+    if(answer?.roundId)add('today-answer',answer.roundId,[answer.id,answer.outcome]);
+    else if(answer)add('answer',answer.id,answer.outcome);
     else for(const [id,p] of Object.entries(after.progress))if(!same(before.progress[id],p))add('baseline',id,p);
     return ops;
   }
@@ -9014,7 +9035,7 @@ const studyRoom=(()=>{
       data=stored.data;
       const s=stored.session;
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
-        (roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
+        (s.origin==='today'||roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
         ['question','revealed','grade','feedback'].includes(s.phase)&&text(s.answer)&&
         Array.isArray(s.results)&&s.results.every(r=>object(r)&&s.queue.includes(r.id)&&Object.hasOwn(outcomes,r.outcome))){
         session=s;
@@ -9032,8 +9053,8 @@ const studyRoom=(()=>{
     if(p.streak>=2)return ['已掌握','mastered'];
     return p.weak?['待加強','weak']:['練習中',''];
   };
-  function persist(answer,move){
-    try{saveLearning(data,answer,move);return true;}
+  function persist(answer,move,roundOperation){
+    try{saveLearning(data,answer,move,roundOperation);return true;}
     catch{
       data=structuredClone(lastSaved);
       toast('無法儲存學習資料，請確認瀏覽器的儲存空間。','warn');
@@ -9320,7 +9341,8 @@ const batchDialog=$id('study-batch');
     }
     const previous=session;
     session={mode,queue,index:0,results:[],phase:'question',answer:'',...extra};
-    if(!persist()){
+    const roundOperation=account&&session.origin==='today'?createTodayRound():null;
+    if(!persist(null,null,roundOperation)){
       session=previous;
       return false;
     }
@@ -9342,23 +9364,67 @@ const batchDialog=$id('study-batch');
     const todays=[...new Set(todayNames.map(n=>String(n).trim().normalize('NFC')))].filter(n=>subjects.includes(n));
     return pick(todays,true)||pick(subjects,false);
   }
-  function todayBrief(todayNames){
-    if(session?.origin==='today'&&session.index<session.queue.length){
-      return {subject:session.subject,resume:true,message:'繼續上次的今日備考'};
+  function createTodayRound(){
+    session.roundId=newPointId();
+    return {kind:'today-round',target:session.roundId,value:{
+      subject:session.subject,queue:session.queue,results:[...session.results],
+    }};
+  }
+  function todayState(source){
+    if(!source)return null;
+    const queue=source.queue.filter(id=>point(id));
+    const results=source.results.filter(result=>queue.includes(result.id));
+    const index=queue.findIndex(id=>!results.some(result=>result.id===id));
+    return {queue,results,index:index<0?queue.length:index,subject:source.subject};
+  }
+  function resumableToday(){
+    const source=account&&data.todayRound?data.todayRound:session?.origin==='today'?session:null;
+    const round=todayState(source);
+    return round&&round.index<round.queue.length?{...round,roundId:source.id||source.roundId}:null;
+  }
+  function syncTodaySession(keepFeedback=false){
+    const remote=session?.roundId&&data.todayRound?.id===session.roundId?data.todayRound:null;
+    if(session?.origin!=='today')return;
+    const round=todayState(remote||session);
+    const current=session.queue[session.index];
+    const currentIndex=round.queue.indexOf(current);
+    if(keepFeedback&&session.phase==='feedback'&&currentIndex>=0&&round.results.some(r=>r.id===current)){
+      Object.assign(session,round,{index:currentIndex});
+    }else{
+      const preserveDraft=round.queue[round.index]===current&&['question','grade'].includes(session.phase);
+      Object.assign(session,round,preserveDraft?{}:{phase:'question',answer:''});
     }
+  }
+  function waitingForToday(){
+    return account&&!account.ready&&!account.failure&&navigator.onLine;
+  }
+  function todayBrief(todayNames){
+    const round=resumableToday();
+    if(round){
+      return {subject:round.subject,resume:true,message:'已完成 '+round.results.length+'／'+round.queue.length+' 題'};
+    }
+    if(waitingForToday())return {message:syncText};
     const rec=weakBrief(todayNames);
     if(rec)return {subject:rec.subject,message:(rec.today?'今日科目':'其他科目')+' · '+rec.count+' 題待加強'};
     if(account&&(!account.ready||account.failure||!navigator.onLine))return {message:syncText};
     return {message:'目前沒有推薦題目',empty:true};
   }
   function startWeakBrief(todayNames,returnMode){
-    if(session?.origin==='today'&&session.index<session.queue.length){
-      resumeFromToday(returnMode);
+    const round=resumableToday();
+    if(round){
+      const previous=session;
+      const sameRound=session?.origin==='today'&&session.roundId===round.roundId;
+      session={...(sameRound?session:{}),...round,origin:'today',mode:'practice',returnMode,phase:'question',answer:''};
+      const operation=account&&!round.roundId?createTodayRound():null;
+      if(!persist(null,null,operation)){session=previous;return false;}
+      openTodayPractice();
+      go('session');
       return true;
     }
+    if(waitingForToday())return false;
     const rec=weakBrief(todayNames);
     if(!rec)return false;
-    if(session&&session.index<session.queue.length){
+    if(session&&session.origin!=='today'&&session.index<session.queue.length){
       showConfirm('已有進行中的練習','目前有一組尚未完成的練習，請先繼續或完成它，再開始今日備考。',()=>{
         resumeFromToday(returnMode);
       },'繼續練習');
@@ -9392,6 +9458,7 @@ const batchDialog=$id('study-batch');
       session.phase=previousPhase;
       return;
     }
+    if(session.origin==='today')syncTodaySession(true);
     go('session');
   }
   function grade(answer,p){
@@ -9420,8 +9487,9 @@ const batchDialog=$id('study-batch');
       body+=reference;
       if(phase==='grade')body+='<div class="study-actions">'+action('沒答出來','missed')+action('部分答對','partial')+action('答對','correct',true)+'</div>';
       else{
-        if(!cards)body+='<p class="study-meta" role="status">'+outcomes[session.results.at(-1).outcome]+'</p>';
-        body+='<div class="study-actions">'+action(index+1===queue.length?'查看結果':'下一題','next',true)+'</div>';
+        if(!cards)body+='<p class="study-meta" role="status">'+(outcomes[session.results.find(r=>r.id===p.id)?.outcome]??'')+'</p>';
+        const final=session.origin==='today'?session.results.length===queue.length:index+1===queue.length;
+        body+='<div class="study-actions">'+action(final?'查看結果':'下一題','next',true)+'</div>';
       }
     }
     draw(cards?'字卡複習':'互動練習','<div class="study-surface">'+body+'</div>');
@@ -9528,7 +9596,8 @@ const batchDialog=$id('study-batch');
       showConfirm('刪除知識點','此知識點與練習進度將一併刪除。',()=>{
         data.points=data.points.filter(p=>p.id!==id);
         delete data.progress[id];
-        if(session?.queue.includes(id)&&!roundComplete(session))session=null;
+        if(session?.queue.includes(id)&&session.origin!=='today'&&!roundComplete(session))session=null;
+        if(session?.origin==='today'&&!session.roundId)syncTodaySession();
         persist();
         go(screen);
       });
@@ -9557,7 +9626,8 @@ const batchDialog=$id('study-batch');
     }else if(act==='view'){
       session.answer='';record('viewed');
     }else if(act==='next'){
-      session.index++;session.phase='question';session.answer='';
+      if(session.origin==='today')syncTodaySession();
+      else{session.index++;session.phase='question';session.answer='';}
       persist();
       go(session.index===session.queue.length?'results':'session');
     }else if(session?.phase==='grade'&&Object.hasOwn(outcomes,act))record(act);
@@ -9710,7 +9780,7 @@ const batchDialog=$id('study-batch');
     const local=Object.fromEntries(changes.map((op,i)=>['local-preview-'+i,{...op,clock:0}]));
     return learningJournal.project({...local,...Object.fromEntries(restored),...state.operations},refs);
   }
-  function saveLearning(next,answer,move){
+  function saveLearning(next,answer,move,roundOperation){
     if(!account){
       if(next.syncJournal){
         const journal={...next.syncJournal};
@@ -9724,7 +9794,9 @@ const batchDialog=$id('study-batch');
     }else{
       const refs=new Map();
       projectAccount(account,refs);
-      const changes=learningJournal.changes(lastSaved,next,answer,move,refs);
+      const scoring=answer&&{...answer,roundId:session?.roundId};
+      const changes=learningJournal.changes(lastSaved,next,scoring,move,refs);
+      if(roundOperation)changes.push(roundOperation);
       if(changes.length)appendLearning(account,changes);
       else storeAccount(account);
       next=projectAccount(account);
@@ -9739,11 +9811,17 @@ const batchDialog=$id('study-batch');
     if(JSON.stringify(next)===JSON.stringify(data))return;
     data=next;
     lastSaved=structuredClone(next);
-    if(session&&!roundComplete(session)&&!session.queue.every(id=>point(id))){
+    const activeToday=screen==='session'&&session?.origin==='today';
+    const before=activeToday?JSON.stringify(session):'';
+    if(session?.origin==='today')syncTodaySession(true);
+    if(session&&session.origin!=='today'&&!roundComplete(session)&&!session.queue.every(id=>point(id))){
       session=null;
       if(screen==='session'||screen==='results')screen='subject';
     }
-    if(!['editor','chapters','new-subject','session'].includes(screen)&&!batchDialog.open)render();
+    if(activeToday&&before!==JSON.stringify(session)){
+      if(roundComplete(session))screen='results';
+      render();
+    }else if(!['editor','chapters','new-subject','session'].includes(screen)&&!batchDialog.open)render();
     briefChanged();
   }
   async function flushLearning(){
@@ -9814,6 +9892,9 @@ const batchDialog=$id('study-batch');
         }
         state.ready=true;
         applyLearning(state);
+        if(!data.todayRound&&session?.origin==='today'&&!session.roundId&&resumableToday()){
+          if(!persist(null,null,createTodayRound()))delete session.roundId;
+        }
         flushLearning();
       }catch(error){
         state.ready=false;
@@ -9857,7 +9938,8 @@ const batchDialog=$id('study-batch');
       }catch{}
       try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);}
       data=projectAccount(state);
-      if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
+      if(session?.origin==='today'&&Array.isArray(session.queue))syncTodaySession();
+      else if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
       if(session)screen=session.index===session.queue.length?'results':'session';
       listenLearning(state);
     }
