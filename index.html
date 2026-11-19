@@ -929,13 +929,17 @@ input:focus,select:focus{
   display:none;position:fixed;z-index:200;
   background:var(--glass-bg);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
   border:1px solid var(--glass-border);border-radius:var(--r);
-  padding:16px 18px;box-shadow:var(--shadow-lg);min-width:230px;
+  padding:16px 18px;box-shadow:var(--shadow-lg);width:min(320px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;
 }
 #exam-popover .pop-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;}
 #exam-popover input[type=date]{margin-bottom:10px;font-size:13px;}
 #exam-popover .pop-clear{font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:0;margin-top:4px;display:block;}
 #exam-popover .pop-clear:hover{color:var(--danger-c);}
 #exam-popover .pop-row{display:flex;gap:6px;align-items:center;justify-content:space-between;}
+.exam-scope{margin-block:0 10px;min-width:0;}
+.exam-scope-checks{max-height:12rem;overflow:auto;padding:4px;}
+.exam-scope-checks label{display:flex;align-items:center;gap:8px;min-height:40px;overflow-wrap:anywhere;}
+.exam-scope-checks input{flex:none;accent-color:var(--accent);}
 
 /* ── Day group cards ── */
 .day-group{
@@ -4159,7 +4163,8 @@ onAuthStateChanged(auth,user=>{
 <!-- Exam date popover -->
 <div id="exam-popover"><button type="button" class="btn popup-close" aria-label="關閉考試日期設定" onclick="closeExamPicker()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
   <div class="pop-title">設定考試日期</div>
-  <input type="date" id="exam-pop-input"/>
+  <input type="date" id="exam-pop-input" aria-label="考試日期"/>
+  <div id="exam-pop-scope" class="exam-scope"></div>
   <div class="pop-row">
     <button class="btn btn-sand btn-xs" onclick="closeExamPicker()">取消</button>
     <button class="pop-clear" onclick="clearExamDate()">清除日期</button>
@@ -4304,6 +4309,7 @@ onAuthStateChanged(auth,user=>{
           <label class="form-label" for="inp-exam">考試日期（選填）</label>
           <input type="date" id="inp-exam"/>
         </div>
+        <div id="new-exam-scope" class="exam-scope" hidden></div>
         <label class="phone-only phone-repeat-choice"><input type="checkbox" id="phone-repeat-after-create"> 建立後接著重複排課（選填）</label>
         <div class="dialog-actions">
           <button type="button" class="btn btn-sand" id="phone-existing-repeat" hidden>為既有課程排課</button>
@@ -5315,10 +5321,14 @@ function addCourse(event){
   if(!name){toast('請輸入科目名稱','warn');nameInput.focus();return;}
   const {total,lessonStart,lessonEnd}=range;
   const examDate=document.getElementById('inp-exam').value||'';
+  syncNewExamScope();
+  const scope=examDate?readExamScope($id('new-exam-scope'),name):{};
+  if(scope===false)return;
   const id=`c${S.cid++}`;
-  S.courses.push({id,name,total,color:PALETTE[colorCursor++%PALETTE.length],examDate,lessonStart,lessonEnd});
+  S.courses.push({id,name,total,color:PALETTE[colorCursor++%PALETTE.length],examDate,lessonStart,lessonEnd,...(scope.examScope?scope:{})});
   const repeatAfterCreate=phoneCourseDialog.open&&document.getElementById('phone-repeat-after-create').checked;
   event.currentTarget.reset();
+  syncNewExamScope();
   updateNewCourseRange();
   nameInput.focus();
   saveState();render();
@@ -5604,13 +5614,72 @@ function editCourse(id){
   requestAnimationFrame(()=>$id('edit-name')?.focus());
 }
 
-function updateExamDate(id,val){const c=course(id);if(!c)return;c.examDate=val;saveState();renderPartial(renderCourses,renderCalendar);refreshStudyBrief();}
+function updateExamDate(id,val,scope){
+  const c=course(id);if(!c)return;
+  c.examDate=val;
+  if(scope?.examScope)c.examScope=scope.examScope;
+  else if(scope?.examScope===null)delete c.examScope;
+  saveState();renderPartial(renderCourses,renderCalendar);refreshStudyBrief();
+}
+
+function renderExamScope(root,name,saved){
+  const library=studyRoom.examLibrary(name);
+  if(!library){root.innerHTML='<p class="study-brief-meta">尚未連結題庫</p>';return;}
+  const id=root.id+'-mode';
+  root.innerHTML=`<label class="study-field" for="${id}"><span>考試範圍</span><select id="${id}" data-exam-scope-mode>
+    <option value="all">全科題庫</option><option value="chapters" ${saved?'selected':''}>指定章節</option>
+  </select></label>
+  <div class="exam-scope-checks" role="group" aria-label="指定章節" ${saved?'':'hidden'}>
+    ${library.chapters.length?library.chapters.map(ch=>`<label><input type="checkbox" value="${esc(ch.id)}" ${saved?.subject===library.subject&&saved.chapters?.includes?.(ch.id)?'checked':''}><span>${esc(ch.name)}</span></label>`).join(''):
+      '<p class="study-brief-meta">目前沒有可選章節</p>'}
+  </div><p class="schedule-time-error" role="status"></p>`;
+  root.onchange=()=>{
+    root.querySelector('.exam-scope-checks').hidden=root.querySelector('[data-exam-scope-mode]').value!=='chapters';
+    root.querySelector('[role=status]').textContent='';
+    if(root.id==='exam-pop-scope')positionExamPicker();
+  };
+}
+function readExamScope(root,name){
+  const library=studyRoom.examLibrary(name);
+  if(!library)return {};
+  if(root.querySelector('[data-exam-scope-mode]')?.value!=='chapters')return {examScope:null};
+  const checked=new Set([...root.querySelectorAll('input:checked')].map(box=>box.value));
+  const chapters=library.chapters.filter(ch=>checked.has(ch.id)).map(ch=>ch.id);
+  if(!chapters.length){
+    root.querySelector('[role=status]').textContent='請至少選擇一個章節。';
+    (root.querySelector('input[type=checkbox]')||root.querySelector('select')).focus();
+    if(root.id==='exam-pop-scope')positionExamPicker();
+    return false;
+  }
+  return {examScope:{subject:library.subject,chapters}};
+}
+function syncNewExamScope(){
+  const root=$id('new-exam-scope'),name=$id('inp-name').value.trim();
+  root.hidden=!$id('inp-exam').value;
+  if(root.hidden){delete root.dataset.courseName;return;}
+  if(root.dataset.courseName!==name||!root.childElementCount){
+    root.dataset.courseName=name;
+    renderExamScope(root,name);
+  }
+}
+document.getElementById('inp-name').addEventListener('input',syncNewExamScope);
+document.getElementById('inp-exam').addEventListener('change',syncNewExamScope);
 
 // ── Exam Popover ──────────────────────────────────────────────────
-let _examPickerCid=null;
+let _examPickerCid=null,examPickerAnchor=null;
+function positionExamPicker(){
+  if(!examPickerAnchor?.isConnected||!isMobile()&&wideCourse.open)return;
+  const pop=$id('exam-popover'),rect=examPickerAnchor.getBoundingClientRect();
+  const width=pop.offsetWidth,height=pop.offsetHeight;
+  pop.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-width-8))+'px';
+  const top=rect.bottom+6+height<=window.innerHeight-8?rect.bottom+6:rect.top-height-6;
+  pop.style.top=Math.max(8,top)+'px';
+}
 function openExamPicker(id, btnEl){
-  _examPickerCid=id;
   const c=course(id);if(!c)return;
+  _examPickerCid=id;
+  examPickerAnchor=btnEl;
+  renderExamScope($id('exam-pop-scope'),c.name,c.examScope);
   const pop=document.getElementById('exam-popover');
   document.getElementById('exam-pop-input').value=c.examDate||'';
   pop.style.display='block';
@@ -5619,13 +5688,7 @@ function openExamPicker(id, btnEl){
     document.getElementById('exam-pop-input').focus();
     return;
   }
-  // Position near the button
-  const rect=btnEl.getBoundingClientRect();
-  const pw=230,ph=120;
-  let left=rect.left,top=rect.bottom+6;
-  if(left+pw>window.innerWidth-8)left=window.innerWidth-pw-8;
-  if(top+ph>window.innerHeight-8)top=rect.top-ph-6;
-  pop.style.left=left+'px';pop.style.top=top+'px';
+  positionExamPicker();
   setTimeout(()=>document.addEventListener('click',_examOutside),0);
 }
 function _examOutside(e){
@@ -5635,11 +5698,15 @@ function closeExamPicker(){
   document.getElementById('exam-popover').style.display='none';
   document.removeEventListener('click',_examOutside);
   _examPickerCid=null;
+  examPickerAnchor=null;
 }
 function confirmExamDate(){
   if(!_examPickerCid)return;
   const val=document.getElementById('exam-pop-input').value;
-  updateExamDate(_examPickerCid,val);
+  const c=course(_examPickerCid);if(!c)return;
+  const scope=readExamScope($id('exam-pop-scope'),c.name);
+  if(scope===false)return;
+  updateExamDate(_examPickerCid,val,scope);
   closeExamPicker();
 }
 function clearExamDate(){
@@ -8130,9 +8197,9 @@ function studyExamHTML(brief){
   if(!exams.length)return '';
   return `<section class="study-exams" aria-labelledby="study-exams-title">
     <h4 id="study-exams-title" class="day-panel-title">考前 7 天重點</h4>
-    ${exams.map(({id,name,date,days,chapters,priority})=>`<details class="study-exam-row" data-study-exam="${esc(id)}">
+    ${exams.map(({id,name,date,days,chapters,priority,scopeLabel,scopeInvalid})=>`<details class="study-exam-row" data-study-exam="${esc(id)}">
       <summary><strong>${esc(name)}</strong> <span class="study-brief-meta"><time datetime="${esc(date)}">${esc(date)}</time> · ${days===0?'今天考試':'剩 '+days+' 天'}</span></summary>
-      ${chapters?`<p class="study-brief-meta">以全科題庫統計</p>
+      ${scopeInvalid?'<p class="study-brief-meta">請重新設定考試範圍</p>':chapters?`<p class="study-brief-meta">${scopeLabel}</p>
         ${chapters.length?`<ul>${chapters.map(({name,answered,total,weak})=>`<li><strong>${esc(name||'未分類')}</strong><span class="study-brief-meta"><span>已作答 ${answered}／${total} 題</span><span>待加強 ${weak} 題</span></span></li>`).join('')}</ul>`:
           '<p class="study-brief-meta">目前沒有題目</p>'}
         ${priority&&!brief.waiting?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">${brief.resume?'繼續複習':'練習優先章節'}</button>`:''}`:
@@ -9070,7 +9137,7 @@ const learningJournal=(()=>{
       results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
     const todayRetries=Object.fromEntries([...rounds.values()].filter(round=>round.retryOf).map(round=>[round.retryOf,round.id]));
     const review=Object.fromEntries(kept.filter(p=>reviews.has(p.id)).map(p=>[p.id,reviews.get(p.id)]));
-    return {version:1,points:kept,progress,review,answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    return {version:1,points:kept,progress,review,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -9138,7 +9205,7 @@ const studyRoom=(()=>{
   function withLocalReview(saved){
     const projection=saved.syncJournal?learningJournal.project(saved.syncJournal):null;
     const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
-    return {...saved,review:projection?.review??{},answered};
+    return {...saved,review:projection?.review??{},chapterRefs:projection?.chapterRefs??{},answered};
   }
   function roundComplete(round){
     return !!round&&Array.isArray(round.queue)&&round.index===round.queue.length;
@@ -9201,7 +9268,9 @@ const studyRoom=(()=>{
     return [...new Set([...(data.catalog?.find(item=>item.name===subject)?.chapters||[]),
       ...data.points.filter(p=>p.subject===subject&&p.chapter).map(p=>p.chapter)])].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
   }
-  function filterMarkup(){
+  function filterMarkup(allowed=null){
+    if(allowed)return '<label class="study-field"><span>章節</span><select id="study-filter-chapter">'+
+      allowed.map(ch=>'<option value="chapter:'+esc(ch.name)+'"'+(ch.name===filters.chapter?' selected':'')+'>'+esc(ch.name)+'</option>').join('')+'</select></label>';
     const choices='<option value="">全部章節</option>'+chapters(filters.subject).map(ch=>'<option value="chapter:'+esc(ch)+'"'+(ch===filters.chapter?' selected':'')+'>'+esc(ch)+'</option>').join('');
     const unfiledOption='<option value="unfiled"'+(filters.chapter===unfiled?' selected':'')+'>未分類</option>';
     return '<label class="study-field"><span>章節</span><select id="study-filter-chapter">'+choices+unfiledOption+'</select></label>';
@@ -9439,21 +9508,34 @@ const batchDialog=$id('study-batch');
       '<p class="study-error" role="alert"></p><div class="study-actions">'+action('取消','cancel-edit')+
       '<button class="btn btn-primary">儲存知識點</button></div></form>');
   }
+  function examLibrary(courseName){
+    const key=courseName.trim().normalize('NFC');
+    const matches=subjectNames().filter(name=>name.trim().normalize('NFC')===key);
+    if(matches.length!==1)return null;
+    const subject=matches[0];
+    return {subject,chapters:chapters(subject).map(name=>{
+      const key=JSON.stringify([subject,name]);
+      return {name,id:data.chapterRefs?.[key]??'legacy:'+key};
+    })};
+  }
   function upcomingExams(){
     const day=studyLocalDay();
-    const known=subjectNames();
     const answered=new Set(data.answered||[]);
     return S.courses.map(c=>({...c,days:c.examDate?daysBetween(day,c.examDate):NaN}))
       .filter(c=>c.days>=0&&c.days<=7)
       .sort((a,b)=>a.examDate.localeCompare(b.examDate))
       .map(c=>{
-        const matches=known.filter(name=>name.trim().normalize('NFC')===c.name.trim().normalize('NFC'));
-        const subject=matches.length===1?matches[0]:null;
+        const library=examLibrary(c.name);
+        const subject=library?.subject;
         const exam={id:c.id,name:c.name,date:c.examDate,days:c.days,subject};
-        if(!subject)return exam;
-        const stats=new Map(chapters(subject).map(name=>[name,{name,answered:0,total:0,weak:0}]));
+        if(!library)return exam;
+        const scope=c.examScope;
+        const allowed=scope?(scope.subject===subject&&Array.isArray(scope.chapters)?
+          library.chapters.filter(ch=>scope.chapters.includes(ch.id)):[]):library.chapters;
+        if(scope&&!allowed.length)return {...exam,scopeInvalid:true};
+        const stats=new Map(allowed.map(({name})=>[name,{name,answered:0,total:0,weak:0}]));
         for(const p of data.points){
-          if(p.subject!==subject)continue;
+          if(p.subject!==subject||scope&&!stats.has(p.chapter))continue;
           if(!stats.has(p.chapter))stats.set(p.chapter,{name:p.chapter,answered:0,total:0,weak:0});
           const chapter=stats.get(p.chapter);
           chapter.total++;
@@ -9462,7 +9544,7 @@ const batchDialog=$id('study-batch');
         }
         const sorted=[...stats.values()].sort((a,b)=>b.weak-a.weak||
           Number(b.total>b.answered)-Number(a.total>a.answered)||a.name.localeCompare(b.name,'zh-Hant'));
-        return {...exam,chapters:sorted,priority:sorted.find(chapter=>chapter.weak||chapter.total>chapter.answered)};
+        return {...exam,scopeLabel:scope?'以指定章節統計':'以全科題庫統計',allowed:scope?allowed:null,chapters:sorted,priority:sorted.find(chapter=>chapter.weak||chapter.total>chapter.answered)};
       });
   }
   function openExamChapter(id){
@@ -9475,7 +9557,7 @@ const batchDialog=$id('study-batch');
     if(!exam?.priority){briefChanged();return;}
     filters={subject:exam.subject,chapter:exam.priority.name||unfiled};
     openTodayPractice();
-    configurePractice('setup-chapter',true);
+    configurePractice('setup-chapter',id);
   }
   function configurePractice(source,fromExam=false){
     examSetup=fromExam;
@@ -9486,7 +9568,8 @@ const batchDialog=$id('study-batch');
   }
   function setup(){
     const available=filtered(weakOnly).length;
-    draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+filterMarkup()+
+    const allowed=examSetup?upcomingExams().find(exam=>exam.id===examSetup)?.allowed:null;
+    draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+filterMarkup(allowed)+
       '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend><div class="study-mode-options">'+
       ['cards','practice'].map((m,i)=>'<label><input type="radio" name="mode" value="'+m+'"'+(m===setupMode?' checked':'')+'>'+['字卡複習','互動練習'][i]+'</label>').join('')+
       '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
@@ -9882,11 +9965,18 @@ const batchDialog=$id('study-batch');
       persist();
       go(from);
     }else if(form.id==='study-setup'){
-      const ids=filtered(weakOnly).map(p=>p.id);
       if(examSetup&&(resumableToday()||unfinishedOtherPractice())){
         startWeakBrief(todayLessonSubjectNames(),'today');
         return;
       }
+      if(examSetup){
+        const exam=upcomingExams().find(item=>item.id===examSetup);
+        if(!exam?.priority){returnToTodayPracticeDay();return;}
+        if(filters.subject!==exam.subject||exam.allowed&&!exam.allowed.some(ch=>ch.name===filters.chapter)){
+          filters={subject:exam.subject,chapter:exam.priority.name||unfiled};
+        }
+      }
+      const ids=filtered(weakOnly).map(p=>p.id);
       if(ids.length)start(ids,values.get('mode'),{subject:filters.subject,...(examSetup?{returnMode:'today'}:{})});
     }else if(form.id==='study-answer-form'&&session?.phase==='question'){
       const answer=values.get('answer').trim();
@@ -9996,10 +10086,11 @@ const batchDialog=$id('study-batch');
   }
   function saveLearning(next,answer,move,roundOperation){
     if(!account){
-      if(next.syncJournal||answer){
+      if(next.syncJournal||answer||move){
         const journal={...next.syncJournal};
         if(!next.syncJournal){
-          for(const op of learningJournal.changes(learningJournal.fresh(),lastSaved))journal[newPointId()]={...op,clock:0};
+          let initialClock=0;
+          for(const op of learningJournal.changes(learningJournal.fresh(),lastSaved))journal[newPointId()]={...op,clock:++initialClock};
         }
         let clock=Object.values(journal).reduce((max,op)=>Math.max(max,op.clock),0);
         const refs=new Map();
@@ -10184,6 +10275,7 @@ const batchDialog=$id('study-batch');
     valid,
     todayBrief,
     upcomingExams,
+    examLibrary,
     openExamChapter,
     startWeakBrief,
     openHome:()=>go('home'),
