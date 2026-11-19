@@ -8861,7 +8861,8 @@ const learningJournal=(()=>{
       Array.isArray(value.queue)&&value.queue.length>0&&value.queue.length<=5&&value.queue.every(validPointId)&&
       new Set(value.queue).size===value.queue.length&&Array.isArray(value.results)&&
       value.results.every(r=>r&&value.queue.includes(r.id)&&outcomes.has(r.outcome))&&
-      new Set(value.results.map(r=>r.id)).size===value.results.length;
+      new Set(value.results.map(r=>r.id)).size===value.results.length&&
+      (value.retryOf===undefined||validPointId(value.retryOf)&&value.retryOf!==op.target);
     if(op.kind==='today-answer')return validPointId(op.target)&&Array.isArray(value)&&value.length===2&&
       validPointId(value[0])&&outcomes.has(value[1]);
     if(op.kind==='baseline')return validPointId(op.target)&&validProgress(value);
@@ -8923,7 +8924,7 @@ const learningJournal=(()=>{
       }else if(kind==='baseline'){
         if((baseline.get(target)?.attempts??-1)<=value.attempts)baseline.set(target,{...value});
       }else if(kind==='today-round'){
-        if(!rounds.has(target))rounds.set(target,{id:target,subject:value.subject,queue:value.queue,
+        if(!rounds.has(target))rounds.set(target,{id:target,subject:value.subject,queue:value.queue,retryOf:value.retryOf,
           results:new Map(value.results.map(r=>[r.id,r.outcome]))});
       }else answers.push(op);
     }
@@ -8960,7 +8961,8 @@ const learningJournal=(()=>{
     const lastRound=[...rounds.values()].at(-1);
     const todayRound=lastRound&&{id:lastRound.id,subject:lastRound.subject,queue:lastRound.queue,
       results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
-    return {version:1,points:kept,progress,catalog:[...catalog.values()],...(todayRound?{todayRound}:{})};
+    const todayRetries=Object.fromEntries([...rounds.values()].filter(round=>round.retryOf).map(round=>[round.retryOf,round.id]));
+    return {version:1,points:kept,progress,catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -9037,7 +9039,7 @@ const studyRoom=(()=>{
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
         (s.origin==='today'||roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
         ['question','revealed','grade','feedback'].includes(s.phase)&&text(s.answer)&&
-        Array.isArray(s.results)&&s.results.every(r=>object(r)&&s.queue.includes(r.id)&&Object.hasOwn(outcomes,r.outcome))){
+        Array.isArray(s.results)&&s.results.every(r=>object(r)&&(s.origin==='today'||s.queue.includes(r.id))&&Object.hasOwn(outcomes,r.outcome))){
         session=s;
       }
     }
@@ -9365,9 +9367,10 @@ const batchDialog=$id('study-batch');
     return pick(todays,true)||pick(subjects,false);
   }
   function createTodayRound(){
-    session.roundId=newPointId();
+    session.roundId||=newPointId();
     return {kind:'today-round',target:session.roundId,value:{
-      subject:session.subject,queue:session.queue,results:[...session.results],
+      subject:session.subject,queue:session.queue,results:session.results.filter(result=>session.queue.includes(result.id)),
+      ...(session.retryOf?{retryOf:session.retryOf}:{}),
     }};
   }
   function todayState(source){
@@ -9380,12 +9383,17 @@ const batchDialog=$id('study-batch');
   function resumableToday(){
     const source=account&&data.todayRound?data.todayRound:session?.origin==='today'?session:null;
     const round=todayState(source);
-    return round&&round.index<round.queue.length?{...round,roundId:source.id||source.roundId}:null;
+    return round&&round.index<round.queue.length?{...round,results:source.results,roundId:source.id||source.roundId}:null;
   }
   function syncTodaySession(keepFeedback=false){
     const remote=session?.roundId&&data.todayRound?.id===session.roundId?data.todayRound:null;
     if(session?.origin!=='today')return;
-    const round=todayState(remote||session);
+    if(roundComplete(session)){
+      if(remote)session.results=remote.results;
+      return;
+    }
+    const source=remote||session;
+    const round={...todayState(source),results:source.results};
     const current=session.queue[session.index];
     const currentIndex=round.queue.indexOf(current);
     if(keepFeedback&&session.phase==='feedback'&&currentIndex>=0&&round.results.some(r=>r.id===current)){
@@ -9480,7 +9488,7 @@ const batchDialog=$id('study-batch');
     if(phase==='question'){
       body+=cards?'<div class="study-actions">'+action('翻面','flip',true)+'</div>':
         '<form id="study-answer-form"><label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3" required>'+esc(answer)+'</textarea></label>'+
-        '<p class="study-error" role="alert"></p><div class="study-actions">'+action('直接看答案','view')+
+        '<p class="study-error" role="alert"></p><div class="study-actions">'+action(session.origin==='today'?'跳過':'直接看答案','view')+
         '<button class="btn btn-primary">送出答案</button></div></form>';
     }else{
       if(answer)body+='<p class="study-meta">你的答案</p><p class="study-copy">'+esc(answer)+'</p>';
@@ -9488,22 +9496,26 @@ const batchDialog=$id('study-batch');
       if(phase==='grade')body+='<div class="study-actions">'+action('沒答出來','missed')+action('部分答對','partial')+action('答對','correct',true)+'</div>';
       else{
         if(!cards)body+='<p class="study-meta" role="status">'+(outcomes[session.results.find(r=>r.id===p.id)?.outcome]??'')+'</p>';
-        const final=session.origin==='today'?session.results.length===queue.length:index+1===queue.length;
+        const final=session.origin==='today'?queue.every(id=>session.results.some(result=>result.id===id)):index+1===queue.length;
         body+='<div class="study-actions">'+action(final?'查看結果':'下一題','next',true)+'</div>';
       }
     }
     draw(cards?'字卡複習':'互動練習','<div class="study-surface">'+body+'</div>');
   }
   function retryQuestionIds(){
-    if(!roundComplete(session)||session.mode!=='practice')return [];
+    if(!roundComplete(session)||session.mode!=='practice'||data.todayRetries?.[session.roundId])return [];
     return [...new Set(session.results.filter(result=>result.outcome==='incorrect'&&point(result.id)).map(result=>result.id))];
   }
   function roundSubject(){
     return session?.subject||session?.queue.map(id=>point(id)?.subject).find(Boolean)||filters.subject;
   }
-  function roundCounts(records){
-    return '<dl class="study-result">'+Object.entries(outcomes).map(([key,label])=>
-      '<dt>'+label+'</dt><dd>'+records.filter(result=>result?.outcome===key).length+'</dd>').join('')+'</dl>';
+  function roundCounts(records,today=false){
+    const totals=Object.fromEntries(Object.keys(outcomes).map(key=>[key,records.filter(result=>result?.outcome===key).length]));
+    const rows=today?[
+      ['correct','答對'],['incorrect','答錯'],['viewed','跳過'],
+      ...[['partial',outcomes.partial],['missed',outcomes.missed]].filter(([key])=>totals[key]>0),
+    ]:Object.entries(outcomes);
+    return '<dl class="study-result">'+rows.map(([key,label])=>'<dt>'+label+'</dt><dd>'+totals[key]+'</dd>').join('')+'</dl>';
   }
   function previousRounds(){
     return Array.isArray(session?.previousResults)?session.previousResults.filter(Array.isArray):[];
@@ -9519,14 +9531,40 @@ const batchDialog=$id('study-batch');
     const retryCount=retryQuestionIds().length;
     const fromToday=session?.origin==='today';
     const earlier=previousRounds();
-    const back=canReturnToday?action('返回今日','today-back',!retryCount):
+    const back=canReturnToday?action(fromToday?'回到今日':'返回今日','today-back',!retryCount):
       action(subjectNames().includes(roundSubject())?'返回科目':'返回學習室','subject-back',!retryCount);
     draw('練習結果','<div class="study-surface">'+
       (fromToday?'<p class="study-meta study-brief-summary">今日備考 · '+esc(session.subject||'')+'　完成 '+r.length+' 題</p>':'')+
-      roundCounts(r)+
+      roundCounts(r,fromToday)+
       (earlier.length?'<details class="study-supplements study-previous-results"><summary>查看先前輪次結果</summary>'+
-        earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records)).join('')+'</details>':'')+
+        earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,fromToday)).join('')+'</details>':'')+
       '<div class="study-actions">'+back+(retryCount?action('重練錯題（'+retryCount+' 題）','retry',true):'')+'</div></div>',false);
+  }
+  let startingRetry=false;
+  async function retryRound(){
+    if(screen!=='results'||startingRetry)return;
+    if(!retryQuestionIds().length){render();return;}
+    const previous=session, owner=account;
+    const {origin,returnMode}=previous;
+    const retryOf=origin==='today'&&owner?previous.roundId:null;
+    startingRetry=true;
+    try{
+      let roundId;
+      if(retryOf){
+        // Concurrent retries of the same parent share a round ID. The journal merges their answers.
+        const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('studyos-today-retry:'+retryOf));
+        roundId='k-'+Array.from(new Uint8Array(hash,0,16),n=>n.toString(16).padStart(2,'0')).join('');
+      }
+      if(account!==owner||session!==previous||screen!=='results')return;
+      const ids=retryQuestionIds();
+      if(!ids.length){render();return;}
+      start(ids,'practice',{
+        origin,returnMode,subject:roundSubject(),previousResults:[...previousRounds(),previous.results],
+        ...(roundId?{roundId,retryOf}:{}),
+      },{shuffle:false});
+    }catch{
+      toast('無法開始重練，請再試一次。','warn');
+    }finally{startingRetry=false;}
   }
   function render(){
     if(screen==='home')subjectCards(false);
@@ -9613,15 +9651,8 @@ const batchDialog=$id('study-batch');
       filters={subject:subjectNames().includes(subject)?subject:'',chapter:''};
       go(filters.subject?'subject':'home');
     }else if(act==='resume')go('session');
-    else if(act==='retry'){
-      if(screen!=='results')return;
-      const ids=retryQuestionIds();
-      if(!ids.length){render();return;}
-      const {origin,returnMode}=session;
-      start(ids,'practice',{
-        origin,returnMode,subject:roundSubject(),previousResults:[...previousRounds(),session.results],
-      },{shuffle:false});
-    }else if(act==='flip'){
+    else if(act==='retry')retryRound();
+    else if(act==='flip'){
       session.phase='revealed';persist();go('session');
     }else if(act==='view'){
       session.answer='';record('viewed');
