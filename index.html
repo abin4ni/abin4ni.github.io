@@ -9002,6 +9002,9 @@ const studyRoom=(()=>{
     return Object.entries(data.progress).every(([id,p])=>ids.has(id)&&object(p)&&count(p.attempts)&&
       count(p.streak)&&p.streak<=2&&p.streak<=p.attempts&&typeof p.weak==='boolean');
   }
+  function roundComplete(round){
+    return !!round&&Array.isArray(round.queue)&&round.index===round.queue.length;
+  }
   let data=fresh(),session=null;
   try{
     const stored=JSON.parse(localStorage.getItem(key));
@@ -9009,7 +9012,7 @@ const studyRoom=(()=>{
       data=stored.data;
       const s=stored.session;
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
-        s.queue.every(id=>data.points.some(p=>p.id===id))&&count(s.index)&&s.index<=s.queue.length&&
+        (roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
         ['question','revealed','grade','feedback'].includes(s.phase)&&text(s.answer)&&
         Array.isArray(s.results)&&s.results.every(r=>object(r)&&s.queue.includes(r.id)&&Object.hasOwn(outcomes,r.outcome))){
         session=s;
@@ -9305,15 +9308,22 @@ const batchDialog=$id('study-batch');
       '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
       '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>');
   }
-  function start(ids,mode,extra){
+  function start(ids,mode,extra,{shuffle=true}={}){
     const queue=[...ids];
-    for(let i=queue.length-1;i>0;i--){
-      const j=Math.floor(Math.random()*(i+1));
-      [queue[i],queue[j]]=[queue[j],queue[i]];
+    if(shuffle){
+      for(let i=queue.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [queue[i],queue[j]]=[queue[j],queue[i]];
+      }
     }
+    const previous=session;
     session={mode,queue,index:0,results:[],phase:'question',answer:'',...extra};
-    persist();
+    if(!persist()){
+      session=previous;
+      return false;
+    }
     go('session');
+    return true;
   }
   function weakBrief(todayNames=[]){
     const subjects=subjectNames();
@@ -9414,17 +9424,39 @@ const batchDialog=$id('study-batch');
     }
     draw(cards?'字卡複習':'互動練習','<div class="study-surface">'+body+'</div>');
   }
+  function retryQuestionIds(){
+    if(!roundComplete(session)||session.mode!=='practice')return [];
+    return [...new Set(session.results.filter(result=>result.outcome==='incorrect'&&point(result.id)).map(result=>result.id))];
+  }
+  function roundSubject(){
+    return session?.subject||session?.queue.map(id=>point(id)?.subject).find(Boolean)||filters.subject;
+  }
+  function roundCounts(records){
+    return '<dl class="study-result">'+Object.entries(outcomes).map(([key,label])=>
+      '<dt>'+label+'</dt><dd>'+records.filter(result=>result?.outcome===key).length+'</dd>').join('')+'</dl>';
+  }
+  function previousRounds(){
+    return Array.isArray(session?.previousResults)?session.previousResults.filter(Array.isArray):[];
+  }
   function results(){
     const r=session?.results||[];
-    const cards=session?.mode==='cards';
-    const weak=r.filter(x=>x.outcome!=='correct').length;
+    const canReturnToday=session?.origin==='today'||Boolean(session?.returnMode);
+    if(session?.mode==='cards'){
+      draw('字卡複習完成','<div class="study-surface"><p>已瀏覽 '+session.queue.length+' 張字卡。</p>'+
+        '<div class="study-actions">'+(canReturnToday?action('返回今日','today-back',true):'')+'</div></div>');
+      return;
+    }
+    const retryCount=retryQuestionIds().length;
     const fromToday=session?.origin==='today';
-    const canReturnToday=fromToday||Boolean(session?.returnMode);
-    draw(cards?'字卡複習完成':'練習結果','<div class="study-surface">'+
-      (fromToday?'<p class="study-meta study-brief-summary">今日備考 · '+esc(session.subject||'')+'　完成 '+r.length+' 題</p>':'')+(cards?
-      '<p>已瀏覽 '+(session?.queue.length||0)+' 張字卡。</p>':
-      '<dl class="study-result">'+Object.entries(outcomes).map(([k,v])=>'<dt>'+v+'</dt><dd>'+r.filter(x=>x.outcome===k).length+'</dd>').join('')+'</dl>')+
-      '<div class="study-actions">'+(weak?action('重練本次待加強','retry',true):'')+(canReturnToday?action('返回今日','today-back',!weak):'')+'</div></div>');
+    const earlier=previousRounds();
+    const back=canReturnToday?action('返回今日','today-back',!retryCount):
+      action(subjectNames().includes(roundSubject())?'返回科目':'返回學習室','subject-back',!retryCount);
+    draw('練習結果','<div class="study-surface">'+
+      (fromToday?'<p class="study-meta study-brief-summary">今日備考 · '+esc(session.subject||'')+'　完成 '+r.length+' 題</p>':'')+
+      roundCounts(r)+
+      (earlier.length?'<details class="study-supplements study-previous-results"><summary>查看先前輪次結果</summary>'+
+        earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records)).join('')+'</details>':'')+
+      '<div class="study-actions">'+back+(retryCount?action('重練錯題（'+retryCount+' 題）','retry',true):'')+'</div></div>',false);
   }
   function render(){
     if(screen==='home')subjectCards(false);
@@ -9494,7 +9526,7 @@ const batchDialog=$id('study-batch');
       showConfirm('刪除知識點','此知識點與練習進度將一併刪除。',()=>{
         data.points=data.points.filter(p=>p.id!==id);
         delete data.progress[id];
-        if(session?.queue.includes(id))session=null;
+        if(session?.queue.includes(id)&&!roundComplete(session))session=null;
         persist();
         go(screen);
       });
@@ -9505,13 +9537,19 @@ const batchDialog=$id('study-batch');
       go('setup');
     }else if(act==='today-back'){
       returnToTodayPracticeDay();
+    }else if(act==='subject-back'){
+      const subject=roundSubject();
+      filters={subject:subjectNames().includes(subject)?subject:'',chapter:''};
+      go(filters.subject?'subject':'home');
     }else if(act==='resume')go('session');
     else if(act==='retry'){
-      const ids=session.results.filter(r=>r.outcome!=='correct'&&point(r.id)).map(r=>r.id);
-      if(ids.length){
-        const {origin,subject,returnMode}=session;
-        start([...new Set(ids)],'practice',{origin,subject,returnMode});
-      }
+      if(screen!=='results')return;
+      const ids=retryQuestionIds();
+      if(!ids.length){render();return;}
+      const {origin,returnMode}=session;
+      start(ids,'practice',{
+        origin,returnMode,subject:roundSubject(),previousResults:[...previousRounds(),session.results],
+      },{shuffle:false});
     }else if(act==='flip'){
       session.phase='revealed';persist();go('session');
     }else if(act==='view'){
@@ -9563,7 +9601,7 @@ const batchDialog=$id('study-batch');
       go(from);
     }else if(form.id==='study-setup'){
       const ids=filtered(weakOnly).map(p=>p.id);
-      if(ids.length)start(ids,values.get('mode'));
+      if(ids.length)start(ids,values.get('mode'),{subject:filters.subject});
     }else if(form.id==='study-answer-form'&&session?.phase==='question'){
       const answer=values.get('answer').trim();
       if(!answer){form.querySelector('.study-error').textContent='請輸入答案，或直接看參考答案。';return;}
@@ -9699,7 +9737,7 @@ const batchDialog=$id('study-batch');
     if(JSON.stringify(next)===JSON.stringify(data))return;
     data=next;
     lastSaved=structuredClone(next);
-    if(session&&!session.queue.every(id=>point(id))){
+    if(session&&!roundComplete(session)&&!session.queue.every(id=>point(id))){
       session=null;
       if(screen==='session'||screen==='results')screen='subject';
     }
@@ -9817,7 +9855,7 @@ const batchDialog=$id('study-batch');
       }catch{}
       try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);}
       data=projectAccount(state);
-      if(session&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
+      if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
       if(session)screen=session.index===session.queue.length?'results':'session';
       listenLearning(state);
     }
