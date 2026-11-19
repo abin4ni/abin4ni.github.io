@@ -4,7 +4,6 @@
   if (navigation?.type === 'reload' || navigation?.type === 'back_forward') return;
   try {
     if (sessionStorage.getItem(seenKey)) return;
-    sessionStorage.setItem(seenKey, '1');
   } catch {
     // The navigation type still prevents replay on reload if storage is unavailable.
   }
@@ -24,10 +23,11 @@
   // Replace this single-stroke outline and its entry/focal points when the logo is final.
   const mark = {
     entry: '480 -26',
-    center: [516, 1],
+    focus: [533, 1],
     outline: ' Q 480 -34 487 -32 Q 505 -31 516 -19 Q 531 -31 545 -32 Q 552 -33 552 -26 L 552 18 Q 552 23 546 23 Q 528 24 516 35 Q 503 25 486 23 Q 480 22 480 17 L 480 -26 Q 480 -34 487 -32 Q 505 -31 516 -19 L 516 35',
   };
   const connector = ' C 467 12 467 -21 ' + mark.entry;
+  const viewBox = [-117, -225, 690, 450];
 
   const style = document.createElement('style');
   style.textContent = [
@@ -36,7 +36,8 @@
     '#studyos-intro { --veil:#f5f4ef; --mist:rgba(255,255,255,.88); --wash:rgba(197,209,229,.27); --ink:#484e59; --rim:rgba(78,89,104,.22); --pill:rgba(255,255,255,.66); --focus:#395d93; --violet:#8a63bf; --blue:#5b73bc; --teal:#318691; --rose:#ac6c83; --mint:#387d71; }',
     '[data-theme=dark] #studyos-intro { --veil:#191a1d; --mist:rgba(62,65,78,.56); --wash:rgba(86,114,124,.2); --ink:#e3e5ec; --rim:rgba(228,232,245,.25); --pill:rgba(28,30,37,.68); --focus:#aec7ff; --violet:#d4a3f1; --blue:#a3b9ff; --teal:#83ddd9; --rose:#efadba; --mint:#a2e9cf; }',
     '#studyos-intro .intro-veil { position:absolute; inset:0; background:radial-gradient(ellipse at 52% 47%, var(--mist), transparent 62%), radial-gradient(ellipse at 66% 46%, var(--wash), transparent 58%), var(--veil); }',
-    '#studyos-intro > svg { display:block; position:absolute; inset:0; width:100%; height:100%; overflow:hidden; pointer-events:none; }',
+    '#studyos-intro .intro-camera { position:absolute; inset:0; pointer-events:none; }',
+    '#studyos-intro .intro-camera > svg { display:block; width:100%; height:100%; overflow:hidden; }',
     '#studyos-intro-skip { position:absolute; bottom:calc(clamp(14px,5vh,48px) + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); min-height:44px; padding:0 18px; white-space:nowrap; border:1px solid var(--rim); border-radius:999px; background:var(--pill); color:var(--ink); font:inherit; font-size:.875rem; cursor:pointer; }',
     '#studyos-intro-skip:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }',
   ].join('\n');
@@ -47,22 +48,19 @@
   dialog.setAttribute('aria-label', 'StudyOS 開場動畫');
   dialog.innerHTML = [
     '<div class="intro-veil"></div>',
-    '<svg viewBox="-117 -225 690 450" aria-hidden="true" focusable="false">',
+    '<div class="intro-camera" aria-hidden="true"><svg viewBox="' + viewBox.join(' ') + '" focusable="false">',
     '<defs>',
     '<linearGradient id="intro-ink" gradientUnits="userSpaceOnUse" x1="0" y1="43" x2="552" y2="-30">',
     '<stop stop-color="var(--violet)"/><stop offset=".23" stop-color="var(--blue)"/><stop offset=".48" stop-color="var(--teal)"/><stop offset=".72" stop-color="var(--rose)"/><stop offset="1" stop-color="var(--mint)"/>',
     '</linearGradient>',
     '<path id="intro-route" d="' + wordmark + '"/>',
     '<filter id="intro-glow" x="-12%" y="-45%" width="124%" height="190%"><feGaussianBlur stdDeviation="5"/></filter>',
-    '<path id="intro-mark" d="M ' + mark.entry + mark.outline + '"/>',
     '</defs>',
-    '<g class="intro-rings" fill="none" stroke="var(--mint)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><use href="#intro-mark" opacity="0"/><use href="#intro-mark" opacity="0"/></g>',
-    '<g class="intro-camera">',
     '<g fill="none" stroke="url(#intro-ink)" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round">',
     '<g class="intro-trail"><use href="#intro-route" filter="url(#intro-glow)" opacity=".45"/><use href="#intro-route"/></g>',
-    '<g class="intro-lead" opacity="0"><use href="#intro-route" filter="url(#intro-glow)" opacity=".45"/><use href="#intro-route"/></g>',
+    '<g class="intro-lead" opacity="0"><use class="intro-lead-glow" href="#intro-route" filter="url(#intro-glow)" opacity=".45"/><use href="#intro-route"/></g>',
     '<circle class="intro-tip" r="2.45" fill="white" opacity=".45" stroke="none"/>',
-    '</g></g></svg>',
+    '</g></svg></div>',
     '<button type="button" id="studyos-intro-skip" autofocus>跳過動畫</button>',
   ].join('');
 
@@ -74,7 +72,7 @@
   const trail = dialog.querySelector('.intro-trail');
   const lead = dialog.querySelector('.intro-lead');
   const camera = dialog.querySelector('.intro-camera');
-  const rings = [...dialog.querySelectorAll('.intro-rings use')];
+  let leadGlow = dialog.querySelector('.intro-lead-glow');
   const veil = dialog.querySelector('.intro-veil');
   const skip = dialog.querySelector('button');
   const wordLength = route.getTotalLength();
@@ -82,11 +80,7 @@
   const markStart = route.getTotalLength();
   route.setAttribute('d', wordmark + connector + mark.outline);
   const length = route.getTotalLength();
-  const [centerX, centerY] = mark.center;
-  const setCamera = (element, scale, pan) => {
-    const x = centerX + (228 - centerX) * pan;
-    element.setAttribute('transform', 'translate(' + x + ' ' + centerY + ') scale(' + scale + ') translate(' + -centerX + ' ' + -centerY + ')');
-  };
+
   const clamp = value => Math.max(0, Math.min(1, value));
   const smooth = value => value * value * (3 - 2 * value);
   // The two passes share identical geometry. The trailing pass fades behind the pen.
@@ -101,16 +95,28 @@
   };
 
   let frame = 0;
-  let start;
+  let elapsed = 0;
+  let previousFrame;
   let finished = false;
   const previousFocus = document.activeElement;
-  // The calendar's scrollbar gutter shrinks CSS viewport units on desktop.
-  const sizeDialog = () => { dialog.style.width = window.innerWidth + 'px'; };
+  let offsetX, offsetY;
+  function sizeDialog() {
+    // The calendar's scrollbar gutter shrinks CSS viewport units on desktop.
+    const width = window.innerWidth;
+    dialog.style.width = width + 'px';
+    const height = dialog.clientHeight || window.innerHeight;
+    const [left, top, viewWidth, viewHeight] = viewBox;
+    const unit = Math.min(width / viewWidth, height / viewHeight);
+    offsetX = (left + viewWidth / 2 - mark.focus[0]) * unit;
+    offsetY = (top + viewHeight / 2 - mark.focus[1]) * unit;
+    camera.style.transformOrigin = (width / 2 - offsetX) + 'px ' + (height / 2 - offsetY) + 'px';
+  }
   function finish() {
     if (finished) return;
     finished = true;
     cancelAnimationFrame(frame);
     window.removeEventListener('resize', sizeDialog);
+    document.removeEventListener('visibilitychange', syncPlayback);
     reducedMotion.removeEventListener('change', onMotionChange);
     window.removeEventListener('keydown', onKey, true);
     if (dialog.open) dialog.close();
@@ -131,17 +137,32 @@
 
   const writeTime = 2430;
   const markTime = 990;
-  const tunnelTime = 670;
+  const markEnd = writeTime + markTime;
+  const pushStart = markEnd - 210;
+  const pushEnd = markEnd + 660;
+  let bookComplete = false;
+  let prepared = false;
+  function syncPlayback() {
+    cancelAnimationFrame(frame);
+    previousFrame = undefined;
+    if (!document.hidden) frame = requestAnimationFrame(animate);
+  }
   function animate(now) {
-    start ??= now;
-    const elapsed = now - start;
+    if (document.hidden) return;
+    if (previousFrame !== undefined) {
+      // Slow or suspended rendering should not skip past the visible drawing.
+      elapsed += Math.min(now - previousFrame, 100);
+    } else if (elapsed === 0) {
+      try { sessionStorage.setItem(seenKey, '1'); } catch {}
+    }
+    previousFrame = now;
     if (elapsed < writeTime) {
       const pace = elapsed / writeTime;
       const distance = wordLength * (pace + .055 * Math.sin(Math.PI * pace));
       drawStroke(trail, 0, distance);
       moveTip(distance);
-    } else if (elapsed < writeTime + markTime) {
-      const pace = (elapsed - writeTime) / markTime;
+    } else if (!bookComplete) {
+      const pace = clamp((elapsed - writeTime) / markTime);
       const distance = wordLength + (length - wordLength) * (pace + .17 * Math.sin(Math.PI * pace));
       const tail = wordLength - 2 + (markStart - wordLength + 2) * smooth(clamp((pace - .60) / .40));
       drawStroke(trail, 0, wordLength);
@@ -149,27 +170,39 @@
       drawStroke(lead, tail, distance);
       lead.setAttribute('opacity', 1);
       moveTip(distance);
-    } else {
-      const pace = clamp((elapsed - writeTime - markTime) / tunnelTime);
+      if (pace >= .90) tip.setAttribute('opacity', .45 * (1 - smooth(clamp((pace - .90) / .10))));
+      bookComplete = pace === 1;
+    }
+
+    if (!prepared && elapsed >= pushStart - 85) {
+      prepared = true;
+      camera.style.willChange = 'transform, opacity';
+      veil.style.willChange = 'opacity';
+    }
+    if (elapsed >= pushStart) {
+      const pace = clamp((elapsed - pushStart) / (pushEnd - pushStart));
+      const scale = Math.exp(2.95 * Math.pow(pace, 1.48));
+      const pan = smooth(clamp(pace / .87));
+
+      // Fade out the blur before the largest scales. After the last stroke the SVG stays static.
+      if (leadGlow) {
+        const glow = 1 - smooth(clamp(pace / .28));
+        if (glow > 0) leadGlow.style.opacity = .45 * glow;
+        else {
+          leadGlow.remove();
+          leadGlow = null;
+        }
+      }
+
+      camera.style.transform = 'translate3d(' + offsetX * pan + 'px,' + offsetY * pan + 'px,0) scale(' + scale + ')';
+      const reveal = smooth(clamp((pace - .15) / .85));
+      veil.style.opacity = 1 - reveal;
+      skip.style.opacity = 1 - reveal;
+      camera.style.opacity = 1 - smooth(clamp((pace - .27) / .73));
       if (pace === 1) {
         finish();
         return;
       }
-      trail.setAttribute('opacity', '0');
-      drawStroke(lead, markStart, length);
-      lead.setAttribute('opacity', '1');
-      tip.setAttribute('opacity', '0');
-      const pan = smooth(clamp(pace / .78));
-      setCamera(camera, Math.exp(3.55 * Math.pow(pace, 1.55)), pan);
-      rings.forEach((ring, index) => {
-        const time = clamp((pace - .10 - index * .11) / (.86 - index * .11));
-        setCamera(ring, Math.exp(3 * Math.pow(time, 1.26)), pan);
-        ring.setAttribute('opacity', Math.sin(Math.PI * time) * (.19 - index * .055));
-      });
-      const reveal = smooth(clamp((pace - .14) / .86));
-      veil.style.opacity = 1 - reveal;
-      camera.style.opacity = 1 - reveal;
-      skip.style.opacity = 1 - reveal;
     }
     frame = requestAnimationFrame(animate);
   }
@@ -192,6 +225,7 @@
   window.addEventListener('keydown', onKey, true);
   window.addEventListener('resize', sizeDialog);
   reducedMotion.addEventListener('change', onMotionChange);
-  frame = requestAnimationFrame(animate);
+  document.addEventListener('visibilitychange', syncPlayback);
+  syncPlayback();
 })();
 
