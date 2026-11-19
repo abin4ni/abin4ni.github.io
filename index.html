@@ -8079,8 +8079,11 @@ function renderDayLesson(ev,subject,lessonNumber){
 }
 
 // ── 今日備考 ──────────────────────────────────────────────
+function studyLocalDay(date=new Date()){
+  return ds(date.getFullYear(),date.getMonth(),date.getDate());
+}
 function todayLessonSubjectNames(){
-  return [...(S.calendar[todayStr]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
+  return [...(S.calendar[studyLocalDay()]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
 }
 function studyBriefHTML(){
   const panel=$id('panel-r');
@@ -8091,7 +8094,7 @@ function studyBriefHTML(){
     <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
       <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
       <div class="study-brief-card">
-        <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
+        <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span>${brief.due?`<span class="study-brief-meta" id="study-brief-due">今日到期 ${brief.due} 題</span>`:''}</div>
         ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
       </div>
     </section>`;
@@ -8853,6 +8856,19 @@ const learningJournal=(()=>{
   const validPointId=id=>/^k-[0-9a-f]{32}$/.test(id);
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const fresh=()=>({version:1,points:[],progress:{}});
+  const intervals=[1,3,7,14];
+  function validDay(day){
+    if(typeof day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(day))return false;
+    const date=new Date(day+'T00:00:00Z');
+    return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===day;
+  }
+  function nextReview(previous,outcome,day){
+    if(outcome==='correct'&&previous&&day<previous.due)return previous;
+    const step=outcome==='incorrect'||!previous?0:Math.min(previous.step+1,intervals.length-1);
+    const date=new Date(day+'T00:00:00Z');
+    date.setUTCDate(date.getUTCDate()+intervals[step]);
+    return {step,due:date.toISOString().slice(0,10)};
+  }
   function valid(op){
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
     const value=op.value;
@@ -8874,7 +8890,7 @@ const learningJournal=(()=>{
   }
   const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
   function project(journal,refs=new Map()){
-    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],rounds=new Map();
+    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],dated=[],rounds=new Map();
     function legacyChapter(subject,name){
       const key=chapterKey(subject,name);
       if(!aliases.has(key)){
@@ -8947,7 +8963,12 @@ const learningJournal=(()=>{
       p.streak=value==='correct'?Math.min(2,p.streak+1):0;
       p.weak=p.streak>=2?false:value!=='correct'||p.weak;
       baseline.set(target,p);
+      if((value==='correct'||value==='incorrect')&&validDay(op.day))dated.push({target,outcome:value,day:op.day});
     }
+    const reviews=new Map();
+    // Delayed uploads retain the calendar day on which the answer was submitted.
+    dated.sort((a,b)=>a.day.localeCompare(b.day));
+    for(const {target,outcome,day} of dated)reviews.set(target,nextReview(reviews.get(target),outcome,day));
     const kept=[];
     for(const p of points.values()){
       if(deleted.has(p.id)||!p.subject?.trim()||!p.question?.trim()||!p.answer?.trim())continue;
@@ -8962,11 +8983,12 @@ const learningJournal=(()=>{
     const todayRound=lastRound&&{id:lastRound.id,subject:lastRound.subject,queue:lastRound.queue,
       results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
     const todayRetries=Object.fromEntries([...rounds.values()].filter(round=>round.retryOf).map(round=>[round.retryOf,round.id]));
-    return {version:1,points:kept,progress,catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    const review=Object.fromEntries(kept.filter(p=>reviews.has(p.id)).map(p=>[p.id,reviews.get(p.id)]));
+    return {version:1,points:kept,progress,review,catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
-    const add=(kind,target,value)=>ops.push({kind,target,value});
+    const add=(kind,target,value,day)=>ops.push({kind,target,value,...(validDay(day)?{day}:{})});
     const oldPoints=new Map(before.points.map(p=>[p.id,p]));
     const newIds=new Set(after.points.map(p=>p.id));
     for(const p of after.points){
@@ -8988,8 +9010,8 @@ const learningJournal=(()=>{
       const ref=refs.get(chapterKey(move[0],move[1]));
       add('move',move[0],ref?[...move,ref]:move);
     }
-    if(answer?.roundId)add('today-answer',answer.roundId,[answer.id,answer.outcome]);
-    else if(answer)add('answer',answer.id,answer.outcome);
+    if(answer?.roundId)add('today-answer',answer.roundId,[answer.id,answer.outcome],answer.day);
+    else if(answer)add('answer',answer.id,answer.outcome,answer.day);
     else for(const [id,p] of Object.entries(after.progress))if(!same(before.progress[id],p))add('baseline',id,p);
     return ops;
   }
@@ -9027,6 +9049,10 @@ const studyRoom=(()=>{
     return Object.entries(data.progress).every(([id,p])=>ids.has(id)&&object(p)&&count(p.attempts)&&
       count(p.streak)&&p.streak<=2&&p.streak<=p.attempts&&typeof p.weak==='boolean');
   }
+  function withLocalReview(saved){
+    const review=saved.syncJournal?learningJournal.project(saved.syncJournal).review:{};
+    return {...saved,review};
+  }
   function roundComplete(round){
     return !!round&&Array.isArray(round.queue)&&round.index===round.queue.length;
   }
@@ -9034,7 +9060,7 @@ const studyRoom=(()=>{
   try{
     const stored=JSON.parse(localStorage.getItem(key));
     if(!localStorage.getItem(key+'-claim')&&valid(stored?.data)){
-      data=stored.data;
+      data=withLocalReview(stored.data);
       const s=stored.session;
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
         (s.origin==='today'||roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
@@ -9353,7 +9379,7 @@ const batchDialog=$id('study-batch');
   }
   function weakBrief(todayNames=[]){
     const subjects=subjectNames();
-    const weakIds=name=>data.points.filter(p=>p.subject===name&&status(p.id)[1]==='weak')
+    const weakIds=name=>data.points.filter(p=>p.subject===name&&!data.review?.[p.id]&&status(p.id)[1]==='weak')
       .sort((a,b)=>(data.progress[a.id]?.streak||0)-(data.progress[b.id]?.streak||0)).map(p=>p.id);
     const pick=(names,today)=>{
       let best=null;
@@ -9365,6 +9391,19 @@ const batchDialog=$id('study-batch');
     };
     const todays=[...new Set(todayNames.map(n=>String(n).trim().normalize('NFC')))].filter(n=>subjects.includes(n));
     return pick(todays,true)||pick(subjects,false);
+  }
+  function dueToday(){
+    const day=studyLocalDay();
+    return data.points.filter(p=>data.review?.[p.id]?.due<=day)
+      .sort((a,b)=>data.review[a.id].due.localeCompare(data.review[b.id].due)||a.id.localeCompare(b.id));
+  }
+  function recommendedToday(todayNames,due=dueToday()){
+    const rec=weakBrief(todayNames);
+    if(!due.length)return rec;
+    const selected=due.slice(0,5);
+    const ids=[...selected.map(p=>p.id),...(rec?.ids||[])].slice(0,5);
+    const subjects=new Set(ids.map(id=>point(id).subject));
+    return {ids,subject:subjects.size===1?[...subjects][0]:'多科複習',count:ids.length,ordered:true};
   }
   function createTodayRound(){
     session.roundId||=newPointId();
@@ -9407,13 +9446,16 @@ const batchDialog=$id('study-batch');
     return account&&!account.ready&&!account.failure&&navigator.onLine;
   }
   function todayBrief(todayNames){
+    const due=dueToday();
     const round=resumableToday();
     if(round){
-      return {subject:round.subject,resume:true,message:'已完成 '+round.results.length+'／'+round.queue.length+' 題'};
+      return {subject:round.subject,resume:true,due:due.length,
+        message:'已完成 '+round.results.filter(r=>round.queue.includes(r.id)).length+'／'+round.queue.length+' 題'};
     }
-    if(waitingForToday())return {message:syncText};
-    const rec=weakBrief(todayNames);
-    if(rec)return {subject:rec.subject,message:(rec.today?'今日科目':'其他科目')+' · '+rec.count+' 題待加強'};
+    if(waitingForToday())return {message:syncText,due:due.length};
+    const rec=recommendedToday(todayNames,due);
+    if(rec)return {subject:rec.subject,due:due.length,message:rec.ordered?rec.count+' 題可複習':
+      (rec.today?'今日科目':'其他科目')+' · '+rec.count+' 題待加強'};
     if(account&&(!account.ready||account.failure||!navigator.onLine))return {message:syncText};
     return {message:'目前沒有推薦題目',empty:true};
   }
@@ -9430,7 +9472,7 @@ const batchDialog=$id('study-batch');
       return true;
     }
     if(waitingForToday())return false;
-    const rec=weakBrief(todayNames);
+    const rec=recommendedToday(todayNames);
     if(!rec)return false;
     if(session&&session.origin!=='today'&&session.index<session.queue.length){
       showConfirm('已有進行中的練習','目前有一組尚未完成的練習，請先繼續或完成它，再開始今日備考。',()=>{
@@ -9439,7 +9481,7 @@ const batchDialog=$id('study-batch');
       return false;
     }
     openTodayPractice();
-    start(rec.ids,'practice',{origin:'today',subject:rec.subject,returnMode});
+    start(rec.ids,'practice',{origin:'today',subject:rec.subject,returnMode},{shuffle:!rec.ordered});
     return true;
   }
   function resumeFromToday(returnMode){
@@ -9461,7 +9503,7 @@ const batchDialog=$id('study-batch');
     session.results.push({id,outcome});
     const previousPhase=session.phase;
     session.phase='feedback';
-    if(!persist({id,outcome})){
+    if(!persist({id,outcome,day:studyLocalDay()})){
       session.results.pop();
       session.phase=previousPhase;
       return;
@@ -9813,8 +9855,11 @@ const batchDialog=$id('study-batch');
   }
   function saveLearning(next,answer,move,roundOperation){
     if(!account){
-      if(next.syncJournal){
+      if(next.syncJournal||answer){
         const journal={...next.syncJournal};
+        if(!next.syncJournal){
+          for(const op of learningJournal.changes(learningJournal.fresh(),lastSaved))journal[newPointId()]={...op,clock:0};
+        }
         let clock=Object.values(journal).reduce((max,op)=>Math.max(max,op.clock),0);
         const refs=new Map();
         learningJournal.project(journal,refs);
@@ -9948,7 +9993,7 @@ const batchDialog=$id('study-batch');
       showLearningSync('學習資料僅存於此瀏覽器');
       try{
         const stored=JSON.parse(localStorage.getItem(key));
-        if(!localStorage.getItem(key+'-claim')&&valid(stored?.data))data=stored.data;
+        if(!localStorage.getItem(key+'-claim')&&valid(stored?.data))data=withLocalReview(stored.data);
       }catch{}
     }else{
       const state={uid,key:key+':'+uid,operations:{},pending:[],ready:false,sending:false,guest:null,failure:null};
@@ -10027,9 +10072,10 @@ const batchDialog=$id('study-batch');
       }else{
         if(!localStorage.getItem(key+'-claim')){
           try{
-            localStorage.setItem(key,JSON.stringify({data:newData,session:null}));
-            data=newData;
-            lastSaved=structuredClone(newData);
+            const restored=withLocalReview(newData);
+            localStorage.setItem(key,JSON.stringify({data:restored,session:null}));
+            data=restored;
+            lastSaved=structuredClone(restored);
           }catch{return false;}
         }else return false;
       }
@@ -10040,6 +10086,18 @@ const batchDialog=$id('study-batch');
     }
   };
 })();
+
+// Refresh the due count in tabs that stay open overnight or resume from sleep.
+let studyMidnightTimer;
+function updateStudyReviewDay(){
+  clearTimeout(studyMidnightTimer);
+  refreshStudyBrief();
+  const midnight=new Date();
+  midnight.setHours(24,0,0,0);
+  studyMidnightTimer=setTimeout(updateStudyReviewDay,Math.max(1,midnight-Date.now()));
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateStudyReviewDay();});
+window.addEventListener('pageshow',updateStudyReviewDay);
 
 // 等 DOM 確實就緒才執行
 if(document.readyState==='loading'){
