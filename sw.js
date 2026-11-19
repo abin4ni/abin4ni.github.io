@@ -1,10 +1,10 @@
-// ── StudyOS Service Worker v7 ──────────────────────────────────
+// ── StudyOS Service Worker v8 ──────────────────────────────────
 // HTML 先向網路重新驗證，離線時才讀取頁面快取。介面發版時一併更新快取版本。
 //        同源靜態資源 → cache-first（加速載入）
 //        Firebase / Google → 直接穿透
 // 全部使用相對路徑，放在 GitHub Pages 子路徑（/repo-name/）也能正常運作
 
-const CACHE_NAME  = 'course-tracker-v7';
+const CACHE_NAME  = 'course-tracker-v8';
 const STATIC_EXTS = ['.js', '.css', '.png', '.jpg', '.svg', '.ico', '.woff2', '.json'];
 const PRECACHE    = ['./manifest.json', './icon-192.png', './icon-512.png'];
 const EXTERNAL    = ['firebase', 'google', 'gstatic', 'googleapis', 'firebaseio'];
@@ -13,7 +13,7 @@ const EXTERNAL    = ['firebase', 'google', 'gstatic', 'googleapis', 'firebaseio'
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    await cache.add(new Request('./index.html', { cache: 'reload' }));
+    await cache.addAll(['./index.html', './studyos-intro.js?v=1'].map(url => new Request(url, { cache: 'reload' })));
     await Promise.all(PRECACHE.map(url =>
       cache.add(new Request(url, { cache: 'reload' })).catch(error => console.warn('[SW] precache skip', url, error))
     ));

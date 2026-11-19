@@ -40,6 +40,7 @@ const studyTheme=(()=>{
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <title>StudyOS</title>
+<link rel="preload" href="./studyos-intro.js?v=1" as="script">
 <style>
 /* ═══════════════════════════════════════════════════════════════
    Apple-grade UI — 課程進度追蹤
@@ -4122,6 +4123,7 @@ onAuthStateChanged(auth,user=>{
 </script>
 </head>
 <body data-wide-page="calendar">
+<script async src="./studyos-intro.js?v=1"></script>
 
 <div id="drag-ghost">
   <span id="ghost-dot" class="dot"></span>
