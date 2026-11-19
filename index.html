@@ -3937,6 +3937,76 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   .week-timed-event[data-week-overlap] .week-ev-time { display: grid; font-size: .5rem; }
   .week-timed-event[data-week-overlap] .week-ev-time > span:nth-child(2) { display: none; }
 }
+/* Course details share the same row layout in Today and calendar dialogs. */
+#panel-r :is(.day-course-list,.day-completed-list) {
+  container: day-lessons / inline-size;
+}
+#panel-r .day-card.day-lesson {
+  display:grid;
+  gap:0;
+  padding-block:var(--sp-1);
+}
+#panel-r .day-lesson .day-card-head {
+  grid-template-columns:44px 8px minmax(0,1fr);
+  align-items:start;
+}
+#panel-r .day-lesson .day-card-head > .dot {
+  align-self:start;
+  margin-block-start:.95rem;
+}
+#panel-r .day-lesson-details {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:2px var(--sp-2);
+  min-width:0;
+  padding-block:.45rem;
+}
+#panel-r .day-lesson-details .day-name {
+  flex:1 1 auto;
+  min-width:0;
+}
+#panel-r .day-lesson-details .day-lesson-time {
+  flex:none;
+  color:var(--text-2);
+  font-size:var(--ui-label);
+}
+#panel-r .day-lesson-actions .act-btn { min-height:44px; min-width:44px; }
+#panel-r .day-lesson-actions .act-btn:focus-visible { outline-offset:-2px; }
+@container day-lessons (min-width:20rem) {
+  #panel-r .day-card.day-lesson.is-untimed {
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    column-gap:var(--sp-2);
+  }
+}
+@container day-lessons (min-width:29rem) {
+  #panel-r .day-card.day-lesson {
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    column-gap:var(--sp-3);
+  }
+}
+
+/* Today reserves the filled treatment for its review action. */
+:is(#wide-today,#panel-r[data-mobile-day=today]) #day-schedule-open {
+  width:auto;
+  max-width:100%;
+  padding-inline:var(--sp-4);
+  border:1px solid color-mix(in srgb,var(--accent) 30%,var(--border-lt));
+  background:var(--accent-tint);
+  color:var(--accent-h);
+}
+:is(#wide-today,#panel-r[data-mobile-day=today]) #day-schedule-open:active {
+  background:var(--nav-sel);
+  color:var(--accent-h);
+}
+@media (hover:hover) and (pointer:fine) {
+  :is(#wide-today,#panel-r[data-mobile-day=today]) #day-schedule-open:hover {
+    background:var(--nav-sel);
+    color:var(--accent-h);
+  }
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
