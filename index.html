@@ -1700,6 +1700,13 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .study-due-group ul{margin:6px 0 0;padding-inline-start:1.4em;}
 .study-due-group li{padding-block:4px;white-space:pre-wrap;overflow-wrap:anywhere;}
 .study-due-group .study-brief-meta{display:block;}
+.study-exams{margin-top:12px;border-top:1px solid var(--border-lt);padding-top:10px;}
+.study-exam-row>summary{min-height:44px;align-content:center;cursor:pointer;overflow-wrap:anywhere;}
+.study-exam-row>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.study-exam-row ul{padding:0;margin:8px 0;list-style:none;}
+.study-exam-row li{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;padding:8px 0;border-top:1px solid var(--border-lt);overflow-wrap:anywhere;}
+.study-exam-row li .study-brief-meta{display:flex;flex-wrap:wrap;gap:4px 12px;}
+.study-exam-row button{min-height:44px;max-width:100%;}
 
 /* Date-detail scheduling is available at every viewport width. */
 .day-schedule-entry{display:block;margin-bottom:18px;}
@@ -5597,7 +5604,7 @@ function editCourse(id){
   requestAnimationFrame(()=>$id('edit-name')?.focus());
 }
 
-function updateExamDate(id,val){const c=course(id);if(!c)return;c.examDate=val;saveState();renderPartial(renderCourses,renderCalendar);}
+function updateExamDate(id,val){const c=course(id);if(!c)return;c.examDate=val;saveState();renderPartial(renderCourses,renderCalendar);refreshStudyBrief();}
 
 // ── Exam Popover ──────────────────────────────────────────────────
 let _examPickerCid=null;
@@ -8097,6 +8104,7 @@ function todayLessonSubjectNames(){
   return [...(S.calendar[studyLocalDay()]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
 }
 let studyDueExpanded=false;
+const expandedStudyExams=new Set();
 function studyDueHTML(brief){
   if(!brief.due.length){
     return brief.waiting?'':'<p class="study-brief-meta study-due-list" id="study-brief-due">目前沒有到期題</p>';
@@ -8117,6 +8125,21 @@ function studyDueHTML(brief){
     </section>`).join('')}
   </details>`;
 }
+function studyExamHTML(brief){
+  const exams=studyRoom.upcomingExams();
+  if(!exams.length)return '';
+  return `<section class="study-exams" aria-labelledby="study-exams-title">
+    <h4 id="study-exams-title" class="day-panel-title">考前 7 天重點</h4>
+    ${exams.map(({id,name,date,days,chapters,priority})=>`<details class="study-exam-row" data-study-exam="${esc(id)}">
+      <summary><strong>${esc(name)}</strong> <span class="study-brief-meta"><time datetime="${esc(date)}">${esc(date)}</time> · ${days===0?'今天考試':'剩 '+days+' 天'}</span></summary>
+      ${chapters?`<p class="study-brief-meta">以全科題庫統計</p>
+        ${chapters.length?`<ul>${chapters.map(({name,answered,total,weak})=>`<li><strong>${esc(name||'未分類')}</strong><span class="study-brief-meta"><span>已作答 ${answered}／${total} 題</span><span>待加強 ${weak} 題</span></span></li>`).join('')}</ul>`:
+          '<p class="study-brief-meta">目前沒有題目</p>'}
+        ${priority&&!brief.waiting?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">${brief.resume?'繼續複習':'練習優先章節'}</button>`:''}`:
+        '<p class="study-brief-meta">尚未連結題庫</p>'}
+    </details>`).join('')}
+  </section>`;
+}
 function studyBriefHTML(){
   const panel=$id('panel-r');
   const onToday=isMobile()?panel.dataset.mobileDay==='today':!wideToday.hidden;
@@ -8130,6 +8153,7 @@ function studyBriefHTML(){
         ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
       </div>
       ${studyDueHTML(brief)}
+      ${studyExamHTML(brief)}
     </section>`;
 }
 function refreshStudyBrief(){
@@ -8142,14 +8166,19 @@ function refreshStudyBrief(){
   const previousDue=$id('study-due-list');
   if(previousDue)studyDueExpanded=previousDue.open;
   const fromDue=previousDue?.contains(focus);
+  const focusedExam=focus?.closest('[data-study-exam]')?.dataset.studyExam;
   slot.innerHTML=wanted;
   slot.studyBriefMarkup=wanted;
   const details=$id('study-due-list');
   if(details)details.open=studyDueExpanded;
+  const examRows=[...slot.querySelectorAll('[data-study-exam]')];
+  for(const exam of examRows)exam.open=expandedStudyExams.has(exam.dataset.studyExam);
   if(hadFocus){
     const restored=fromDue&&details?[...details.querySelectorAll('[data-study-due]')].find(
       button=>button.dataset.studyDue===focus.dataset.studyDue)||$id('study-brief-due'):null;
-    (restored||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
+    const exam=examRows.find(row=>row.dataset.studyExam===focusedExam);
+    const examFocus=exam&&(focus.matches('[data-study-exam-practice]')&&exam.querySelector('[data-study-exam-practice]')||exam.querySelector('summary'));
+    (restored||examFocus||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
   }
 }
 function openTodayPractice(){
@@ -8164,10 +8193,14 @@ function returnToTodayPracticeDay(){
 $id('day-label').tabIndex=-1;
 $id('day-events').addEventListener('toggle',event=>{
   if(event.target.id==='study-due-list')studyDueExpanded=event.target.open;
+  const exam=event.target.dataset?.studyExam;
+  if(exam)event.target.open?expandedStudyExams.add(exam):expandedStudyExams.delete(exam);
 },true);
 $id('day-events').addEventListener('click',event=>{
   const dueButton=event.target.closest('[data-study-due]');
-  if(dueButton)studyRoom.startWeakBrief(todayLessonSubjectNames(),'today',dueButton.dataset.studyDue);
+  const examButton=event.target.closest('[data-study-exam-practice]');
+  if(examButton)studyRoom.openExamChapter(examButton.dataset.studyExamPractice);
+  else if(dueButton)studyRoom.startWeakBrief(todayLessonSubjectNames(),'today',dueButton.dataset.studyDue);
   else if(event.target.closest('#study-brief-go'))studyRoom.startWeakBrief(todayLessonSubjectNames(),'today');
   else if(event.target.closest('#study-brief-library')){
     openTodayPractice();
@@ -8938,7 +8971,7 @@ const learningJournal=(()=>{
   }
   const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
   function project(journal,refs=new Map()){
-    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],dated=[],rounds=new Map();
+    const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],dated=[],rounds=new Map(),answered=new Set();
     function legacyChapter(subject,name){
       const key=chapterKey(subject,name);
       if(!aliases.has(key)){
@@ -8988,8 +9021,11 @@ const learningJournal=(()=>{
       }else if(kind==='baseline'){
         if((baseline.get(target)?.attempts??-1)<=value.attempts)baseline.set(target,{...value});
       }else if(kind==='today-round'){
-        if(!rounds.has(target))rounds.set(target,{id:target,subject:value.subject,queue:value.queue,retryOf:value.retryOf,
-          results:new Map(value.results.map(r=>[r.id,r.outcome]))});
+        if(!rounds.has(target)){
+          rounds.set(target,{id:target,subject:value.subject,queue:value.queue,retryOf:value.retryOf,
+            results:new Map(value.results.map(r=>[r.id,r.outcome]))});
+          for(const result of value.results)if(result.outcome!=='viewed')answered.add(result.id);
+        }
       }else answers.push(op);
     }
     for(const {subject,name,listed,deleted} of instances.values()){
@@ -8998,6 +9034,7 @@ const learningJournal=(()=>{
       const list=catalog.get(subject).chapters;
       if(!list.includes(name))list.push(name);
     }
+    for(const [id,p] of baseline)if(p.streak>0)answered.add(id);
     for(const op of answers){
       let {target,value}=op;
       if(op.kind==='today-answer'){
@@ -9006,6 +9043,7 @@ const learningJournal=(()=>{
         if(!round?.queue.includes(target)||round.results.has(target))continue;
         round.results.set(target,value);
       }
+      if(value!=='viewed')answered.add(target);
       const p=baseline.get(target)||{attempts:0,streak:0,weak:false};
       p.attempts++;
       p.streak=value==='correct'?Math.min(2,p.streak+1):0;
@@ -9032,7 +9070,7 @@ const learningJournal=(()=>{
       results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
     const todayRetries=Object.fromEntries([...rounds.values()].filter(round=>round.retryOf).map(round=>[round.retryOf,round.id]));
     const review=Object.fromEntries(kept.filter(p=>reviews.has(p.id)).map(p=>[p.id,reviews.get(p.id)]));
-    return {version:1,points:kept,progress,review,catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    return {version:1,points:kept,progress,review,answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -9098,8 +9136,9 @@ const studyRoom=(()=>{
       count(p.streak)&&p.streak<=2&&p.streak<=p.attempts&&typeof p.weak==='boolean');
   }
   function withLocalReview(saved){
-    const review=saved.syncJournal?learningJournal.project(saved.syncJournal).review:{};
-    return {...saved,review};
+    const projection=saved.syncJournal?learningJournal.project(saved.syncJournal):null;
+    const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
+    return {...saved,review:projection?.review??{},answered};
   }
   function roundComplete(round){
     return !!round&&Array.isArray(round.queue)&&round.index===round.queue.length;
@@ -9121,7 +9160,7 @@ const studyRoom=(()=>{
   let screen=session?(session.index===session.queue.length?'results':'session'):'home';
   let filters={subject:'',chapter:''};
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
-  let setupMode='practice',weakOnly=false;
+  let setupMode='practice',weakOnly=false,examSetup=false;
   const point=id=>data.points.find(p=>p.id===id);
   const status=id=>{
     const p=data.progress[id];
@@ -9147,6 +9186,7 @@ const studyRoom=(()=>{
     pillMotion.mount(root);
   }
   function go(next){
+    if(next!=='setup')examSetup=false;
     screen=next;
     render();
     $id('study-heading').focus({preventScroll:true});
@@ -9399,13 +9439,58 @@ const batchDialog=$id('study-batch');
       '<p class="study-error" role="alert"></p><div class="study-actions">'+action('取消','cancel-edit')+
       '<button class="btn btn-primary">儲存知識點</button></div></form>');
   }
+  function upcomingExams(){
+    const day=studyLocalDay();
+    const known=subjectNames();
+    const answered=new Set(data.answered||[]);
+    return S.courses.map(c=>({...c,days:c.examDate?daysBetween(day,c.examDate):NaN}))
+      .filter(c=>c.days>=0&&c.days<=7)
+      .sort((a,b)=>a.examDate.localeCompare(b.examDate))
+      .map(c=>{
+        const matches=known.filter(name=>name.trim().normalize('NFC')===c.name.trim().normalize('NFC'));
+        const subject=matches.length===1?matches[0]:null;
+        const exam={id:c.id,name:c.name,date:c.examDate,days:c.days,subject};
+        if(!subject)return exam;
+        const stats=new Map(chapters(subject).map(name=>[name,{name,answered:0,total:0,weak:0}]));
+        for(const p of data.points){
+          if(p.subject!==subject)continue;
+          if(!stats.has(p.chapter))stats.set(p.chapter,{name:p.chapter,answered:0,total:0,weak:0});
+          const chapter=stats.get(p.chapter);
+          chapter.total++;
+          if(answered.has(p.id))chapter.answered++;
+          if(status(p.id)[1]==='weak')chapter.weak++;
+        }
+        const sorted=[...stats.values()].sort((a,b)=>b.weak-a.weak||
+          Number(b.total>b.answered)-Number(a.total>a.answered)||a.name.localeCompare(b.name,'zh-Hant'));
+        return {...exam,chapters:sorted,priority:sorted.find(chapter=>chapter.weak||chapter.total>chapter.answered)};
+      });
+  }
+  function openExamChapter(id){
+    if(resumableToday()||unfinishedOtherPractice()){
+      startWeakBrief(todayLessonSubjectNames(),'today');
+      return;
+    }
+    if(waitingForToday())return;
+    const exam=upcomingExams().find(item=>item.id===id);
+    if(!exam?.priority){briefChanged();return;}
+    filters={subject:exam.subject,chapter:exam.priority.name||unfiled};
+    openTodayPractice();
+    configurePractice('setup-chapter',true);
+  }
+  function configurePractice(source,fromExam=false){
+    examSetup=fromExam;
+    weakOnly=source==='setup-weak';
+    if(source==='setup')filters.chapter='';
+    setupMode='practice';
+    go('setup');
+  }
   function setup(){
     const available=filtered(weakOnly).length;
     draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+filterMarkup()+
       '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend><div class="study-mode-options">'+
       ['cards','practice'].map((m,i)=>'<label><input type="radio" name="mode" value="'+m+'"'+(m===setupMode?' checked':'')+'>'+['字卡複習','互動練習'][i]+'</label>').join('')+
       '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
-      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>');
+      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>',examSetup?'today-back':true);
   }
   function start(ids,mode,extra,{shuffle=true}={}){
     const queue=[...ids];
@@ -9737,10 +9822,7 @@ const batchDialog=$id('study-batch');
         go(screen);
       });
     }else if(act==='setup'||act==='setup-chapter'||act==='setup-weak'){
-      weakOnly=act==='setup-weak';
-      if(act==='setup')filters.chapter='';
-      setupMode='practice';
-      go('setup');
+      configurePractice(act);
     }else if(act==='today-back'){
       returnToTodayPracticeDay();
     }else if(act==='subject-back'){
@@ -9801,7 +9883,11 @@ const batchDialog=$id('study-batch');
       go(from);
     }else if(form.id==='study-setup'){
       const ids=filtered(weakOnly).map(p=>p.id);
-      if(ids.length)start(ids,values.get('mode'),{subject:filters.subject});
+      if(examSetup&&(resumableToday()||unfinishedOtherPractice())){
+        startWeakBrief(todayLessonSubjectNames(),'today');
+        return;
+      }
+      if(ids.length)start(ids,values.get('mode'),{subject:filters.subject,...(examSetup?{returnMode:'today'}:{})});
     }else if(form.id==='study-answer-form'&&session?.phase==='question'){
       const answer=values.get('answer').trim();
       if(!answer){form.querySelector('.study-error').textContent='請輸入答案，或直接看參考答案。';return;}
@@ -10097,6 +10183,8 @@ const batchDialog=$id('study-batch');
   return {
     valid,
     todayBrief,
+    upcomingExams,
+    openExamChapter,
     startWeakBrief,
     openHome:()=>go('home'),
     switchAccount:switchLearning,
