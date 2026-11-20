@@ -4052,6 +4052,83 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
     color:var(--accent-h);
   }
 }
+
+/* Shared workspace surfaces and responsive calendar detail. */
+#calendar-day-slot[hidden]{display:none;}
+#panel-r .day-heading{align-items:center;flex-wrap:wrap;min-width:0;}
+#panel-r .day-heading h2{overflow-wrap:anywhere;}
+#panel-r .day-schedule-entry{min-width:0;}
+#panel-r .day-panel-main .day-list-status{padding-inline:var(--sp-2);}
+#panel-r .day-study-options{
+  display:grid;gap:var(--sp-2);margin-top:var(--sp-2);
+}
+#panel-r :is(.study-due-list,.study-exam-row){
+  min-width:0;overflow-wrap:anywhere;
+}
+#panel-r .study-brief-card{
+  background:var(--surface);border-color:var(--border-lt);gap:var(--sp-3);
+}
+#panel-r .study-brief-go{max-width:100%;white-space:normal;}
+#panel-r #study-exams-title{cursor:pointer;min-height:44px;align-content:center;}
+#panel-r #study-exams .study-exam-row{margin-block-start:var(--sp-2);}
+#panel-r[data-day-context=today] .day-panel-meta{order:0;}
+#panel-r[data-day-context=today] .day-panel-shell{gap:var(--sp-4);}
+#panel-r[data-day-context=today] .day-schedule-entry{margin-block-end:var(--sp-3);}
+#study-room .study-home-modes{
+  display:inline-grid;grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%;
+  width:22rem;margin-block-end:var(--sp-4);border-radius:var(--r-pill);
+}
+#study-room .study-home-modes::before{border-radius:var(--r-pill);}
+#study-room .study-home-modes button{border-radius:var(--r-pill);}
+#study-room .study-home-modes button:active{background:var(--accent-tint);}
+#study-room .study-subject-grid{gap:var(--sp-3);}
+#study-room .study-subject-grid .memo-card{
+  min-width:0;min-height:5.25rem;padding:var(--sp-3);background:var(--surface);
+}
+#study-room .study-subject-grid .memo-card:active{background:var(--accent-tint);}
+#study-room .study-subject-grid .memo-card:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+#study-room .study-subject-grid .memo-card-name{min-width:0;overflow-wrap:anywhere;}
+@media (hover:hover) and (pointer:fine){
+  #study-room .study-subject-grid .memo-card:hover{background:var(--accent-tint);}
+}
+@media (max-width:767px){
+  #panel-r[data-mobile-day=today] .day-heading{margin-block-end:var(--sp-2);}
+  #panel-r[data-mobile-day=today] .day-schedule-entry{margin-block-end:var(--sp-2);}
+  #panel-r[data-mobile-day=today] .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
+  #panel-r[data-mobile-day=today] .day-card.day-lesson{padding-block:0;}
+  #panel-r[data-mobile-day=today] .day-lesson-actions .act-btn{padding-block:0;}
+}
+@media (min-width:900px){
+  #wide-today:not([hidden]){width:min(100%,1120px);}
+  #wide-today .day-panel-shell{
+    display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+    grid-template-areas:"lessons review" "notes review" "stats review";
+    align-items:start;
+  }
+  #wide-today .day-panel-main{grid-area:lessons;}
+  #wide-today .study-brief{grid-area:review;}
+  #wide-today .day-panel-notes{grid-area:notes;}
+  #wide-today .day-panel-meta{grid-area:stats;}
+}
+@media (min-width:1024px){
+  body[data-wide-page=calendar] .layout:has(#calendar-day-slot:not([hidden])){
+    display:grid!important;max-width:1480px;grid-template-columns:minmax(0,1fr) clamp(280px,26vw,360px)!important;
+    align-items:start;gap:var(--sp-4);
+  }
+  .layout:has(#calendar-day-slot:not([hidden])) #panel-cal[data-cal-view]{
+    grid-column:1!important;grid-row:1;width:100%;margin-inline:0;
+  }
+  #calendar-day-slot{grid-column:2;grid-row:1;min-width:0;}
+  #calendar-day-slot #panel-r{
+    display:block!important;position:static;width:100%;max-width:none;height:auto!important;
+    max-height:none;padding:var(--sp-4);visibility:visible;opacity:1;transform:none;
+    pointer-events:auto;overflow:visible!important;
+    background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);box-shadow:none;
+  }
+  #calendar-day-slot #panel-r .day-heading h2{font-size:var(--ui-heading);}
+  #calendar-day-slot #panel-r .day-panel-meta{order:0;}
+  #calendar-day-slot #panel-r .day-panel-shell{gap:var(--sp-4);}
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
@@ -4458,6 +4535,7 @@ onAuthStateChanged(auth,user=>{
       </div>
     </main>
 
+    <section id="calendar-day-slot" aria-labelledby="day-label" hidden></section>
     <aside class="panel panel-r" id="panel-r">
       <div class="day-heading">
         <h2 id="day-label">選擇日期</h2>
@@ -5441,7 +5519,7 @@ function renderMemo(){
 function renderDayMemo(){
   const panel=document.getElementById('day-course-memos');
   if(!panel)return;
-  const lessons=S.calendar[S.selectedDate]||[];
+  const lessons=S.calendar[dayPanelDate()]||[];
   const courses=[...new Set(lessons.map(lesson=>lesson.courseId))].map(course).filter(Boolean);
   panel.innerHTML=courses.length?courses.map(c=>memoCard(c,false)).join(''):'<p class="memo-empty">當天沒有課程備忘錄。</p>';
 }
@@ -6444,6 +6522,8 @@ const wideCourses=$id('wide-course-list');
 const accountToggle=$id('account-toggle');
 const accountPanel=$id('account-panel');
 const wideMedia=matchMedia('(min-width:768px)');
+const calendarSplitMedia=matchMedia('(min-width:1024px)');
+const calendarDaySlot=$id('calendar-day-slot');
 let wideCourseId=null;
 let dayPanelReturnFocus=null;
 
@@ -6460,7 +6540,26 @@ const wideMounts=[
 const quickSection=$id('quick-input').closest('.quick-course-section');
 
 let wideCalendarScroll=0;
-let wideCalendarSelectedDate=null;
+function mountWideDayPanel(){
+  const page=document.body.dataset.widePage,panel=$id('panel-r');
+  const inline=calendarSplitMedia.matches&&page==='calendar'&&!wideDay.open;
+  calendarDaySlot.hidden=!inline;
+  if(!wideMedia.matches)return;
+  const target=page==='today'?wideToday:inline?calendarDaySlot:wideDay;
+  if(panel.parentElement!==target)target.append(panel);
+  $id('day-panel-close').hidden=!wideDay.open;
+}
+calendarSplitMedia.addEventListener('change',()=>{
+  if(calendarSplitMedia.matches&&wideDay.dataset.stage==='detail'&&topAppDialog()?.dialog===wideDay)closeDayPanel();
+  else mountWideDayPanel();
+  renderDayPanel();
+});
+function isTodayPage(){
+  return isMobile()?$id('panel-r').dataset.mobileDay==='today':!wideToday.hidden;
+}
+function dayPanelDate(){
+  return isTodayPage()?todayStr:S.selectedDate;
+}
 function setWidePage(page){
   const wide=wideMedia.matches;
   const onCalendar=page==='calendar';
@@ -6470,23 +6569,12 @@ function setWidePage(page){
   const courses=$id('wide-courses');
   const scroller=document.scrollingElement;
   if(wide&&!onCalendar&&!calendar.hidden)wideCalendarScroll=scroller.scrollTop;
-  if(onToday&&!wasToday){
-    closeDayPanel();
-    wideCalendarSelectedDate=S.selectedDate;
-    S.selectedDate=todayStr;
-  }else if(wasToday&&!onToday){
-    cancelDaySchedule(false);
-    S.selectedDate=wideCalendarSelectedDate;
-  }
+  if(!onCalendar&&wideDay.open)closeDayPanel();
+  if(wasToday&&!onToday)cancelDaySchedule(false);
   document.body.dataset.widePage=page;
   wideToday.hidden=!onToday;
   wideToday.inert=!onToday;
-  if(wide){
-    const panel=$id('panel-r');
-    const target=onToday?wideToday:wideDay;
-    if(panel.parentElement!==target)target.append(panel);
-    $id('day-panel-close').hidden=!wideDay.open;
-  }
+  mountWideDayPanel();
   calendar.hidden=wide&&!onCalendar;
   calendar.inert=calendar.hidden;
   courses.hidden=!wide||page!=='courses';
@@ -6496,7 +6584,7 @@ function setWidePage(page){
     renderDayPanel();
     if(!wasToday)wideToday.closest('.app-shell').scrollTop=0;
   }
-  if(wasToday&&wide&&!onToday)renderCalendar();
+  if(wide&&onCalendar)renderDayPanel();
   if(wide&&onCalendar)scroller.scrollTop=wideCalendarScroll;
   for(const button of document.querySelectorAll('[data-wide-page-button]')){
     if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
@@ -6504,13 +6592,15 @@ function setWidePage(page){
   }
 }
 
-function mountWideLayout(){
-  const wide=wideMedia.matches;
-  const activeTab=$id('panel-r').classList.contains('mob-active')?$id('panel-r').dataset.mobileDay:'';
+function mountWideLayout(event){
+  const wide=wideMedia.matches,panel=$id('panel-r');
+  const mobileDay=panel.dataset.mobileDay;
+  const keepDetail=wide?mobileDay==='detail':wideDay.open;
   let page=document.body.dataset.widePage;
-  if(wide&&activeTab==='today')page='today';
-  else if(wide&&page==='today'&&wideToday.hidden){
-    page=$id('bn-course').classList.contains('active')?'courses':$id('bn-study').classList.contains('active')?'study':'calendar';
+  if(wide&&event){
+    page=mobileDay==='today'?'today':$id('bn-course').classList.contains('active')?'courses':
+      $id('bn-study').classList.contains('active')?'study':'calendar';
+    panel.dataset.mobileDay='';
   }
   if(lessonTimeDialog.open)closeLessonTime();
   if(memoDialog.open)closeMemoModal();
@@ -6537,10 +6627,16 @@ function mountWideLayout(){
   }
   if(S.view==='week')S.weekStart=weekStartOf(addDays(S.weekStart,3));
   setWidePage(page);
-  if(!wide&&page==='study')mobileTab('study');
-  if(!wide&&page==='today')mobileTab('day');
+  if(!wide){
+    const tab={calendar:'cal',courses:'course',today:'day',study:'study'}[page];
+    if(keepDetail&&page==='calendar')mobileTab('day','detail');
+    else if(tab)mobileTab(tab);
+  }
   render();
-  if(wide&&document.body.dataset.widePage==='calendar')document.scrollingElement.scrollTop=wideCalendarScroll;
+  if(wide&&page==='calendar'){
+    document.scrollingElement.scrollTop=wideCalendarScroll;
+    if(keepDetail&&usesDayDialog())openDayPanel();
+  }
 }
 wideMedia.addEventListener('change',mountWideLayout);
 
@@ -6597,7 +6693,7 @@ $id('wide-exam-open').addEventListener('click',()=>{
   wideExam.scrollTop=0;
 });
 
-function usesDayDialog(){return !isMobile();}
+function usesDayDialog(){return !isMobile()&&$id('panel-r').parentElement===wideDay;}
 function openDayPanel(){
   if(!usesDayDialog()||wideDay.open)return;
   if(!dayPanelReturnFocus){
@@ -6622,6 +6718,7 @@ function closeDayPanel(){
   if(wideDay.dataset.stage==='move')closeLessonReschedule(false);
   cancelDaySchedule(false);
   wideDay.close();
+  mountWideDayPanel();
   dayPanelReturnFocus?.();
   dayPanelReturnFocus=null;
 }
@@ -6830,10 +6927,6 @@ function mobileTab(tab,dayMode='today'){
   document.getElementById('panel-cal').classList.toggle('mob-active',tab==='cal');
   const pr=document.getElementById('panel-r');
   const isDetail=tab==='day'&&dayMode==='detail';
-  if(tab==='day'&&!isDetail){
-    S.selectedDate=todayStr;
-    renderCalendar();
-  }
   pr.dataset.mobileDay=tab==='day'?dayMode:'';
   $id('day-panel-close').hidden=!isDetail;
   pr.classList.toggle('mob-active',tab==='day');
@@ -6863,10 +6956,7 @@ function cancelCalendarSchedule(){
   renderTodo();renderCalendar();
 }
 function openCalendarSchedule(event){
-  const selected=calendarScheduleSelection===S.selectedDate?calendarScheduleSelection:null;
-  const visible=selected&&(S.view==='week'?selected>=S.weekStart&&selected<=addDays(S.weekStart,6):
-    selected.slice(0,7)===ds(S.year,S.month,1).slice(0,7));
-  beginCalendarSchedule(visible?selected:localDateKey(),event?.currentTarget||document.activeElement,false);
+  beginCalendarSchedule(S.selectedDate||localDateKey(),event?.currentTarget||document.activeElement,false);
 }
 function renderMobileSchedule(){
   const el=$id('mobile-schedule'),selected=course(S.tapCourseId);
@@ -7328,7 +7418,8 @@ function activateCalendarDate(event,date){
   event.preventDefault();
   event.stopPropagation();
   handleCellClick(date);
-  if(isMobile())document.getElementById('day-schedule-open')?.focus();
+  if(isMobile())$id('day-schedule-open').focus();
+  else if(!usesDayDialog())document.querySelector('#cal-body [data-calendar-date="'+date+'"]')?.focus({preventScroll:true});
 }
 
 function handleCellClick(date){
@@ -7892,7 +7983,7 @@ const resetRescheduleTime=initScheduleTime('reschedule',()=>{
   if(rescheduleDraft)rescheduleDraft.timeEdited=true;
 });
 
-let dayScheduleDate=null,calendarScheduleSelection=null,scheduleOriginDay=false;
+let dayScheduleDate=null,scheduleOriginDay=false;
 function cancelDaySchedule(restoreFocus=true){
   if(dayScheduleDate)closePhoneCourse({restoreFocus,returnDay:restoreFocus});
 }
@@ -7937,7 +8028,7 @@ function refreshDayScheduleCourses(){
   syncScheduleFields();
 }
 function openDaySchedule(){
-  beginCalendarSchedule(S.selectedDate||localDateKey(),$id('day-schedule-open'),wideDay.open);
+  beginCalendarSchedule(dayPanelDate()||localDateKey(),$id('day-schedule-open'),wideDay.open);
 }
 function beginCalendarSchedule(date,opener,fromDay){
   if(dayScheduleDate)return;
@@ -7962,9 +8053,9 @@ function beginCalendarSchedule(date,opener,fromDay){
   openPhoneCourse('schedule');
 }
 function finishCalendarSchedule(date){
-  const onToday=isMobile()?$id('panel-r').dataset.mobileDay==='today':!wideToday.hidden;
+  const onToday=isTodayPage();
   closePhoneCourse({restoreFocus:false,returnDay:false});
-  if(onToday&&date===S.selectedDate){
+  if(onToday&&date===dayPanelDate()){
     render();
     $id('day-schedule-open').focus({preventScroll:true});
     return;
@@ -7974,6 +8065,7 @@ function finishCalendarSchedule(date){
   S.year=year;S.month=month-1;
   selectDate(date);
   if(isMobile())mobileTab('day','detail');
+  else if(!usesDayDialog())$id('day-label').focus({preventScroll:true});
 }
 function submitDaySchedule(event){
   event.preventDefault();
@@ -8121,7 +8213,7 @@ function finishDayEdit(restoreFocus=true){
   }
 }
 function openDayEdit(opener){
-  const date=S.selectedDate;
+  const date=dayPanelDate();
   const id=opener.dataset.dayEdit;
   const wide=wideDay.open;
   const scroller=wide?wideDay:$id('panel-r');
@@ -8210,7 +8302,7 @@ document.getElementById('day-events').addEventListener('click',event=>{
     const scroller=usesDayDialog()?wideDay:$id('panel-r');
     const scrollTop=scroller.scrollTop;
     const pageScroll=document.scrollingElement.scrollTop;
-    toggleDone(S.selectedDate,id);
+    toggleDone(dayPanelDate(),id);
     const dayEvents=$id('day-events');
     const findCheck=key=>[...dayEvents.querySelectorAll('[data-day-toggle]')]
       .find(button=>button.dataset.dayToggle===key);
@@ -8226,7 +8318,7 @@ document.getElementById('day-events').addEventListener('click',event=>{
   }
   const remove=event.target.closest('[data-delete-day-lesson]');
   if(remove){
-    removeEvent(S.selectedDate,remove.dataset.deleteDayLesson);
+    removeEvent(dayPanelDate(),remove.dataset.deleteDayLesson);
     return;
   }
   const edit=event.target.closest('[data-day-edit]');
@@ -8280,7 +8372,7 @@ function studyLocalDay(date=new Date()){
 function todayLessonSubjectNames(){
   return [...(S.calendar[studyLocalDay()]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
 }
-let studyDueExpanded=false;
+let studyDueExpanded=false,studyExamsExpanded=false;
 const expandedStudyExams=new Set();
 function studyDueHTML(brief){
   if(!brief.due.length){
@@ -8305,8 +8397,8 @@ function studyDueHTML(brief){
 function studyExamHTML(brief){
   const exams=studyRoom.upcomingExams();
   if(!exams.length)return '';
-  return `<section class="study-exams" aria-labelledby="study-exams-title">
-    <h4 id="study-exams-title" class="day-panel-title">考前 7 天重點</h4>
+  return `<details class="study-exams" id="study-exams">
+    <summary id="study-exams-title" class="day-panel-title">考前 7 天重點 <span class="study-brief-meta">· ${exams.length} 場</span></summary>
     ${exams.map(({id,name,date,days,chapters,priority,scopeLabel,scopeInvalid,focus})=>`<details class="study-exam-row" data-study-exam="${esc(id)}">
       <summary><strong>${esc(name)}</strong> <span class="study-brief-meta"><time datetime="${esc(date)}">${esc(date)}</time> · ${days===0?'今天考試':'剩 '+days+' 天'}</span></summary>
       ${scopeInvalid?'<p class="study-brief-meta">請重新設定考試範圍</p>':chapters?`<p class="study-brief-meta">${scopeLabel}</p>
@@ -8315,18 +8407,16 @@ function studyExamHTML(brief){
         ${!brief.resume?`<p class="study-brief-meta" data-study-exam-focus>${focus.ids.length?
           focus.ids.length+' 題 · 涵蓋 '+focus.chapterCount+' 章':'目前沒有待練重點題'}</p>`:''}
         ${!brief.waiting&&(brief.resume||priority||focus.ids.length)?`<div class="study-exam-actions">
-          ${brief.resume?`<button type="button" class="btn btn-primary" data-study-exam-practice="${esc(id)}">繼續複習</button>`:
-            `${focus.ids.length?`<button type="button" class="btn btn-primary" data-study-exam-scope-practice="${esc(id)}">練習考試範圍</button>`:''}
+          ${brief.resume?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">繼續複習</button>`:
+            `${focus.ids.length?`<button type="button" class="btn btn-sand" data-study-exam-scope-practice="${esc(id)}">練習考試範圍</button>`:''}
               ${priority?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">練習優先章節</button>`:''}`}
         </div>`:''}`:
         '<p class="study-brief-meta">尚未連結題庫</p>'}
     </details>`).join('')}
-  </section>`;
+  </details>`;
 }
 function studyBriefHTML(){
-  const panel=$id('panel-r');
-  const onToday=isMobile()?panel.dataset.mobileDay==='today':!wideToday.hidden;
-  if(!onToday||S.selectedDate!==todayStr)return '';
+  if(!isTodayPage())return '';
   const brief=studyRoom.todayBrief(todayLessonSubjectNames());
   return `
     <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
@@ -8335,8 +8425,7 @@ function studyBriefHTML(){
         <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
         ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
       </div>
-      ${studyDueHTML(brief)}
-      ${studyExamHTML(brief)}
+      <div class="day-study-options">${studyDueHTML(brief)}${studyExamHTML(brief)}</div>
     </section>`;
 }
 function refreshStudyBrief(){
@@ -8349,11 +8438,15 @@ function refreshStudyBrief(){
   const previousDue=$id('study-due-list');
   if(previousDue)studyDueExpanded=previousDue.open;
   const fromDue=previousDue?.contains(focus);
+  const previousExams=$id('study-exams');
+  if(previousExams)studyExamsExpanded=previousExams.open;
   const focusedExam=focus?.closest('[data-study-exam]')?.dataset.studyExam;
   slot.innerHTML=wanted;
   slot.studyBriefMarkup=wanted;
   const details=$id('study-due-list');
   if(details)details.open=studyDueExpanded;
+  const exams=$id('study-exams');
+  if(exams)exams.open=studyExamsExpanded;
   const examRows=[...slot.querySelectorAll('[data-study-exam]')];
   for(const exam of examRows)exam.open=expandedStudyExams.has(exam.dataset.studyExam);
   if(hadFocus){
@@ -8362,7 +8455,7 @@ function refreshStudyBrief(){
     const exam=examRows.find(row=>row.dataset.studyExam===focusedExam);
     const examAction=['[data-study-exam-scope-practice]','[data-study-exam-practice]'].find(selector=>focus.matches(selector));
     const examFocus=exam&&((examAction&&exam.querySelector(examAction))||exam.querySelector('summary'));
-    (restored||examFocus||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
+    (restored||examFocus||(focus.id==='study-exams-title'&&$id('study-exams-title'))||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
   }
 }
 function openTodayPractice(){
@@ -8377,6 +8470,7 @@ function returnToTodayPracticeDay(){
 $id('day-label').tabIndex=-1;
 $id('day-events').addEventListener('toggle',event=>{
   if(event.target.id==='study-due-list')studyDueExpanded=event.target.open;
+  if(event.target.id==='study-exams')studyExamsExpanded=event.target.open;
   const exam=event.target.dataset?.studyExam;
   if(exam)event.target.open?expandedStudyExams.add(exam):expandedStudyExams.delete(exam);
 },true);
@@ -8399,7 +8493,9 @@ function renderDayPanel(){
   const label=document.getElementById('day-label');
   const el=document.getElementById('day-events');
 
-  if(!S.selectedDate){
+  const date=dayPanelDate(),onToday=isTodayPage();
+  $id('panel-r').dataset.dayContext=onToday?'today':'calendar';
+  if(!date){
     label.textContent='選擇日期';
     el.innerHTML=`<div class="day-panel-shell">
       <section class="day-panel-section day-panel-main">
@@ -8422,14 +8518,14 @@ function renderDayPanel(){
     return;
   }
 
-  label.textContent=fmtDate(S.selectedDate);
-  if(S.selectedDate===todayStr){
+  label.textContent=fmtDate(date);
+  if(date===todayStr){
     const badge=document.createElement('span');
     badge.className='day-label-today-badge';
     badge.textContent='今天';
     label.appendChild(badge);
   }
-  const allEvts=S.calendar[S.selectedDate]||[];
+  const allEvts=S.calendar[date]||[];
   const dayTotal=allEvts.length;
   const dayDone=allEvts.filter(e=>e.done).length;
   const dayRate=dayTotal>0?Math.round(dayDone/dayTotal*100):0;
@@ -8442,9 +8538,9 @@ function renderDayPanel(){
     const subject=subjects.get(lesson.courseId);
     if(subject)(lesson.done?completed:pending).push(renderDayLesson(lesson,subject,numbers.get(lesson)));
   }
-  const keepExpanded=el.dataset.renderedDate===S.selectedDate&&el.querySelector('.day-completed')?.open;
-  el.dataset.renderedDate=S.selectedDate;
-  const status=pending.length?'':`<p class="day-list-status">${completed.length?'當天課程已全部完成。':'這天還沒有課堂。'}</p>`;
+  const keepExpanded=el.dataset.renderedDate===date&&el.querySelector('.day-completed')?.open;
+  el.dataset.renderedDate=date;
+  const status=pending.length?'':`<p class="day-list-status">${completed.length?'當天課程已全部完成。':onToday?'今天還沒有課堂。':'這天還沒有課堂。'}</p>`;
   const doneSection=completed.length?`<details class="day-completed" ${keepExpanded?'open':''}>
     <summary>已完成（${completed.length}）</summary>
     <div class="day-lesson-list day-completed-list">${completed.join('')}</div>
@@ -8452,7 +8548,7 @@ function renderDayPanel(){
 
   el.innerHTML=`<div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
-      <h3 class="day-panel-title">${S.selectedDate===todayStr?'今日課程':'當日課程'}</h3>
+      <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
     </section><div class="study-brief-slot" id="study-brief-slot"></div>
     <section class="day-panel-section day-panel-notes">
@@ -8919,9 +9015,20 @@ $id('wide-calendar-add').addEventListener('click',openCalendarSchedule);
 for(const [id,mode] of [['schedule-manual-open','manual'],['schedule-quick-open','quick'],['schedule-back','schedule']]){
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
 }
-function setView(v){S.view=v;if(v==='week')S.weekStart=weekStartOf(S.selectedDate||todayStr);render();}
+function setView(view){
+  if(view===S.view)return;
+  const date=S.selectedDate,month=ds(S.year,S.month,1);
+  if(view==='week'){
+    S.weekStart=weekStartOf(date?.slice(0,7)===month.slice(0,7)?date:month);
+  }else{
+    const inWeek=date&&date>=S.weekStart&&date<=addDays(S.weekStart,6);
+    const [year,monthNumber]=(inWeek?date:addDays(S.weekStart,3)).split('-').map(Number);
+    S.year=year;S.month=monthNumber-1;
+  }
+  S.view=view;
+  render();
+}
 function selectDate(s,{preserveWeek=false}={}){
-  calendarScheduleSelection=s;
   S.selectedDate=s;
   if(S.view==='week'&&!preserveWeek)S.weekStart=weekStartOf(s);
   render();
@@ -9382,7 +9489,7 @@ const studyRoom=(()=>{
   let filters={subject:'',chapter:''};
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
   let setupMode='practice',weakOnly=false,examSetup=false;
-  let homeMode='knowledge',paperSubject='',paperId=null,editingPaper=null;
+  let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperId=null,editingPaper=null;
   const paper=id=>data.papers?.find(p=>p.id===id);
   const point=id=>{
     const knowledge=data.points.find(p=>p.id===id);
@@ -9414,12 +9521,17 @@ const studyRoom=(()=>{
     pillMotion.mount(root);
   }
   function go(next){
+    const returningHome=next==='home'&&screen!=='home';
     if(next!=='setup')examSetup=false;
     screen=next;
     render();
-    $id('study-heading').focus({preventScroll:true});
+    const subject=homeMode==='papers'?paperSubject:knowledgeSubject;
+    const card=returningHome&&[...root.querySelectorAll('#study-home-cards [data-subject]')]
+      .find(button=>button.dataset.subject===subject);
     root.scrollTop=0;
-    if(!isMobile())root.scrollIntoView({block:'nearest'});
+    (card||$id('study-heading')).focus({preventScroll:true});
+    if(card)card.scrollIntoView({block:'nearest'});
+    else if(!isMobile())root.scrollIntoView({block:'nearest'});
   }
   function options(items,value,label){
     return items.map(v=>'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(v||label)+'</option>').join('');
@@ -10143,11 +10255,12 @@ const batchDialog=$id('study-batch');
     else if(act==='sync-retry'&&account)retryLearning(account);
     else if(act==='home')go('home');
     else if(act==='library'||act==='weak'||act==='subject'&&!button.dataset.subject){
-      if(act==='library'||act==='weak')filters.chapter='';
+      if(act==='weak')filters.chapter='';
       go(act);
     }else if(act==='subject'){
       subjectHub=screen;
-      filters={subject:button.dataset.subject,chapter:''};
+      knowledgeSubject=button.dataset.subject;
+      filters={subject:knowledgeSubject,chapter:''};
       go('subject');
     }else if(act==='new-subject'){
       subjectHub=screen;
