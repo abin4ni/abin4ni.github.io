@@ -3127,6 +3127,12 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 #calendar-schedule-panel #day-schedule-form{margin-top:0;}
 #day-schedule-number{margin:0 0 10px;color:var(--text-2);font-size:var(--ui-caption);}
 #day-schedule-number:empty{display:none;}
+.schedule-conflicts{margin:8px 0;color:var(--text);font-size:var(--ui-caption);overflow-wrap:anywhere;}
+.schedule-conflicts:not([hidden]):not(:empty){border-inline-start:3px solid var(--accent);padding-inline-start:10px;}
+.schedule-conflicts:empty{display:none;}
+.schedule-conflicts summary{min-height:44px;align-content:center;cursor:pointer;}
+.schedule-conflicts ul{padding-inline-start:20px;margin-block:4px 8px;}
+.schedule-conflicts li{margin-block:4px;}
 #day-repeat-details>summary{min-height:44px;align-content:center;cursor:pointer;}
 #day-repeat-slot :is(.fold-head,[for=rep-start],#rep-start,#rep-course){display:none;}
 #phone-course-dialog .schedule-secondary{margin-top:10px;}
@@ -4551,10 +4557,12 @@ onAuthStateChanged(auth,user=>{
       <label for="day-schedule-date">日期</label>
       <input type="date" id="day-schedule-date" required>
       <div id="day-time-slot"></div>
+      <div id="day-schedule-conflicts" class="schedule-conflicts" aria-live="polite"></div>
       <div class="day-schedule-actions dialog-actions"><button type="submit" class="btn btn-primary" id="day-schedule-confirm">確認安排</button></div>
     </form>
     <details id="day-repeat-details">
       <summary>重複排課</summary><div id="day-repeat-slot"></div>
+      <details id="day-repeat-conflicts" class="schedule-conflicts" hidden><summary></summary><ul></ul></details>
     </details>
     <div class="dialog-actions schedule-secondary">
       <button type="button" class="btn btn-sand" id="schedule-manual-open">新增課程</button>
@@ -4615,6 +4623,7 @@ onAuthStateChanged(auth,user=>{
   <p id="repeat-preview-summary"></p>
   <div id="repeat-preview-body" role="region" aria-label="科目與排課日期" tabindex="0">
     <p id="repeat-preview-course"></p>
+    <details id="repeat-preview-conflicts" class="schedule-conflicts" hidden><summary></summary><ul></ul></details>
     <ul id="repeat-preview-dates"></ul>
     <div id="repeat-preview-skipped" class="rp-skipped" hidden></div>
   </div>
@@ -5752,6 +5761,46 @@ function lessonTimeLabel(lesson){
   const {time,endTime}=lessonTimes(lesson);
   return endTime?time+'–'+endTime:time;
 }
+function completeScheduleRange({time,endTime}){
+  const clock=/^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  return clock.test(time)&&clock.test(endTime)&&time<endTime;
+}
+function scheduleConflicts(date,times){
+  if(!date||!completeScheduleRange(times))return [];
+  return (S.calendar[date]||[]).filter(lesson=>completeScheduleRange(lesson)&&
+    times.time<lesson.endTime&&lesson.time<times.endTime).map(lesson=>({
+      name:course(lesson.courseId)?.name||'課堂',time:lessonTimeLabel(lesson),
+    }));
+}
+function conflictLessonsHTML(lessons){
+  return '<ul>'+lessons.map(lesson=>'<li>'+esc(lesson.name)+' · '+esc(lesson.time)+'</li>').join('')+'</ul>';
+}
+function renderScheduleConflicts(){
+  const times=readScheduleTimes('day'),date=$id('day-schedule-date').value;
+  const lessons=$id('day-schedule-course').value?scheduleConflicts(date,times):[];
+  const container=$id('day-schedule-conflicts');
+  const html=lessons.length?'<strong>時段重疊</strong>'+conflictLessonsHTML(lessons):'';
+  if(container.innerHTML!==html)container.innerHTML=html;
+  const plan=readRepeatPlan(repeatForm);
+  const batch=completeScheduleRange(plan)?calculateRepeatBatch(plan):null;
+  renderRepeatConflicts('day-repeat-conflicts',plan,batch);
+}
+function renderRepeatConflicts(id,plan,batch){
+  const details=$id(id),days=[];
+  if(completeScheduleRange(plan)){
+    for(const {date,count} of batch?.dates||[]){
+      const lessons=scheduleConflicts(date,plan);
+      if(count>1)lessons.push({name:'本次預計安排 '+count+' 堂 '+batch.name,time:lessonTimeLabel(plan)});
+      if(lessons.length)days.push({date,lessons});
+    }
+  }
+  details.hidden=!days.length;
+  const summary=details.querySelector('summary'),list=details.querySelector('ul');
+  const title=days.length?'有 '+days.length+' 天時段重疊':'';
+  if(summary.textContent!==title)summary.textContent=title;
+  const html=days.map(({date,lessons})=>'<li><time datetime="'+esc(date)+'">'+esc(date)+'</time>'+conflictLessonsHTML(lessons)+'</li>').join('');
+  if(list.innerHTML!==html)list.innerHTML=html;
+}
 function sameLessonTimes(a,b){
   const first=lessonTimes(a),second=lessonTimes(b);
   return first.time===second.time&&first.endTime===second.endTime;
@@ -5984,6 +6033,7 @@ function repeatExamHint(date){
   return '<span class="rp-exam">當天有考試'+(exams.length===1?' · '+esc(exams[0].name):'（'+exams.length+' 科）')+'</span>';
 }
 function renderRepeatPreview(batch,notice='',{keepScroll=false}={}){
+  renderRepeatConflicts('repeat-preview-conflicts',readRepeatPlan(repeatForm),batch);
   document.getElementById('repeat-preview-notice').textContent=notice;
   document.getElementById('repeat-preview-course').textContent=batch.name||'';
   document.getElementById('repeat-preview-summary').textContent=batch.error||
@@ -6141,16 +6191,21 @@ function recheckRepeatPreview(){
   const batch=projectRepeatBatch(plan,skips);
   if(batch.error)return;
   const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
-  if(!batchChanged&&repeatLoadKey(batch)===repeatPreview.loadKey)return;
+  if(!batchChanged&&repeatLoadKey(batch)===repeatPreview.loadKey){
+    renderRepeatConflicts('repeat-preview-conflicts',plan,batch);
+    return;
+  }
   repeatPreview={key:repeatPreview.key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,pointerConfirmAfter:performance.now()+400};
   renderRepeatPreview(batch,!batchChanged?'同步後，預覽日期的原有課堂數已更新，請重新確認。':batch.added?'同步後，排課結果已更新，請重新確認。':'同步後，排課結果已更新。');
 }
 repeatForm.addEventListener('input',event=>{
   if(['rep-course','rep-start','rep-end'].includes(event.target.id))document.getElementById('repeat-prefill-note').textContent='';
   updateRepeatConditions();
+  if(dayScheduleDate)renderScheduleConflicts();
 });
 repeatForm.addEventListener('change',()=>{
   if(repeatPreview)updateRepeatConditions();
+  if(dayScheduleDate)renderScheduleConflicts();
 });
 repeatDialog.addEventListener('keydown',event=>event.stopPropagation());
 repeatConfirm.addEventListener('click',confirmRepeatSchedule);
@@ -7861,6 +7916,7 @@ function syncScheduleFields(){
     number.textContent='本次安排第 '+scheduledLessonNumbers([c],calendar).get(lesson)+' 堂';
   }else number.textContent='';
   updateRepeatScheduleForm(repeatForm);
+  if(dayScheduleDate)renderScheduleConflicts();
 }
 for(const id of ['day-schedule-course','day-schedule-date'])$id(id).addEventListener('change',syncScheduleFields);
 function refreshDayScheduleCourses(){
@@ -7898,6 +7954,8 @@ function beginCalendarSchedule(date,opener,fromDay){
   $id('day-schedule-form').reset();
   repeatForm.reset();
   $id('day-repeat-details').open=false;
+  $id('day-repeat-conflicts').open=false;
+  $id('repeat-preview-conflicts').open=false;
   $id('day-schedule-date').value=date;
   resetDayScheduleTime();
   refreshDayScheduleCourses();
