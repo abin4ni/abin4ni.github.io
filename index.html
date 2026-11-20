@@ -4053,6 +4053,13 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   }
 }
 
+#paper-home-tools[hidden]{display:none;}
+.past-question-link{border:0;background:none;color:var(--text);font:inherit;text-align:start;width:100%;min-height:44px;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer;}
+.past-question-link:hover,.past-question-link:focus-visible{color:var(--accent-h);}
+.past-options{padding-inline-start:1.5rem;overflow-wrap:anywhere;}
+.past-answer-choices{border:0;padding:0;margin:12px 0;min-width:0;}
+.past-answer-choices label{display:flex;align-items:center;gap:.75rem;min-height:44px;overflow-wrap:anywhere;}
+.past-answer-choices input{accent-color:var(--accent);flex:none;}
 /* Shared workspace surfaces and responsive calendar detail. */
 #calendar-day-slot[hidden]{display:none;}
 #panel-r .day-heading{align-items:center;flex-wrap:wrap;min-width:0;}
@@ -9210,12 +9217,14 @@ pillMotion.mount(document);
 
 const TODAY_ROUND_LIMIT=5;
 const learningJournal=(()=>{
-  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer','paper','paper-question']);
+  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer','paper','paper-question','paper-subject']);
   const outcomes=new Set(['correct','incorrect','partial','missed','viewed']);
-  const fields=['subject','chapter','question','answer','explanation','accepted'];
+  const fields=['subject','chapter','question','answer','explanation','accepted','options','source','sourceQuestionId'];
   const text=v=>typeof v==='string';
   const validProgress=p=>p&&Number.isSafeInteger(p.attempts)&&p.attempts>=0&&Number.isInteger(p.streak)&&p.streak>=0&&p.streak<=Math.min(2,p.attempts)&&typeof p.weak==='boolean';
   const validPointId=id=>/^k-[0-9a-f]{32}$/.test(id);
+  const objectValue=value=>value&&typeof value==='object'&&!Array.isArray(value);
+  const strings=value=>Array.isArray(value)&&value.every(text);
   const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
   const fresh=()=>({version:1,points:[],progress:{}});
   const intervals=[1,3,7,14];
@@ -9235,11 +9244,12 @@ const learningJournal=(()=>{
   function valid(op){
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
     const value=op.value;
+    if(op.kind==='paper-subject')return validPointId(op.target)&&value&&text(value.name)&&!!value.name.trim();
     if(op.kind==='paper')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject.trim()&&
-      text(value.year)&&/^\d{1,4}$/.test(value.year)&&Number(value.year)>0&&text(value.name)&&!!value.name.trim()&&text(value.source);
-    if(op.kind==='paper-question')return validPointId(op.target)&&value&&validPointId(value.paperId)&&text(value.number)&&!!value.number.trim()&&
-      text(value.question)&&!!value.question.trim()&&text(value.answer)&&!!value.answer.trim()&&text(value.explanation)&&
-      Array.isArray(value.accepted)&&value.accepted.every(text);
+      (value.subjectRef===undefined||text(value.subjectRef))&&text(value.year)&&/^\d{1,4}$/.test(value.year)&&Number(value.year)>0&&text(value.name)&&!!value.name.trim()&&text(value.source);
+    if(op.kind==='paper-question')return validPointId(op.target)&&objectValue(value)&&(validPointId(value.paperId)||value.paperId===''&&text(value.subject)&&!!value.subject.trim())&&text(value.number)&&
+      (value.subjectRef===undefined||text(value.subjectRef))&&text(value.question)&&!!value.question.trim()&&text(value.answer)&&
+      text(value.explanation)&&strings(value.accepted)&&(value.options===undefined||strings(value.options));
     if(op.kind==='answer')return validPointId(op.target)&&outcomes.has(value);
     if(op.kind==='today-round')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject&&
       Array.isArray(value.queue)&&value.queue.length>0&&value.queue.length<=TODAY_ROUND_LIMIT&&value.queue.every(validPointId)&&
@@ -9252,13 +9262,13 @@ const learningJournal=(()=>{
     if(op.kind==='baseline')return validPointId(op.target)&&validProgress(value);
     if(op.kind==='delete')return validPointId(op.target)&&value===null;
     if(op.kind==='point')return validPointId(op.target)&&value&&typeof value==='object'&&!Array.isArray(value)&&
-      Object.keys(value).every(k=>(fields.includes(k)||k==='chapterRef')&&(k==='accepted'?Array.isArray(value[k])&&value[k].every(text):text(value[k])));
+      Object.keys(value).every(k=>(fields.includes(k)||k==='chapterRef')&&(['accepted','options'].includes(k)?strings(value[k]):k==='sourceQuestionId'?validPointId(value[k]):text(value[k])));
     if(op.kind==='subject')return !!op.target&&value===null;
     return Array.isArray(value)&&(op.kind==='move'?[3,4].includes(value.length):value.length===2)&&value.every(text)&&!!value[0]&&!!value[1];
   }
   const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
   function project(journal,refs=new Map()){
-    const papers=new Map(),paperQuestions=new Map();
+    const papers=new Map(),paperQuestions=new Map(),paperSubjects=new Map();
     const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],dated=[],rounds=new Map(),answered=new Set();
     function legacyChapter(subject,name){
       const key=chapterKey(subject,name);
@@ -9275,7 +9285,8 @@ const learningJournal=(()=>{
     for(const [id,op] of ordered){
       const {kind,target,value}=op;
       if(kind==='paper')papers.set(target,{...value,id:target});
-      else if(kind==='paper-question'){if(!paperQuestions.has(target))paperQuestions.set(target,{...value,id:target});}
+      else if(kind==='paper-question')paperQuestions.set(target,{...value,id:target});
+      else if(kind==='paper-subject')paperSubjects.set(target,{...value,id:target});
       else if(kind==='point'){
         const previous=points.get(target);
         const next={...previous,...value,id:target};
@@ -9362,7 +9373,8 @@ const learningJournal=(()=>{
     const review=Object.fromEntries(kept.filter(p=>reviews.has(p.id)).map(p=>[p.id,reviews.get(p.id)]));
     const paperNumbers=new Map();
     const keptPaperQuestions=[...paperQuestions.values()].filter(p=>{
-      if(!papers.has(p.paperId)||points.has(p.id))return false;
+      if(points.has(p.id)||p.paperId&&!papers.has(p.paperId))return false;
+      if(!p.paperId||!p.number.trim())return true;
       if(!paperNumbers.has(p.paperId))paperNumbers.set(p.paperId,new Set());
       const seen=paperNumbers.get(p.paperId),number=numberKey(p.number);
       if(seen.has(number))return false;
@@ -9370,12 +9382,12 @@ const learningJournal=(()=>{
       return true;
     });
     const paperProgress=Object.fromEntries(keptPaperQuestions.filter(p=>baseline.has(p.id)).map(p=>[p.id,baseline.get(p.id)]));
-    return {version:1,points:kept,progress,review,papers:[...papers.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    return {version:1,points:kept,progress,review,papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
     const add=(kind,target,value,day)=>ops.push({kind,target,value,...(validDay(day)?{day}:{})});
-    for(const [kind,key] of [['paper','papers'],['paper-question','paperQuestions']]){
+    for(const [kind,key] of [['paper','papers'],['paper-question','paperQuestions'],['paper-subject','paperSubjects']]){
       const old=new Map((before[key]||[]).map(item=>[item.id,item]));
       for(const item of after[key]||[]){
         if(!same(old.get(item.id),item)){
@@ -9440,10 +9452,16 @@ const studyRoom=(()=>{
     for(const point of data.points){
       if(!object(point)||!text(point.id)||!/^k-[a-f0-9]{32}$/.test(point.id)||ids.has(point.id)||!subjects.includes(point.subject)||
         !['chapter','question','answer','explanation'].every(k=>text(point[k]))||
-        !point.question.trim()||!point.answer.trim()||!Array.isArray(point.accepted)||!point.accepted.every(text))return false;
+        !point.question.trim()||!point.answer.trim()||!Array.isArray(point.accepted)||!point.accepted.every(text)||
+        (point.options!==undefined&&(!Array.isArray(point.options)||!point.options.every(text)))||
+        (point.source!==undefined&&!text(point.source))||
+        (point.sourceQuestionId!==undefined&&!/^k-[0-9a-f]{32}$/.test(point.sourceQuestionId)))return false;
       ids.add(point.id);
     }
     const paperIds=new Set(),questionIds=new Set(),numbers=new Set();
+    if(data.paperSubjects!==undefined&&(!Array.isArray(data.paperSubjects)||
+      !data.paperSubjects.every(item=>object(item)&&learningJournal.valid({kind:'paper-subject',target:item.id,value:{name:item.name},clock:0}))||
+      new Set(data.paperSubjects.map(item=>item.id)).size!==data.paperSubjects.length))return false;
     for(const [key,kind,index] of [['papers','paper',paperIds],['paperQuestions','paper-question',questionIds]]){
       if(data[key]===undefined)continue;
       if(!Array.isArray(data[key]))return false;
@@ -9453,8 +9471,11 @@ const studyRoom=(()=>{
         if(ids.has(id)||index.has(id)||!learningJournal.valid({kind,target:id,value,clock:0}))return false;
         if(kind==='paper-question'){
           const number=JSON.stringify([value.paperId,learningJournal.numberKey(value.number)]);
-          if(!paperIds.has(value.paperId)||paperIds.has(id)||numbers.has(number))return false;
-          numbers.add(number);
+          if((value.paperId&&!paperIds.has(value.paperId))||paperIds.has(id))return false;
+          if(value.paperId&&value.number.trim()){
+            if(numbers.has(number))return false;
+            numbers.add(number);
+          }
         }
         index.add(id);
       }
@@ -9489,13 +9510,15 @@ const studyRoom=(()=>{
   let filters={subject:'',chapter:''};
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
   let setupMode='practice',weakOnly=false,examSetup=false;
-  let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperId=null,editingPaper=null;
+  let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
+  let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
+  let paperSearch={year:'',name:''};
   const paper=id=>data.papers?.find(p=>p.id===id);
   const point=id=>{
     const knowledge=data.points.find(p=>p.id===id);
     if(knowledge)return knowledge;
     const question=data.paperQuestions?.find(p=>p.id===id);
-    return question&&{...question,subject:paper(question.paperId)?.subject};
+    return question&&{...question,subject:paper(question.paperId)?.subject||question.subject};
   };
   const status=id=>{
     const p=data.progress[id];
@@ -9527,7 +9550,7 @@ const studyRoom=(()=>{
     render();
     const subject=homeMode==='papers'?paperSubject:knowledgeSubject;
     const card=returningHome&&[...root.querySelectorAll('#study-home-cards [data-subject]')]
-      .find(button=>button.dataset.subject===subject);
+      .find(button=>homeMode==='papers'?button.dataset.paperSubject===paperSubjectRef:button.dataset.subject===subject);
     root.scrollTop=0;
     (card||$id('study-heading')).focus({preventScroll:true});
     if(card)card.scrollIntoView({block:'nearest'});
@@ -9552,36 +9575,141 @@ const studyRoom=(()=>{
     return data.points.filter(p=>p.subject===filters.subject&&
       (!filters.chapter||p.chapter===(filters.chapter===unfiled?'':filters.chapter))&&(!weak||status(p.id)[1]==='weak'));
   }
+  const paperRef=item=>item.subjectRef||'legacy:'+item.subject;
+  function pastSubjects(){
+    const independent=(data.paperSubjects||[]).map(p=>({key:p.id,name:p.name,group:'獨立考科'}));
+    const legacy=[...new Set([...(data.papers||[]),...(data.paperQuestions||[])]
+      .filter(p=>p.subject&&(!p.subjectRef||p.subjectRef.startsWith('legacy:'))).map(p=>p.subject))];
+    return [...independent,...legacy.map(name=>({key:'legacy:'+name,name,group:'原有考科'})),
+      ...subjectNames().map(name=>({key:'library:'+name,name,group:'學習室科目'}))];
+  }
+  function subjectChoices(selected,placeholder){
+    return '<option value="">'+esc(placeholder)+'</option>'+pastSubjects().map(({key,name,group})=>
+      '<option value="'+esc(key)+'" '+(key===selected?'selected':'')+'>'+esc(name+' · '+group)+'</option>').join('');
+  }
   function studyHomeCards(){
     const colors=['#7a8c6e','#6b8fa8','#c4924a','#5a7a8a','#9e7b8a'];
-    const names=homeMode==='papers'?[...new Set([...subjectNames(),...(data.papers||[]).map(p=>p.subject)])]:subjectNames();
-    const cards=names.map((name,i)=>{
-      const n=homeMode==='papers'?(data.papers||[]).filter(p=>p.subject===name).length:data.points.filter(p=>p.subject===name).length;
-      return '<button type="button" class="memo-card" data-study-action="'+(homeMode==='papers'?'paper-subject':'subject')+'" data-subject="'+esc(name)+'">'+
+    const past=homeMode==='papers';
+    const subjects=past?pastSubjects():subjectNames().map(name=>({name}));
+    const cards=subjects.map(({name,key,group},i)=>{
+      const n=homeMode==='papers'?(data.papers||[]).filter(p=>paperRef(p)===key).length:data.points.filter(p=>p.subject===name).length;
+      return '<button type="button" class="memo-card" data-study-action="'+(homeMode==='papers'?'paper-subject':'subject')+'" data-subject="'+esc(name)+'"'+(past?' data-paper-subject="'+esc(key)+'"':'')+'>'+
         '<span class="memo-card-head"><span class="dot" style="background:'+colors[i%colors.length]+'"></span><span class="memo-card-name">'+esc(name)+'</span></span>'+
-        (n?'<span class="study-meta">'+n+(homeMode==='papers'?' 份試卷':' 題')+'</span>':'')+'</button>';
+        (past||n?'<span class="study-meta">'+(past?esc(group)+' · ':'')+n+(homeMode==='papers'?' 份試卷':' 題')+'</span>':'')+'</button>';
     }).join('');
-    return cards+(homeMode==='knowledge'?'<button type="button" class="memo-card study-new-subject" data-study-action="new-subject">＋ 新增科目知識庫</button>':'');
+    return cards+(homeMode==='knowledge'?'<button type="button" class="memo-card study-new-subject" data-study-action="new-subject">＋ 新增科目知識庫</button>':'<button type="button" class="memo-card study-new-subject" data-study-action="paper-add-subject">＋ 新增考科</button>');
   }
   function subjectCards(){
     const resume=session&&session.index<session.queue.length;
     draw('學習室','<div class="study-mode-options study-home-modes" role="group" aria-label="學習室模式">'+
       [['knowledge','知識庫'],['papers','考古題']].map(([mode,label])=>
         '<button type="button" data-study-action="home-mode" data-mode="'+mode+'" aria-pressed="'+(mode===homeMode)+'">'+label+'</button>').join('')+
-      '</div><div id="study-home-cards" class="study-subject-grid">'+studyHomeCards()+'</div>'+
+      '</div><div id="paper-home-tools" class="study-actions" '+(homeMode==='papers'?'':'hidden')+'>'+
+      action('混合刷題','paper-mix',true)+action('歷屆試卷','paper-archive')+'</div><div id="study-home-cards" class="study-subject-grid">'+studyHomeCards()+'</div>'+
       (resume?'<div class="study-home-actions">'+action('繼續練習','resume')+'</div>':''),false);
   }
   function paperTitle(p){return p.year+' 年度 · '+p.name;}
   function paperItems(id){
     return (data.paperQuestions||[]).filter(p=>p.paperId===id).sort((a,b)=>
-      a.number.localeCompare(b.number,'zh-Hant',{numeric:true})||a.id.localeCompare(b.id));
+      Number(!a.number)-Number(!b.number)||a.number.localeCompare(b.number,'zh-Hant',{numeric:true})||a.id.localeCompare(b.id));
+  }
+
+  const canPracticePaper=q=>Boolean(q.answer.trim());
+  const pastQuestionRef=q=>paperRef(paper(q.paperId)||q);
+  function pastQuestionList(items){
+    return items.length?'<ul class="study-paper-questions">'+items.map(q=>'<li><button type="button" class="past-question-link" data-study-action="paper-question" data-question="'+
+      esc(q.id)+'">'+(q.number?'<b>第 '+esc(q.number)+' 題</b> ':'')+esc(q.question)+
+      (!canPracticePaper(q)?' <span class="study-meta">待補答案</span>':'')+'</button></li>').join('')+'</ul>':
+      '<p class="study-meta">目前沒有題目。</p>';
   }
   function paperList(){
-    const papers=(data.papers||[]).filter(p=>p.subject===paperSubject).sort((a,b)=>Number(b.year)-Number(a.year)||a.name.localeCompare(b.name,'zh-Hant'));
+    const papers=(data.papers||[]).filter(p=>(!paperSubjectRef||paperRef(p)===paperSubjectRef)&&
+      (!paperSearch.year||p.year===paperSearch.year)&&p.name.toLocaleLowerCase().includes(paperSearch.name.toLocaleLowerCase()))
+      .sort((a,b)=>Number(b.year)-Number(a.year)||a.name.localeCompare(b.name,'zh-Hant'));
     const cards=papers.map(p=>'<button type="button" class="memo-card" data-study-action="paper-open" data-paper="'+p.id+'">'+
-      '<span class="memo-card-name">'+esc(paperTitle(p))+'</span><span class="study-meta">'+paperItems(p.id).length+' 題</span></button>').join('');
-    draw(esc(paperSubject)+' · 考古題','<div class="study-subject-grid study-paper-list">'+cards+
-      '<button type="button" class="memo-card study-new-subject" data-study-action="paper-new">＋ 新增試卷</button></div>');
+      '<span class="memo-card-name">'+esc(paperTitle(p))+'</span><span class="study-meta">'+esc(p.subject)+' · '+paperItems(p.id).length+' 題</span></button>').join('');
+    draw(esc(paperSubject||'歷屆試卷'),'<form id="study-paper-search" class="study-surface">'+
+      '<label class="study-field">考科<select name="subject">'+subjectChoices(paperSubjectRef,'全部科目')+'</select></label>'+
+      '<label class="study-field">年度<input name="year" inputmode="numeric" value="'+esc(paperSearch.year)+'"></label>'+
+      '<label class="study-field">考試名稱<input name="name" value="'+esc(paperSearch.name)+'"></label>'+
+      '<div class="study-actions"><button type="submit" class="btn btn-sand">搜尋</button>'+
+      action('混合刷題','paper-mix-subject')+(paperSubjectRef?action('新增試卷','paper-new',true):'')+'</div></form>'+
+      (cards?'<div class="study-subject-grid study-paper-list">'+cards+'</div>':'<p class="study-meta">沒有符合的試卷。</p>'));
+  }
+  function mixedItems(){
+    return (data.paperQuestions||[]).filter(q=>!mixedSubject||pastQuestionRef(q)===mixedSubject);
+  }
+  function mixedPage(){
+    const items=mixedItems(),ready=items.filter(canPracticePaper);
+    draw('混合刷題','<div class="study-surface"><label class="study-field">考科<select id="paper-mix-subject">'+
+      subjectChoices(mixedSubject,'全部科目')+'</select></label><p class="study-meta">可作答 '+ready.length+' 題</p><div class="study-actions">'+
+      action(unfinishedOtherPractice()||resumableToday()?'繼續練習':'開始刷題','paper-mix-start',true)+
+      action('新增單題','paper-question-new')+'</div>'+pastQuestionList(items)+'</div>');
+  }
+  function sourceLabel(q){
+    const p=paper(q.paperId);
+    return p?[p.subject,paperTitle(p),q.number?'第 '+q.number+' 題':'',p.source].filter(Boolean).join(' · '):q.subject+' · 未歸卷';
+  }
+  function choiceList(q){
+    return q.options?.length?'<ol class="past-options">'+q.options.map(option=>'<li>'+esc(option)+'</li>').join('')+'</ol>':'';
+  }
+  function collectionAction(q){
+    return data.points.some(p=>p.sourceQuestionId===q.id)?'<p class="study-meta">已收藏到知識庫</p>':
+      q.answer.trim()?action('收藏到知識庫','paper-collect',false,'data-question="'+esc(q.id)+'"'):
+      '<p class="study-meta">補上正解後即可收藏。</p>';
+  }
+  function questionDetail(){
+    const q=point(questionId);
+    if(!q){go(questionBack);return;}
+    draw('題目詳情','<div class="study-surface"><p class="study-meta">'+esc(sourceLabel(q))+'</p><h3 class="study-copy">'+
+      esc(q.question)+'</h3>'+choiceList(q)+'<p class="study-copy">'+esc(q.answer||'待補答案')+'</p>'+
+      (q.explanation?'<p class="study-copy">'+esc(q.explanation)+'</p>':'')+
+      '<div class="study-actions">'+action('編輯題目','paper-question-edit')+collectionAction(q)+'</div></div>',
+      questionBack==='paper'?'paper-return':'paper-mix-return');
+  }
+  function collectionFields(subject){
+    return '<label class="study-field">收藏科目<select name="collectionSubject" data-collection-subject>'+
+      options(subjectNames(),subject,'')+'</select></label><label class="study-field">收藏章節<select name="collectionChapter">'+
+      options(['',...chapters(subject)],'','未分類')+'</select></label>';
+  }
+  function questionEditor(){
+    const q=questionId?point(questionId):null;
+    const target=q?.paperId||(!q&&questionBack==='paper'?paperId:'');
+    const subject=target?paperRef(paper(target)):q?pastQuestionRef(q):mixedSubject;
+    const linkedName=pastSubjects().find(item=>item.key===subject)?.name||'';
+    const librarySubject=subjectNames().includes(linkedName)?linkedName:subjectNames()[0];
+    draw(q?'編輯題目':'新增單題','<form id="past-question-form" class="study-surface">'+
+      '<label class="study-field">考科<select name="pastSubject" required '+(target&&questionBack==='paper'?'disabled':'')+'>'+
+      subjectChoices(subject,'選擇考科')+'</select></label>'+
+      '<label class="study-field">試卷<select name="targetPaper" '+(questionBack==='paper'?'disabled':'')+'>'+paperChoices(subject,target)+'</select></label>'+
+      '<label class="study-field">原題號（選填）<input name="number" value="'+esc(q?.number)+'"></label>'+
+      '<label class="study-field">題目<textarea name="question" required rows="3">'+esc(q?.question)+'</textarea></label>'+
+      '<label class="study-field">選項（選填，每行一個）<textarea name="choices" rows="3">'+esc(q?.options?.join('\n'))+'</textarea></label>'+
+      '<label class="study-field">正解（未確認可留空）<textarea name="answer" rows="2">'+esc(q?.answer)+'</textarea></label>'+
+      '<label class="study-field">其他可接受答案（短答自動判分，每行一個）<textarea name="accepted" rows="2">'+esc(q?.accepted?.join('\n'))+'</textarea></label>'+
+      '<label class="study-field">解析<textarea name="explanation" rows="4">'+esc(q?.explanation)+'</textarea></label>'+
+      (!q?'<details class="study-supplements"><summary>同時收藏到知識庫</summary><label><input type="checkbox" name="collect"> 收藏這題</label>'+
+        collectionFields(librarySubject)+'</details>':'')+
+      '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">儲存題目</button></div></form>',
+      q?'paper-question-detail':questionBack==='paper'?'paper-return':'paper-mix-return');
+  }
+  function paperChoices(subject,target){
+    return '<option value="">未歸卷</option>'+(data.papers||[]).filter(p=>paperRef(p)===subject).map(p=>
+      '<option value="'+esc(p.id)+'" '+(p.id===target?'selected':'')+'>'+esc(paperTitle(p))+'</option>').join('');
+  }
+  function collectPage(){
+    const q=point(questionId);
+    if(!q?.answer.trim()){go(collectBack);return;}
+    const subject=subjectNames().includes(q.subject)?q.subject:subjectNames()[0];
+    draw('收藏到知識庫','<form id="past-collection-form" class="study-surface"><p class="study-copy">'+esc(q.question)+
+      '</p>'+collectionFields(subject)+'<p class="study-error" role="alert"></p>'+
+      '<div class="study-actions"><button class="btn btn-primary">確認收藏</button></div></form>','paper-collect-back');
+  }
+  async function collectionPoint(q,subject,chapter){
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('studyos-paper-collection:'+q.id));
+    const id='k-'+Array.from(new Uint8Array(hash,0,16),n=>n.toString(16).padStart(2,'0')).join('');
+    const {question,answer,explanation,accepted,options}=q;
+    return {id,subject,chapter,question,answer,explanation,accepted,sourceQuestionId:q.id,source:sourceLabel(q),...(options?.length?{options}:{})};
   }
   function paperEditor(){
     const p=paper(editingPaper);
@@ -9595,11 +9723,12 @@ const studyRoom=(()=>{
     const p=paper(paperId);
     if(!p){go('papers');return;}
     const items=paperItems(p.id);
-    const active=resumableToday()||session&&session.index<session.queue.length;
+    const active=resumableToday()||unfinishedOtherPractice();
+    const ready=items.filter(canPracticePaper);
     draw(esc(paperTitle(p)),'<div class="study-surface">'+(p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<p class="study-meta">'+items.length+' 題</p><div class="study-actions">'+action('編輯試卷','paper-edit')+
-      action('批次貼上','paper-batch')+(active||items.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
-      '</div>'+(items.length?'<ul class="study-paper-questions">'+items.map(q=>'<li><b>第 '+esc(q.number)+' 題</b> '+esc(q.question)+'</li>').join('')+'</ul>':'')+'</div>','paper-list');
+      action('批次貼上','paper-batch')+action('新增單題','paper-question-new')+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
+      '</div>'+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
     const ids=data.points.filter(p=>p.subject===filters.subject);
@@ -10081,7 +10210,8 @@ const batchDialog=$id('study-batch');
     if(!session||!['question','grade'].includes(session.phase))return;
     const id=session.queue[session.index];
     if(!point(id))return;
-    const progress=session.paperId?(data.paperProgress??={}):data.progress;
+    const isPastQuestion=Boolean(session.paperId||session.paperMix);
+    const progress=isPastQuestion?(data.paperProgress??={}):data.progress;
     const p=progress[id]||{attempts:0,streak:0,weak:false};
     p.attempts++;
     p.streak=outcome==='correct'?Math.min(2,p.streak+1):0;
@@ -10090,7 +10220,7 @@ const batchDialog=$id('study-batch');
     session.results.push({id,outcome});
     const previousPhase=session.phase;
     session.phase='feedback';
-    if(!persist({id,outcome,day:session.paperId?undefined:studyLocalDay()})){
+    if(!persist({id,outcome,day:isPastQuestion?undefined:studyLocalDay()})){
       session.results.pop();
       session.phase=previousPhase;
       return;
@@ -10099,6 +10229,7 @@ const batchDialog=$id('study-batch');
     go('session');
   }
   function grade(answer,p){
+    if(p.options?.length)return answer===p.answer?'correct':'incorrect';
     if(!p.accepted.length||answer.includes('\n')||answer.length>120)return null;
     const eligible=[p.answer,...p.accepted].map(v=>v.trim()).filter(v=>v&&!v.includes('\n')&&v.length<=120);
     if(!eligible.length)return null;
@@ -10112,16 +10243,18 @@ const batchDialog=$id('study-batch');
     const cards=mode==='cards';
     const reference='<div class="study-reference"><h3>參考答案</h3><p class="study-copy">'+esc(p.answer)+'</p>'+
       (p.explanation?'<h3>解析</h3><p class="study-copy">'+esc(p.explanation)+'</p>':'')+'</div>';
-    let body='<p class="study-meta">'+(index+1)+'／'+queue.length+' · '+esc(p.subject)+(p.paperId?' · 第 '+esc(p.number)+' 題':p.chapter?' · '+esc(p.chapter):'')+
-      '</p><h3 class="study-copy">'+esc(p.question)+'</h3>';
+    let body='<p class="study-meta">'+(index+1)+'／'+queue.length+' · '+esc(p.subject)+((p.paperId||session.paperMix)&&p.number?' · 第 '+esc(p.number)+' 題':p.chapter?' · '+esc(p.chapter):'')+
+      '</p><h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'');
     if(phase==='question'){
       body+=cards?'<div class="study-actions">'+action('翻面','flip',true)+'</div>':
-        '<form id="study-answer-form"><label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3" required>'+esc(answer)+'</textarea></label>'+
-        '<p class="study-error" role="alert"></p><div class="study-actions">'+action(session.origin==='today'||session.paperId?'跳過':'直接看答案','view')+
+        '<form id="study-answer-form">'+(p.options?.length?'<fieldset class="past-answer-choices"><legend>你的答案</legend>'+p.options.map(option=>'<label><input type="radio" name="answer" required value="'+esc(option)+'" '+(option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>':
+        '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3" required>'+esc(answer)+'</textarea></label>')+
+        '<p class="study-error" role="alert"></p><div class="study-actions">'+action(session.origin==='today'||session.paperId||session.paperMix?'跳過':'直接看答案','view')+
         '<button class="btn btn-primary">送出答案</button></div></form>';
     }else{
       if(answer)body+='<p class="study-meta">你的答案</p><p class="study-copy">'+esc(answer)+'</p>';
       body+=reference;
+      if(session.paperId||session.paperMix)body+=choiceList(p)+collectionAction(p);
       if(phase==='grade')body+='<div class="study-actions">'+action('沒答出來','missed')+action('部分答對','partial')+action('答對','correct',true)+'</div>';
       else{
         if(!cards)body+='<p class="study-meta" role="status">'+(outcomes[session.results.find(r=>r.id===p.id)?.outcome]??'')+'</p>';
@@ -10162,13 +10295,13 @@ const batchDialog=$id('study-batch');
     const currentPaper=paper(session?.paperId);
     const earlier=previousRounds();
     const back=currentPaper?action('返回試卷','paper-return',!retryCount):canReturnToday?action(fromToday?'回到今日':'返回今日','today-back',!retryCount):
-      action(subjectNames().includes(roundSubject())?'返回科目':'返回學習室','subject-back',!retryCount);
+      session?.paperMix?action('返回混合刷題','paper-mix-return',!retryCount):action(subjectNames().includes(roundSubject())?'返回科目':'返回學習室','subject-back',!retryCount);
     draw('練習結果','<div class="study-surface">'+
       (fromToday?'<p class="study-meta study-brief-summary">今日備考 · '+esc(session.subject||'')+'　完成 '+r.length+' 題</p>':'')+
       (currentPaper?'<p class="study-meta study-brief-summary">'+esc(paperTitle(currentPaper))+'</p>':'')+
-      roundCounts(r,fromToday||!!currentPaper)+
+      roundCounts(r,fromToday||!!currentPaper||Boolean(session?.paperMix))+
       (earlier.length?'<details class="study-supplements study-previous-results"><summary>查看先前輪次結果</summary>'+
-        earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,fromToday||!!currentPaper)).join('')+'</details>':'')+
+        earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,fromToday||!!currentPaper||Boolean(session?.paperMix))).join('')+'</details>':'')+
       '<div class="study-actions">'+back+(retryCount?action((currentPaper?'重練本卷錯題（':'重練錯題（')+retryCount+' 題）','retry',true):'')+'</div></div>',false);
   }
   let startingRetry=false;
@@ -10190,7 +10323,7 @@ const batchDialog=$id('study-batch');
       const ids=retryQuestionIds();
       if(!ids.length){render();return;}
       start(ids,'practice',{
-        origin,returnMode,paperId:previous.paperId,subject:roundSubject(),previousResults:[...previousRounds(),previous.results],
+        origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,mixedSubject:previous.mixedSubject,subject:roundSubject(),previousResults:[...previousRounds(),previous.results],
         ...(roundId?{roundId,retryOf}:{}),
       },{shuffle:false});
     }catch{
@@ -10202,6 +10335,11 @@ const batchDialog=$id('study-batch');
     else if(screen==='papers')paperList();
     else if(screen==='paper')paperPage();
     else if(screen==='paper-editor')paperEditor();
+    else if(screen==='paper-mix')mixedPage();
+    else if(screen==='paper-question')questionDetail();
+    else if(screen==='paper-question-editor')questionEditor();
+    else if(screen==='paper-collect')collectPage();
+    else if(screen==='paper-subject-editor')draw('新增考科','<form id="past-subject-form" class="study-surface"><label class="study-field">考科名稱<input name="name" required></label><p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">新增</button></div></form>');
     else if(screen==='subject')subjectPage();
     else if(screen==='new-subject')newSubjectForm();
     else if(screen==='chapters')chapterManager();
@@ -10213,7 +10351,10 @@ const batchDialog=$id('study-batch');
   }
   root.addEventListener('change',event=>{
     const id=event.target.id;
-    if(id==='study-filter-chapter'){
+    if(id==='paper-mix-subject'){mixedSubject=event.target.value;render();$id(id).focus();}
+    else if(event.target.name==='pastSubject')event.target.form.elements.targetPaper.innerHTML=paperChoices(event.target.value,'');
+    else if(event.target.matches('[data-collection-subject]'))event.target.form.elements.collectionChapter.innerHTML=options(['',...chapters(event.target.value)],'','未分類');
+    else if(id==='study-filter-chapter'){
       filters.chapter=event.target.value==='unfiled'?unfiled:event.target.value.slice(8);
       render();
       $id(id).focus({preventScroll:true});
@@ -10233,13 +10374,39 @@ const batchDialog=$id('study-batch');
       homeMode=button.dataset.mode;
       for(const option of root.querySelectorAll('[data-study-action=home-mode]'))option.setAttribute('aria-pressed',String(option===button));
       $id('study-home-cards').innerHTML=studyHomeCards();
+      $id('paper-home-tools').hidden=homeMode!=='papers';
+    }else if(act==='paper-add-subject')go('paper-subject-editor');
+    else if(act==='paper-archive'){paperSubject='';paperSubjectRef='';paperSearch={year:'',name:''};go('papers');}
+    else if(act==='paper-mix'||act==='paper-mix-subject'||act==='paper-mix-return'){
+      if(act!=='paper-mix-return')mixedSubject=act==='paper-mix-subject'?paperSubjectRef:'';
+      if(act==='paper-mix-return'&&screen==='results')mixedSubject=session?.mixedSubject||'';
+      go('paper-mix');
+    }else if(act==='paper-mix-start'){
+      if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
+      if(unfinishedOtherPractice()){go('session');return;}
+      const ready=mixedItems().filter(canPracticePaper);
+      if(ready.length)start([...new Set(ready.map(q=>q.id))],'practice',{paperMix:true,mixedSubject});
+      else toast('這個範圍還沒有可作答的題目。','warn');
+    }else if(act==='paper-question-new'||act==='paper-question'||act==='paper-question-edit'){
+      if(act!=='paper-question-edit'){
+        questionBack=screen;
+        questionId=button.dataset.question||null;
+      }
+      go(act==='paper-question'?'paper-question':'paper-question-editor');
+    }else if(act==='paper-question-detail')go('paper-question');
+    else if(act==='paper-collect-back')go(collectBack);
+    else if(act==='paper-collect'){
+      questionId=button.dataset.question;
+      if(data.points.some(p=>p.sourceQuestionId===questionId)){toast('此題已收藏到知識庫。');return;}
+      collectBack=screen;
+      go('paper-collect');
     }else if(act==='paper-subject'){
-      paperSubject=button.dataset.subject;
-      go('papers');
+      paperSubject=button.dataset.subject;paperSubjectRef=button.dataset.paperSubject;
+      paperSearch={year:'',name:''};go('papers');
     }else if(act==='paper-list')go('papers');
     else if(act==='paper-open'||act==='paper-return'){
       paperId=button.dataset.paper||(screen==='results'?session?.paperId:paperId)||paperId;
-      if(paper(paperId))paperSubject=paper(paperId).subject;
+      if(paper(paperId)){paperSubject=paper(paperId).subject;paperSubjectRef=paperRef(paper(paperId));}
       go('paper');
     }else if(act==='paper-new'||act==='paper-edit'){
       editingPaper=act==='paper-edit'?paperId:null;
@@ -10248,7 +10415,7 @@ const batchDialog=$id('study-batch');
     }else if(act==='paper-start'){
       if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
       if(session&&session.index<session.queue.length){go('session');return;}
-      const p=paper(paperId),items=paperItems(paperId);
+      const p=paper(paperId),items=paperItems(paperId).filter(canPracticePaper);
       if(p&&items.length)start(items.map(q=>q.id),'practice',{paperId,subject:p.subject},{shuffle:false});
     }else if(act==='paper-batch')openBatch(button,false,paperId);
     else if(act==='batch'||act==='ai-batch')openBatch(button,act==='ai-batch');
@@ -10317,13 +10484,29 @@ const batchDialog=$id('study-batch');
       go(session.index===session.queue.length?'results':'session');
     }else if(session?.phase==='grade'&&Object.hasOwn(outcomes,act))record(act);
   });
-  root.addEventListener('submit',event=>{
+  root.addEventListener('submit',async event=>{
     event.preventDefault();
     const form=event.target;
     const values=new FormData(form);
-    if(form.id==='study-paper-form'){
+    if(form.id==='study-paper-search'){
+      paperSubjectRef=values.get('subject');
+      paperSubject=pastSubjects().find(item=>item.key===paperSubjectRef)?.name||'';
+      paperSearch={year:values.get('year').trim(),name:values.get('name').trim()};
+      render();
+    }else if(form.id==='past-subject-form'){
+      const name=values.get('name').trim().normalize('NFC');
+      if(!name||(data.paperSubjects||[]).some(item=>item.name===name)){
+        form.querySelector('.study-error').textContent='請填寫未使用的獨立考科名稱。';return;
+      }
+      const id=newPointId();
+      data.paperSubjects=[...(data.paperSubjects||[]),{id,name}];
+      if(persist()){paperSubject=name;paperSubjectRef=id;paperSearch={year:'',name:''};go('papers');}
+    }else if(['past-question-form','past-collection-form'].includes(form.id)){
+      await savePastForm(form,values);
+    }else if(form.id==='study-paper-form'){
       const year=values.get('year').trim(),name=values.get('name').trim(),source=values.get('source').trim();
-      const p={id:editingPaper||newPointId(),subject:paperSubject,year,name,source};
+      const previous=paper(editingPaper);
+      const p={id:editingPaper||newPointId(),subject:previous?.subject||paperSubject,subjectRef:previous?paperRef(previous):paperSubjectRef,year,name,source};
       if(!learningJournal.valid({kind:'paper',target:p.id,value:p,clock:0})){
         form.querySelector('.study-error').textContent='請填寫有效年度（1 至 4 位數字）與考試名稱。';
         return;
@@ -10359,7 +10542,7 @@ const batchDialog=$id('study-batch');
         return;
       }
       const id=editing||newPointId();
-      const updated={id,subject,question,answer,chapter:values.get('chapter').trim(),explanation:values.get('explanation').trim(),
+      const updated={...point(id),id,subject,question,answer,chapter:values.get('chapter').trim(),explanation:values.get('explanation').trim(),
         accepted:values.get('accepted').split(/\r?\n/).map(v=>v.trim()).filter(Boolean)};
       if(point(id))data.points=data.points.map(p=>p.id===id?updated:p);
       else data.points.push(updated);
@@ -10389,6 +10572,56 @@ const batchDialog=$id('study-batch');
     }
   });
 
+  async function savePastForm(form,values){
+    if(savingQuestion)return;
+    const editor=form.id==='past-question-form',owner=account,error=form.querySelector('.study-error');
+    const checked=!editor||values.has('collect');
+    let q=questionId?point(questionId):null;
+    if(editor){
+      const target=questionBack==='paper'?paperId:values.get('targetPaper')||'';
+      const p=paper(target);
+      const subjectRef=p?paperRef(p):values.get('pastSubject');
+      const subject=p?.subject||pastSubjects().find(item=>item.key===subjectRef)?.name;
+      const answer=values.get('answer').trim();
+      const choices=values.get('choices').split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+      q={id:q?.id||newPointId(),paperId:target,subject,subjectRef,number:values.get('number').trim(),
+        question:values.get('question').trim(),answer,options:choices,accepted:choices.length?[]:values.get('accepted').split(/\r?\n/).map(v=>v.trim()).filter(Boolean),
+        explanation:values.get('explanation').trim()};
+      if(!subject||!q.question||target&&!p){error.textContent='請選考科並填寫題目。';return;}
+      if(choices.length&&(new Set(choices).size!==choices.length||answer&&!choices.includes(answer))){
+        error.textContent='選項不得重複，正解請填入其中一個選項的完整文字。';return;
+      }
+      if(target&&q.number&&paperItems(target).some(item=>item.id!==q.id&&learningJournal.numberKey(item.number)===learningJournal.numberKey(q.number))){
+        error.textContent='這份試卷已有相同題號。';return;
+      }
+    }
+    if(!q||checked&&!q.answer.trim()){error.textContent='請先補上正解，再收藏到知識庫。';return;}
+    if(checked&&data.points.some(point=>point.sourceQuestionId===q.id)){
+      error.textContent='此題已收藏到知識庫。';return;
+    }
+    const subject=values.get('collectionSubject'),chapter=values.get('collectionChapter');
+    if(checked&&(!subjectNames().includes(subject)||(chapter&&!chapters(subject).includes(chapter)))){
+      error.textContent='請選擇有效的收藏科目與章節。';return;
+    }
+    savingQuestion=true;
+    try{
+      const item=checked?await collectionPoint(q,subject,chapter):null;
+      if(!form.isConnected||owner!==account)return;
+      if(item&&data.points.some(p=>p.sourceQuestionId===q.id)){
+        error.textContent='此題已收藏到知識庫。';return;
+      }
+      if(item&&account&&Object.values(account.operations).some(op=>op.kind==='delete'&&op.target===item.id)){
+        error.textContent='這題的知識庫收藏已刪除。';return;
+      }
+      if(editor)data.paperQuestions=[...(data.paperQuestions||[]).filter(point=>point.id!==q.id),q];
+      if(item)data.points=[...data.points,item];
+      if(!persist()){error.textContent='無法儲存，請再試一次。';return;}
+      questionId=q.id;
+      go(editor?'paper-question':collectBack);
+      if(item)toast('已收藏到知識庫','success');
+    }catch{error.textContent='無法儲存，請再試一次。';}
+    finally{savingQuestion=false;}
+  }
   let account=null;
   let lastSaved=structuredClone(data);
   let syncText='學習資料僅存於此瀏覽器',syncFailed=false;
@@ -10530,7 +10763,7 @@ const batchDialog=$id('study-batch');
     if(activeToday&&before!==JSON.stringify(session)){
       if(roundComplete(session))screen='results';
       render();
-    }else if(!['editor','chapters','new-subject','session'].includes(screen)&&!batchDialog.open)render();
+    }else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open)render();
     briefChanged();
   }
   async function flushLearning(){
