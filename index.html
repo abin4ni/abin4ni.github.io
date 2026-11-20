@@ -269,19 +269,6 @@ body{
 .quick-input-wrap{
   position:relative;margin-bottom:10px;
 }
-#quick-input{
-  width:100%;font-family:var(--sans);font-size:13px;
-  padding:9px 36px 9px 12px;
-  border:1.5px solid var(--border);border-radius:var(--r);
-  background:var(--card);color:var(--text);outline:none;
-  transition:border-color .15s,box-shadow .15s;
-  -webkit-appearance:none;
-}
-#quick-input:focus{
-  border-color:var(--accent-2);
-  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.14);
-}
-#quick-input::placeholder{color:var(--text-3);}
 .quick-input-hint{
   font-size:10px;color:var(--text-3);margin-top:4px;
   padding:0 2px;line-height:1.5;
@@ -429,27 +416,6 @@ body{
 
 /* ── Form inputs ── */
 .form-group{margin-bottom:7px;}
-.form-label{font-size:11px;font-weight:500;color:var(--text-2);margin-bottom:3px;letter-spacing:-.1px;}
-input[type=text],input[type=number],input[type=date],select:not(.time-sel){
-  font-family:var(--sans);font-size:13px;width:100%;
-  padding:8px 12px;
-  border:1.5px solid var(--border);border-radius:var(--r-sm);
-  background:var(--card);color:var(--text);
-  outline:none;
-  transition:
-    border-color var(--dur-fast) var(--ease),
-    box-shadow var(--dur-fast) var(--ease),
-    transform var(--dur-fast) var(--ease);
-  -webkit-appearance:none;appearance:none;
-  letter-spacing:-.1px;
-}
-input::placeholder{color:var(--text-3);}
-input:focus,select:focus{
-  border-color:var(--accent-2);
-  box-shadow:0 0 0 3.5px rgba(var(--accent-rgb),.16);
-  transform:scale(1.005);
-}
-
 /* ── Buttons ── */
 .form-row{display:flex;gap:6px;}
 .btn{
@@ -530,7 +496,7 @@ input:focus,select:focus{
 .del-btn:hover{color:var(--danger-c);background:var(--danger-bg);}
 .exam-edit-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
 .exam-edit-lbl{font-size:11px;color:var(--text-3);flex-shrink:0;}
-.exam-edit-row input[type=date]{font-size:11px;padding:3px 8px;border-radius:8px;flex:1;}
+.exam-edit-row input[type=date]{flex:1;}
 .exam-badge{
   display:inline-flex;align-items:center;gap:4px;
   font-size:10px;font-weight:600;
@@ -899,18 +865,7 @@ input:focus,select:focus{
 .time-wrap{display:flex;align-items:center;gap:6px;margin-top:8px;}
 .time-lbl{font-size:11px;color:var(--text-3);flex-shrink:0;}
 .time-selects{display:flex;gap:4px;align-items:center;}
-.time-sel{
-  font-family:var(--sans);font-size:12px;
-  padding:5px 22px 5px 9px;
-  border:1px solid rgba(0,0,0,.14);border-radius:9px;
-  background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2387867f'/%3E%3C/svg%3E") no-repeat right 7px center;
-  background-size:8px 5px;
-  color:var(--text);outline:none;cursor:pointer;
-  width:auto;min-width:58px;
-  -webkit-appearance:none;appearance:none;
-  transition:border-color .15s;
-}
-.time-sel:focus{border-color:var(--accent-2);}
+.time-sel{width:auto;min-width:58px;font-variant-numeric:tabular-nums;}
 .time-colon{font-size:14px;font-weight:600;color:var(--text-3);line-height:1;}
 .time-clear{
   font-size:13px;color:var(--text-3);cursor:pointer;
@@ -933,7 +888,7 @@ input:focus,select:focus{
   padding:16px 18px;box-shadow:var(--shadow-lg);width:min(320px,calc(100vw - 16px));max-height:calc(100dvh - 16px);overflow:auto;
 }
 #exam-popover .pop-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;}
-#exam-popover input[type=date]{margin-bottom:10px;font-size:13px;}
+#exam-popover input[type=date]{margin-bottom:10px;}
 #exam-popover .pop-clear{font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:0;margin-top:4px;display:block;}
 #exam-popover .pop-clear:hover{color:var(--danger-c);}
 #exam-popover .pop-row{display:flex;gap:6px;align-items:center;justify-content:space-between;}
@@ -1038,12 +993,7 @@ input:focus,select:focus{
 }
 .modal p{font-size:13px;color:var(--text-2);margin-bottom:16px;line-height:1.6;}
 .modal-btns{display:flex;gap:8px;flex-wrap:wrap;}
-.modal textarea{
-  width:100%;height:100px;resize:vertical;
-  font-size:12px;font-family:monospace;padding:10px 12px;
-  border:1px solid rgba(0,0,0,.14);border-radius:var(--r-sm);
-  background:var(--bg);color:var(--text);outline:none;margin-bottom:12px;
-}
+.modal textarea{height:100px;margin-bottom:12px;}
 .setup-modal{max-width:540px;}
 .setup-modal pre{
   background:rgba(0,0,0,.04);border:1px solid var(--border-lt);
@@ -1072,7 +1022,7 @@ input:focus,select:focus{
 /* ── Lesson range ── */
 .lesson-range-row{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 .lesson-range-row .form-label{flex-shrink:0;margin:0;}
-.lesson-range-row input[type=number]{width:64px;padding:5px 8px;text-align:center;}
+.lesson-range-row input[type=number]{width:64px;text-align:center;}
 .lesson-range-sep{font-size:12px;color:var(--text-3);}
 .lesson-chip{
   display:inline-flex;align-items:center;
@@ -1169,12 +1119,7 @@ input:focus,select:focus{
 .memo-delete{min-width:44px;color:var(--danger-c);font-size:12px;padding-inline:4px;}
 .memo-empty{font-size:13px;color:var(--text-2);margin:8px 0;}
 #memo-add,#memo-item-form{margin-top:12px;}
-#memo-item-form label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;}
-#memo-item-input{
-  display:block;width:100%;min-height:68px;resize:vertical;padding:8px 10px;
-  background:var(--card);color:var(--text);border:1px solid var(--border);
-  border-radius:var(--r-sm);font:inherit;font-size:16px;margin-bottom:8px;
-}
+#memo-item-input{display:block;min-height:68px;margin-bottom:8px;}
 .memo-form-actions{display:flex;flex-wrap:wrap;gap:8px;}
 #memo-item-message{margin:0 0 8px;font-size:13px;color:var(--danger-c);}
 #memo-item-message:empty{display:none;}
@@ -1557,16 +1502,6 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .fab-manage:hover{box-shadow:var(--shadow-md);transform:scale(1.04);}
 button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
-/* ── Inputs ── */
-input[type=text],input[type=number],input[type=date],select:not(.time-sel),#quick-input{
-  border:1px solid var(--border);border-radius:var(--r-sm);background:var(--card);
-}
-input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);transform:none;}
-#quick-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
-.time-sel{border:1px solid var(--border);border-radius:var(--r-xs);background-color:var(--card-2);}
-.modal textarea{border-color:var(--border);border-radius:var(--r-sm);background:var(--card);}
-#edit-name,#edit-total{border-radius:var(--r-sm) !important;border-color:var(--border) !important;}
-
 /* ── Tags / badges / chips ── */
 .exam-badge,.lesson-chip,.day-label-today-badge{border-radius:var(--r-tag);}
 .cal-tag,.week-ev{border-radius:var(--r-tag);}
@@ -1718,8 +1653,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .day-schedule-entry{display:block;margin-bottom:18px;}
   #day-schedule-form{margin-top:10px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);}
   #day-schedule-form[hidden]{display:none;}
-  #day-schedule-form label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
-  #day-schedule-form select,#day-schedule-form input{width:100%;min-height:44px;margin-bottom:12px;}
+  #day-schedule-form select,#day-schedule-form input{margin-bottom:12px;}
   .day-schedule-date{font-size:13px;font-weight:600;margin-bottom:12px;}
   .day-schedule-actions{display:flex;gap:8px;}
   #day-schedule-message{font-size:13px;color:var(--text-2);margin-bottom:10px;}
@@ -1732,13 +1666,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .day-schedule-actions .btn{min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;min-height:44px;}
 .schedule-time-picker{margin-bottom:12px;}
 .schedule-time-picker [hidden],.schedule-time-picker input[type="hidden"]{display:none;}
-.schedule-time-trigger{
-  display:block;width:100%;min-height:44px;padding:8px 12px;text-align:left;
-  font:inherit;font-size:14px;font-variant-numeric:tabular-nums;color:var(--text);
-  background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);
-  cursor:pointer;touch-action:manipulation;
-}
-.schedule-time-trigger[aria-expanded="true"]{border-color:var(--accent);}
+.schedule-time-trigger{display:block;text-align:start;font-variant-numeric:tabular-nums;cursor:pointer;}
 .schedule-time-editor{
   margin-top:6px;padding:10px;background:var(--surface);
   border:1px solid var(--border);border-radius:var(--r-sm);
@@ -1799,18 +1727,15 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 #repeat-preview .btn:disabled{opacity:.55;cursor:default;}
 #reschedule-title{font-size:18px;margin-bottom:8px;}
 #reschedule-original{font-size:13px;color:var(--text-2);overflow-wrap:anywhere;margin-bottom:12px;}
-#reschedule-form label{display:block;font-size:12px;font-weight:600;margin-bottom:6px;}
 #reschedule-form input[type="date"],#reschedule-form input[type="text"]{min-height:44px;min-width:0;margin-bottom:12px;}
 #reschedule-message:not(:empty){margin:0 0 8px;}
 /* Course creation and repeat scheduling share the course panel. */
-.course-planning-form .form-label{display:block;}
 .course-planning-form input:not([type="checkbox"]),.course-planning-form select,.course-planning-form .btn{
   min-width:0;min-height:44px;
 }
 .course-planning-form .lesson-range-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);}
 .course-planning-form .lesson-range-row .form-label{grid-column:1/-1;margin-bottom:0;}
-.course-planning-form .lesson-range-row input{width:100%;padding:8px;text-align:center;}
-#inp-le{background:var(--sunken);}
+.course-planning-form .lesson-range-row input{width:100%;text-align:center;}
 .course-plan-message{margin:7px 0 0;font-size:12px;color:var(--text-2);}
 .course-plan-message:empty{display:none;}
 .course-plan-message.is-error{color:var(--danger-c);}
@@ -1834,12 +1759,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 }
 .cal-course-filter label{flex-shrink:0;}
 .cal-course-select{flex:1;min-width:0;position:relative;}
-.cal-course-select::after{
-  content:'';position:absolute;right:14px;top:calc(50% - 5px);
-  width:7px;height:7px;border:solid currentColor;border-width:0 1px 1px 0;
-  transform:rotate(45deg);pointer-events:none;
-}
-#cal-course-filter{width:100%;min-width:0;min-height:44px;padding-inline-end:30px;text-overflow:ellipsis;}
+#cal-course-filter{text-overflow:ellipsis;}
 #day-calendar-filter{
   margin:0 0 10px;padding:8px 10px;border-radius:var(--r-sm);
   background:var(--accent-tint);color:var(--text-2);font-size:12px;overflow-wrap:anywhere;
@@ -1871,11 +1791,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
     padding:14px;border:1px solid var(--border-lt);border-radius:var(--touch-radius);background:var(--surface);
   }
   .course-planning-form .form-group{margin-bottom:12px;}
-  .course-planning-form .form-label,#day-schedule-form label{font-size:13px;line-height:1.4;}
-  .panel-l input:not([type=checkbox]),.panel-l select,.panel-r input:not([type=hidden]),.panel-r select,
-  .cal-head select,#memo-modal textarea,#reschedule-dialog input:not([type=hidden]){
-    font-size:16px;min-height:44px;min-width:0;max-width:100%;border-radius:10px;
-  }
   .panel-l .btn,.panel-r .btn,.cal-panel .btn,#reschedule-dialog .btn,#memo-modal .btn,#repeat-preview .btn{
     min-height:44px;border-radius:10px;font-size:14px;line-height:1.35;white-space:normal;
   }
@@ -1949,7 +1864,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
   #day-events .done-check.checked{color:white;font-size:13px;}
   #day-events .done-check.checked::before{background:var(--done-c);border-color:var(--done-c);}
   .time-wrap,.time-selects{flex-wrap:wrap;gap:4px;}
-  .panel-r .time-sel{width:auto;min-width:52px;padding-inline:6px 18px;background-position:right 5px center;}
   .day-memo-title{align-items:flex-start;}
   .day-memo-title .btn{font-size:12px;padding-inline:8px;}
   .day-memo-wrap .memo-preview-row,.memo-row .memo-item-text{font-size:14px;line-height:1.5;}
@@ -2181,7 +2095,6 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 }
 #panel-r .time-wrap,#panel-r .time-selects{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0;}
 #panel-r .time-lbl,#panel-r .day-group-count{font-size:12px;color:var(--text-2);}
-#panel-r .time-sel{min-height:44px;width:auto;min-width:54px;font-size:16px;font-variant-numeric:tabular-nums;}
 #panel-r .day-actions,#panel-r .dgi-actions{display:flex;gap:2px;flex-shrink:0;}
 #panel-r .act-btn,#panel-r .time-clear{
   background:none;color:var(--accent-h);font-size:13px;font-weight:600;
@@ -2278,17 +2191,6 @@ button:active:not(:disabled){filter:brightness(.91);}
 :where(button,[role="button"],input,select,textarea):focus-visible{
   outline:2px solid var(--accent);outline-offset:2px;
 }
-input:is([type=text],[type=number],[type=date]),select:not(.time-sel),textarea,
-#quick-input,.schedule-time-trigger{
-  min-width:0;max-width:100%;min-height:var(--ui-control);font:inherit;font-size:1rem;
-  padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-sm);
-  background:var(--surface);color:var(--text);
-}
-input[readonly]{background:var(--card-2);color:var(--text-2);}
-input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focus{box-shadow:none;}
-:where(.form-label,#day-schedule-form label,#reschedule-form label,#memo-item-form label){
-  color:var(--text-2);font-size:var(--ui-label);font-weight:600;letter-spacing:normal;
-}
 .section-label,.memo-area-title{
   color:var(--text);font-size:1rem;font-weight:600;letter-spacing:normal;
 }
@@ -2337,7 +2239,6 @@ input:is([type=text],[type=number],[type=date]):focus,select:focus,textarea:focu
   margin-top:0;padding:var(--sp-3);border:1px solid var(--border-lt);
   border-radius:var(--r);background:var(--accent-tint);
 }
-#quick-input{background:var(--surface);}
 #quick-submit{min-height:var(--ui-control);}
 .quick-input-hint{font-size:var(--ui-caption);color:var(--text-3);}
 .quick-parse-preview{background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-sm);}
@@ -3155,7 +3056,6 @@ body:has(#lesson-time-dialog[open]) #phone-course-dialog[data-calendar-schedule]
 #day-edit-panel [hidden]{display:none!important;}
 #day-edit-panel .day-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
 #day-edit-panel h2{margin:0;font-size:1.25rem;overflow-wrap:anywhere;}
-#day-edit-form label,#day-edit-panel #lesson-time-form label{display:block;margin-bottom:8px;}
 #day-edit-form input,#day-edit-panel #lesson-time-input,#day-edit-time-trigger{width:100%;min-height:44px;}
 #day-edit-form .day-edit-field+.day-edit-field{margin-top:12px;}
 #day-edit-form input[type=date]{min-width:0;}
@@ -3222,7 +3122,6 @@ dialog input[type=date],dialog input[type=date]::-webkit-date-and-time-value{tex
 
 .lesson-time-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-block:12px;}
 .lesson-time-field{min-width:0;border:0;padding:0;margin:0;}
-.lesson-time-field legend{font-size:14px;font-weight:600;}
 .lesson-time-field input{width:100%;min-width:0;min-height:44px;}
 .lesson-time-field .picker-wheel-grid{margin:4px 0;gap:6px;}
 .lesson-time-field .time-unset{font-size:12px;color:var(--text-2);margin-top:4px;}
@@ -3409,14 +3308,12 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-stats{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--text-2);padding:10px 0;border-bottom:1px solid var(--border-lt);}
 .study-surface{background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);padding:clamp(12px,3vw,22px);}
 .study-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;}
-.study-field{display:grid;gap:4px;min-width:0;}
-.study-field span,.study-meta{color:var(--text-2);font-size:var(--ui-caption);}
-.study-field select{appearance:auto;padding-inline:8px;}
+.study-field{display:grid;gap:var(--field-label-gap);min-width:0;}
+.study-meta{color:var(--text-2);font-size:var(--ui-caption);}
 .study-chapter-filter{display:flex;flex-wrap:wrap;align-items:end;gap:8px;}
 .study-chapter-filter .study-field{flex:1 1 15rem;}
 .study-chapter-filter select{width:100%;}
 .study-editor{display:grid;gap:10px;}
-.study-editor textarea,.study-answer{width:100%;resize:vertical;}
 .study-supplements>summary{min-height:44px;align-content:center;border-top:1px solid var(--border-lt);color:var(--text-2);cursor:pointer;}
 .study-supplements>summary:hover{color:var(--text);}
 .study-supplements>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
@@ -3484,14 +3381,7 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   --card:var(--surface);
 }
 [data-theme=dark] :is(#account-panel,#calendar-more-panel,dialog:not(.wide-legacy),.modal,#confirm-dialog){border-color:var(--border);}
-[data-theme=dark] :is(input:is([type=text],[type=number],[type=date]),select:not(.time-sel),textarea,#quick-input,.schedule-time-trigger){
-  background-color:var(--field);border-color:var(--field-border);
-}
-[data-theme=dark] :is(input,select,textarea,[role=listbox]):focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-[data-theme=dark] [aria-invalid="true"]{border-color:var(--danger-c);}
-[data-theme=dark] :is(.cal-tag,.week-ev)[style*="--lesson-color"]{
-  --lesson-bg:color-mix(in srgb,var(--surface),var(--lesson-color) 12%);
-}
+[data-theme=dark] [role=listbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 [data-theme=dark] .week-slot-unsched.selected-slot{background:var(--accent-tint);}
 [data-theme=dark] .week-slot-unsched.drag-over{background:var(--nav-sel);}
 [data-theme=dark] .account-theme::before{background:var(--nav-sel);box-shadow:inset 0 0 0 1px var(--border);}
@@ -3533,7 +3423,7 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 @media(prefers-reduced-motion:reduce){
   :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{transition:none;}
 }
-#study-batch{width:min(650px,calc(100% - 24px));} #study-batch textarea{width:100%;resize:vertical;} #study-batch-list{list-style:none;padding:0;margin:8px 0;max-height:46dvh;overflow:auto;overscroll-behavior:contain;} #study-batch-list fieldset{min-width:0;border:1px solid var(--border-lt);border-radius:var(--r);padding:10px;margin:8px 2px;} #study-batch-list input{accent-color:var(--accent);} #study-batch-summary,.study-batch-status{color:var(--text-2);} #study-batch .study-error{margin-top:8px;} #study-batch .study-error:empty{margin:0;}
+#study-batch{width:min(650px,calc(100% - 24px));} #study-batch-list{list-style:none;padding:0;margin:8px 0;max-height:46dvh;overflow:auto;overscroll-behavior:contain;} #study-batch-list fieldset{min-width:0;border:1px solid var(--border-lt);border-radius:var(--r);padding:10px;margin:8px 2px;} #study-batch-list input{accent-color:var(--accent);} #study-batch-summary,.study-batch-status{color:var(--text-2);} #study-batch .study-error{margin-top:8px;} #study-batch .study-error:empty{margin:0;}
 
 .study-subject-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:10px;margin:12px 0;}
 .study-subject-grid .memo-card{min-height:94px;justify-content:center;}
@@ -4053,7 +3943,43 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   }
 }
 
-#paper-home-tools[hidden]{display:none;}
+/* Shared fields keep native pickers and validation while using the same surface. */
+:root{
+  --field-height:max(44px,2.75rem);
+  --field-label-gap:.375rem;
+  --field-surface:var(--field,var(--surface));
+  --field-stroke:var(--field-border,var(--border-strong));
+}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger){
+  box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:var(--field-height);
+  padding:.5rem .75rem;border:1px solid var(--field-stroke);border-radius:var(--r-sm);
+  background-color:var(--field-surface);color:var(--text);
+  font:inherit;font-size:max(16px,1rem);line-height:1.4;letter-spacing:normal;
+}
+textarea{min-height:max(68px,4.25rem);resize:vertical;}
+select:not([multiple]){appearance:auto;}
+input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger):focus,:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger)[aria-expanded=true]{border-color:var(--accent);}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger):focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger):is([aria-invalid=true],:user-invalid){border-color:var(--danger-c);}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger):is([aria-invalid=true],:user-invalid):focus-visible{outline-color:var(--danger-c);}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger)[readonly]{background-color:var(--card-2);color:var(--text-2);}
+:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger):disabled{background-color:var(--sunken);color:var(--text-3);-webkit-text-fill-color:currentColor;opacity:1;cursor:not-allowed;}
+:is(.form-label,.study-field,.lesson-time-field legend,label:has(+ :is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger))){
+  color:var(--text-2);font-size:var(--ui-label);font-weight:600;line-height:1.4;letter-spacing:normal;
+}
+:is(.form-label,.lesson-time-field legend,label:has(+ :is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger))){display:block;margin-block-end:var(--field-label-gap);}
+.lesson-range-row .form-label{margin:0;}
+#quick-input{padding-inline-end:36px;}
+.time-sel{width:auto;}
+#paper-home-tools[hidden],#paper-query-clear[hidden],#study-paper-form button[hidden]{display:none;}
+.paper-archive-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sp-3);}
+.paper-archive-toolbar .study-field{flex:1 1 16rem;margin:0;}
+.paper-archive-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
+#paper-archive-status:empty{display:none;}
+.paper-year{margin-block:var(--sp-5);}
+.paper-year .study-paper-list{margin-block-start:var(--sp-2);}
+.paper-year .memo-card-name{overflow-wrap:anywhere;}
 .past-question-link{border:0;background:none;color:var(--text);font:inherit;text-align:start;width:100%;min-height:44px;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer;}
 .past-question-link:hover,.past-question-link:focus-visible{color:var(--accent-h);}
 .past-options{padding-inline-start:1.5rem;overflow-wrap:anywhere;}
@@ -4194,7 +4120,7 @@ const learningOperationsPath='users/{uid}/data/learning/operations';
 const learningOperations=uid=>collection(db,learningOperationsPath.replace('{uid}',()=>uid));
 window._fb={
   learningInfo:Object.freeze({
-    build:'learning-sync-diagnostics-1',
+    build:'learning-sync-diagnostics-2',
     project:firebaseConfig.projectId,
     database:'(default)',
     path:learningOperationsPath,
@@ -9246,7 +9172,7 @@ const learningJournal=(()=>{
     const value=op.value;
     if(op.kind==='paper-subject')return validPointId(op.target)&&value&&text(value.name)&&!!value.name.trim();
     if(op.kind==='paper')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject.trim()&&
-      (value.subjectRef===undefined||text(value.subjectRef))&&text(value.year)&&/^\d{1,4}$/.test(value.year)&&Number(value.year)>0&&text(value.name)&&!!value.name.trim()&&text(value.source);
+      (value.subjectRef===undefined||text(value.subjectRef))&&(value.school===undefined||text(value.school)&&!!value.school.trim())&&text(value.year)&&/^\d{1,4}$/.test(value.year)&&Number(value.year)>0&&text(value.name)&&!!value.name.trim()&&text(value.source);
     if(op.kind==='paper-question')return validPointId(op.target)&&objectValue(value)&&(validPointId(value.paperId)||value.paperId===''&&text(value.subject)&&!!value.subject.trim())&&text(value.number)&&
       (value.subjectRef===undefined||text(value.subjectRef))&&text(value.question)&&!!value.question.trim()&&text(value.answer)&&
       text(value.explanation)&&strings(value.accepted)&&(value.options===undefined||strings(value.options));
@@ -9512,7 +9438,7 @@ const studyRoom=(()=>{
   let setupMode='practice',weakOnly=false,examSetup=false;
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
-  let paperSearch={year:'',name:''};
+  let paperSearch='',mixedArchive=false;
   const paper=id=>data.papers?.find(p=>p.id===id);
   const point=id=>{
     const knowledge=data.points.find(p=>p.id===id);
@@ -9608,7 +9534,8 @@ const studyRoom=(()=>{
       action('混合刷題','paper-mix',true)+action('歷屆試卷','paper-archive')+'</div><div id="study-home-cards" class="study-subject-grid">'+studyHomeCards()+'</div>'+
       (resume?'<div class="study-home-actions">'+action('繼續練習','resume')+'</div>':''),false);
   }
-  function paperTitle(p){return p.year+' 年度 · '+p.name;}
+  const paperSchool=p=>p.school||p.name;
+  function paperTitle(p){return p.year+' 年度 · '+paperSchool(p);}
   function paperItems(id){
     return (data.paperQuestions||[]).filter(p=>p.paperId===id).sort((a,b)=>
       Number(!a.number)-Number(!b.number)||a.number.localeCompare(b.number,'zh-Hant',{numeric:true})||a.id.localeCompare(b.id));
@@ -9622,27 +9549,56 @@ const studyRoom=(()=>{
       (!canPracticePaper(q)?' <span class="study-meta">待補答案</span>':'')+'</button></li>').join('')+'</ul>':
       '<p class="study-meta">目前沒有題目。</p>';
   }
+
+  const normalizePaperSearch=value=>value.normalize('NFKC').trim().toLocaleLowerCase('zh-Hant').replace(/\s+/g,' ');
+  function paperModes(active){
+    return '<div class="study-mode-options study-home-modes" role="group" aria-label="考古題模式">'+
+      [['paper-list','歷屆試卷'],['paper-mix-subject','混合刷題']].map(([key,label])=>
+        '<button type="button" data-study-action="'+key+'" aria-pressed="'+(active===key)+'">'+label+'</button>').join('')+'</div>';
+  }
+  function updatePaperList(){
+    const list=$id('paper-archive-results'),query=normalizePaperSearch(paperSearch);
+    const papers=(data.papers||[]).filter(p=>!paperSubjectRef||paperRef(p)===paperSubjectRef)
+      .sort((a,b)=>Number(b.year)-Number(a.year)||paperSchool(a).localeCompare(paperSchool(b),'zh-Hant'));
+    const groups=new Map();
+    for(const p of papers){
+      const year=String(Number(p.year));
+      if(query&&![paperSchool(p),p.name,year,year+' 年度',year+'年度'].some(value=>normalizePaperSearch(value).includes(query)))continue;
+      if(!groups.has(year))groups.set(year,[]);
+      groups.get(year).push(p);
+    }
+    const clear=$id('paper-query-clear');
+    clear.hidden=!paperSearch;
+    $id('paper-archive-status').textContent=query?'找到 '+[...groups.values()].reduce((total,items)=>total+items.length,0)+' 份試卷':'';
+    if(!groups.size){
+      list.innerHTML=papers.length?'<p class="study-empty">找不到符合的試卷。</p>':
+        '<p class="study-empty">'+(paperSubjectRef?'還沒有試卷。按「＋ 新增試卷」建立第一份。':'還沒有試卷。從考古題首頁選擇考科後，即可新增。')+'</p>';
+      return;
+    }
+    const counts=new Map();
+    for(const item of data.paperQuestions||[])counts.set(item.paperId,(counts.get(item.paperId)||0)+1);
+    list.innerHTML=[...groups].map(([year,items])=>'<section class="paper-year"><h3>'+esc(year)+' 年度</h3><div class="study-subject-grid study-paper-list">'+
+      items.map(p=>'<button type="button" class="memo-card" data-study-action="paper-open" data-paper="'+esc(p.id)+'">'+
+        '<span class="memo-card-name">'+esc(paperSchool(p))+'</span><span class="study-meta">'+
+        (paperSubjectRef?'':esc(p.subject)+' · ')+(counts.get(p.id)||0)+' 題</span></button>').join('')+'</div></section>').join('');
+  }
   function paperList(){
-    const papers=(data.papers||[]).filter(p=>(!paperSubjectRef||paperRef(p)===paperSubjectRef)&&
-      (!paperSearch.year||p.year===paperSearch.year)&&p.name.toLocaleLowerCase().includes(paperSearch.name.toLocaleLowerCase()))
-      .sort((a,b)=>Number(b.year)-Number(a.year)||a.name.localeCompare(b.name,'zh-Hant'));
-    const cards=papers.map(p=>'<button type="button" class="memo-card" data-study-action="paper-open" data-paper="'+p.id+'">'+
-      '<span class="memo-card-name">'+esc(paperTitle(p))+'</span><span class="study-meta">'+esc(p.subject)+' · '+paperItems(p.id).length+' 題</span></button>').join('');
-    draw(esc(paperSubject||'歷屆試卷'),'<form id="study-paper-search" class="study-surface">'+
-      '<label class="study-field">考科<select name="subject">'+subjectChoices(paperSubjectRef,'全部科目')+'</select></label>'+
-      '<label class="study-field">年度<input name="year" inputmode="numeric" value="'+esc(paperSearch.year)+'"></label>'+
-      '<label class="study-field">考試名稱<input name="name" value="'+esc(paperSearch.name)+'"></label>'+
-      '<div class="study-actions"><button type="submit" class="btn btn-sand">搜尋</button>'+
-      action('混合刷題','paper-mix-subject')+(paperSubjectRef?action('新增試卷','paper-new',true):'')+'</div></form>'+
-      (cards?'<div class="study-subject-grid study-paper-list">'+cards+'</div>':'<p class="study-meta">沒有符合的試卷。</p>'));
+    draw(esc(paperSubjectRef?paperSubject+'・考古題':'歷屆試卷'),
+      (paperSubjectRef?paperModes('paper-list'):'')+'<div class="paper-archive-toolbar">'+
+      '<label class="study-field"><span>搜尋學校或年度</span><input id="paper-query" type="search" value="'+esc(paperSearch)+'" autocomplete="off"></label>'+
+      '<div class="paper-archive-actions"><button id="paper-query-clear" type="button" class="btn btn-sand" data-study-action="paper-clear" hidden>清除搜尋</button>'+
+      (paperSubjectRef?action('＋ 新增試卷','paper-new',true):'')+'</div></div>'+
+      '<p class="study-meta" id="paper-archive-status" role="status"></p><div id="paper-archive-results"></div>');
+    updatePaperList();
   }
   function mixedItems(){
     return (data.paperQuestions||[]).filter(q=>!mixedSubject||pastQuestionRef(q)===mixedSubject);
   }
   function mixedPage(){
     const items=mixedItems(),ready=items.filter(canPracticePaper);
-    draw('混合刷題','<div class="study-surface"><label class="study-field">考科<select id="paper-mix-subject">'+
-      subjectChoices(mixedSubject,'全部科目')+'</select></label><p class="study-meta">可作答 '+ready.length+' 題</p><div class="study-actions">'+
+    draw(esc(mixedArchive?paperSubject+'・考古題':'混合刷題'),(mixedArchive?paperModes('paper-mix-subject'):'')+
+      '<div class="study-surface">'+(mixedArchive?'':'<label class="study-field">考科<select id="paper-mix-subject">'+
+      subjectChoices(mixedSubject,'全部科目')+'</select></label>')+'<p class="study-meta">可作答 '+ready.length+' 題</p><div class="study-actions">'+
       action(unfinishedOtherPractice()||resumableToday()?'繼續練習':'開始刷題','paper-mix-start',true)+
       action('新增單題','paper-question-new')+'</div>'+pastQuestionList(items)+'</div>');
   }
@@ -9715,9 +9671,10 @@ const studyRoom=(()=>{
     const p=paper(editingPaper);
     draw(p?'編輯試卷':'新增試卷','<form id="study-paper-form" class="study-editor study-surface">'+
       '<label class="study-field"><span>年度</span><input name="year" inputmode="numeric" maxlength="4" required value="'+esc(p?.year)+'"></label>'+
-      '<label class="study-field"><span>考試名稱</span><input name="name" required value="'+esc(p?.name)+'"></label>'+
-      '<label class="study-field"><span>來源（選填）</span><input name="source" value="'+esc(p?.source)+'"></label>'+
-      '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">儲存試卷</button></div></form>',p?'paper-return':'paper-list');
+      '<label class="study-field"><span>學校</span><input name="school" required value="'+esc(p?.school)+'"></label>'+
+      (p&&!p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+
+      '<p class="study-error" role="alert"></p><div class="study-actions"><button type="button" data-study-action="paper-duplicate" class="btn btn-sand" hidden>開啟既有試卷</button>'+
+      '<button class="btn btn-primary">儲存試卷</button></div></form>',p?'paper-return':'paper-list');
   }
   function paperPage(){
     const p=paper(paperId);
@@ -9725,7 +9682,7 @@ const studyRoom=(()=>{
     const items=paperItems(p.id);
     const active=resumableToday()||unfinishedOtherPractice();
     const ready=items.filter(canPracticePaper);
-    draw(esc(paperTitle(p)),'<div class="study-surface">'+(p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
+    draw(esc(paperTitle(p)),'<div class="study-surface">'+(p.school&&p.name!==p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+(p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<p class="study-meta">'+items.length+' 題</p><div class="study-actions">'+action('編輯試卷','paper-edit')+
       action('批次貼上','paper-batch')+action('新增單題','paper-question-new')+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
@@ -10323,7 +10280,7 @@ const batchDialog=$id('study-batch');
       const ids=retryQuestionIds();
       if(!ids.length){render();return;}
       start(ids,'practice',{
-        origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,mixedSubject:previous.mixedSubject,subject:roundSubject(),previousResults:[...previousRounds(),previous.results],
+        origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,mixedSubject:previous.mixedSubject,mixedArchive:previous.mixedArchive,subject:roundSubject(),previousResults:[...previousRounds(),previous.results],
         ...(roundId?{roundId,retryOf}:{}),
       },{shuffle:false});
     }catch{
@@ -10361,6 +10318,15 @@ const batchDialog=$id('study-batch');
     }else if(event.target.name==='mode')setupMode=event.target.value;
   });
   root.addEventListener('input',event=>{
+    if(event.target.id==='paper-query'){
+      paperSearch=event.target.value;
+      updatePaperList();
+      return;
+    }
+    if(event.target.form?.id==='study-paper-form'){
+      event.target.form.querySelector('.study-error').textContent='';
+      event.target.form.querySelector('[data-study-action=paper-duplicate]').hidden=true;
+    }
     if(event.target.name==='answer'&&event.target.form?.id==='study-answer-form'){
       session.answer=event.target.value;
       persist();
@@ -10376,16 +10342,30 @@ const batchDialog=$id('study-batch');
       $id('study-home-cards').innerHTML=studyHomeCards();
       $id('paper-home-tools').hidden=homeMode!=='papers';
     }else if(act==='paper-add-subject')go('paper-subject-editor');
-    else if(act==='paper-archive'){paperSubject='';paperSubjectRef='';paperSearch={year:'',name:''};go('papers');}
-    else if(act==='paper-mix'||act==='paper-mix-subject'||act==='paper-mix-return'){
-      if(act!=='paper-mix-return')mixedSubject=act==='paper-mix-subject'?paperSubjectRef:'';
-      if(act==='paper-mix-return'&&screen==='results')mixedSubject=session?.mixedSubject||'';
+    else if(act==='paper-archive'){paperSubject='';paperSubjectRef='';paperSearch='';go('papers');}
+    else if(act==='paper-clear'){
+      paperSearch='';
+      $id('paper-query').value='';
+      updatePaperList();
+      $id('paper-query').focus();
+    }else if(act==='paper-mix'||act==='paper-mix-subject'||act==='paper-mix-return'){
+      if(act!=='paper-mix-return'){
+        mixedArchive=act==='paper-mix-subject';
+        mixedSubject=mixedArchive?paperSubjectRef:'';
+      }else if(screen==='results'){
+        mixedSubject=session?.mixedSubject||'';
+        mixedArchive=!!session?.mixedArchive;
+        if(mixedArchive){
+          paperSubjectRef=mixedSubject;
+          paperSubject=pastSubjects().find(item=>item.key===mixedSubject)?.name||'';
+        }
+      }
       go('paper-mix');
     }else if(act==='paper-mix-start'){
       if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
       if(unfinishedOtherPractice()){go('session');return;}
       const ready=mixedItems().filter(canPracticePaper);
-      if(ready.length)start([...new Set(ready.map(q=>q.id))],'practice',{paperMix:true,mixedSubject});
+      if(ready.length)start([...new Set(ready.map(q=>q.id))],'practice',{paperMix:true,mixedSubject,mixedArchive});
       else toast('這個範圍還沒有可作答的題目。','warn');
     }else if(act==='paper-question-new'||act==='paper-question'||act==='paper-question-edit'){
       if(act!=='paper-question-edit'){
@@ -10402,11 +10382,11 @@ const batchDialog=$id('study-batch');
       go('paper-collect');
     }else if(act==='paper-subject'){
       paperSubject=button.dataset.subject;paperSubjectRef=button.dataset.paperSubject;
-      paperSearch={year:'',name:''};go('papers');
+      paperSearch='';go('papers');
     }else if(act==='paper-list')go('papers');
-    else if(act==='paper-open'||act==='paper-return'){
+    else if(['paper-open','paper-return','paper-duplicate'].includes(act)){
       paperId=button.dataset.paper||(screen==='results'?session?.paperId:paperId)||paperId;
-      if(paper(paperId)){paperSubject=paper(paperId).subject;paperSubjectRef=paperRef(paper(paperId));}
+      if(screen==='results'&&paper(paperId)){paperSubject=paper(paperId).subject;paperSubjectRef=paperRef(paper(paperId));}
       go('paper');
     }else if(act==='paper-new'||act==='paper-edit'){
       editingPaper=act==='paper-edit'?paperId:null;
@@ -10488,27 +10468,32 @@ const batchDialog=$id('study-batch');
     event.preventDefault();
     const form=event.target;
     const values=new FormData(form);
-    if(form.id==='study-paper-search'){
-      paperSubjectRef=values.get('subject');
-      paperSubject=pastSubjects().find(item=>item.key===paperSubjectRef)?.name||'';
-      paperSearch={year:values.get('year').trim(),name:values.get('name').trim()};
-      render();
-    }else if(form.id==='past-subject-form'){
+    if(form.id==='past-subject-form'){
       const name=values.get('name').trim().normalize('NFC');
       if(!name||(data.paperSubjects||[]).some(item=>item.name===name)){
         form.querySelector('.study-error').textContent='請填寫未使用的獨立考科名稱。';return;
       }
       const id=newPointId();
       data.paperSubjects=[...(data.paperSubjects||[]),{id,name}];
-      if(persist()){paperSubject=name;paperSubjectRef=id;paperSearch={year:'',name:''};go('papers');}
+      if(persist()){paperSubject=name;paperSubjectRef=id;paperSearch='';go('papers');}
     }else if(['past-question-form','past-collection-form'].includes(form.id)){
       await savePastForm(form,values);
     }else if(form.id==='study-paper-form'){
-      const year=values.get('year').trim(),name=values.get('name').trim(),source=values.get('source').trim();
+      const rawYear=values.get('year').normalize('NFKC').trim(),school=values.get('school').trim();
+      const error=form.querySelector('.study-error'),link=form.querySelector('[data-study-action=paper-duplicate]');
       const previous=paper(editingPaper);
-      const p={id:editingPaper||newPointId(),subject:previous?.subject||paperSubject,subjectRef:previous?paperRef(previous):paperSubjectRef,year,name,source};
-      if(!learningJournal.valid({kind:'paper',target:p.id,value:p,clock:0})){
-        form.querySelector('.study-error').textContent='請填寫有效年度（1 至 4 位數字）與考試名稱。';
+      if(!/^\d{1,4}$/.test(rawYear)||Number(rawYear)<1||!school||!previous&&!paperSubjectRef){
+        error.textContent='請填寫有效年度（1 至 4 位數字）與學校。';
+        return;
+      }
+      const p={...previous,id:editingPaper||newPointId(),subject:previous?.subject||paperSubject,
+        subjectRef:previous?paperRef(previous):paperSubjectRef,year:String(Number(rawYear)),school,name:previous?.name||school,source:previous?.source||''};
+      const duplicate=(data.papers||[]).find(item=>item.id!==p.id&&paperRef(item)===p.subjectRef&&
+        Number(item.year)===Number(p.year)&&normalizePaperSearch(paperSchool(item))===normalizePaperSearch(school));
+      if(duplicate){
+        error.textContent='這個考科、年度和學校已有試卷。';
+        link.dataset.paper=duplicate.id;
+        link.hidden=false;
         return;
       }
       data.papers=[...(data.papers||[]).filter(item=>item.id!==p.id),p];
@@ -10642,11 +10627,11 @@ const batchDialog=$id('study-batch');
     const {stage,code}=state.failure;
     showLearningSync('學習資料同步失敗 · '+stage+'（'+code+'）',true);
   }
-  function recordLearningFailure(state,stage,error){
+  function recordLearningFailure(state,stage,error,attemptedWrites){
     const code=error?.code||error?.name||'unknown';
     state.failure={stage,code};
     console.error('[StudyOS] 學習資料同步失敗',{
-      ...window._fb?.learningInfo,stage,code,message:error?.message||String(error),
+      ...window._fb?.learningInfo,stage,code,message:error?.message||String(error),...(attemptedWrites?{attemptedWrites}:{}),
     });
     showLearningFailure(state);
   }
@@ -10763,7 +10748,8 @@ const batchDialog=$id('study-batch');
     if(activeToday&&before!==JSON.stringify(session)){
       if(roundComplete(session))screen='results';
       render();
-    }else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open)render();
+    }else if(screen==='papers'&&$id('paper-archive-results'))updatePaperList();
+    else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open)render();
     briefChanged();
   }
   async function flushLearning(){
@@ -10780,12 +10766,14 @@ const batchDialog=$id('study-batch');
     if(!state.pending.length){showLearningSync('學習資料已同步');return;}
     state.sending=true;
     showLearningSync('學習資料同步中');
-    let stage='批次寫入';
+    let stage='批次寫入',attemptedWrites;
     try{
       while(account===state&&state.ready&&!state.failure&&navigator.onLine&&state.pending.length){
         stage='批次寫入';
         const ids=state.pending.slice(0,200);
-        await window._fb.writeLearning(state.uid,ids.map(id=>[id,state.operations[id]]));
+        const operations=ids.map(id=>[id,state.operations[id]]);
+        attemptedWrites=operations.map(([id,op])=>({kind:op.kind,path:'users/{uid}/data/learning/operations/'+id}));
+        await window._fb.writeLearning(state.uid,operations);
         if(account!==state)return;
         stage='儲存本機同步確認';
         for(const id of ids)localStorage.setItem(state.key+':ack:'+id,'1');
@@ -10797,7 +10785,7 @@ const batchDialog=$id('study-batch');
       else if(state.failure)showLearningFailure(state);
       else if(state.ready)showLearningSync(state.pending.length?'學習資料待同步':'學習資料已同步');
     }catch(error){
-      if(account===state)recordLearningFailure(state,stage,error);
+      if(account===state)recordLearningFailure(state,stage,error,stage==='批次寫入'?attemptedWrites:undefined);
     }finally{state.sending=false;}
   }
   function listenLearning(state){
