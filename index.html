@@ -3876,6 +3876,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 #study-ai-instructions summary{cursor:pointer;min-height:44px;align-content:center;}
 #study-batch[data-paper-import] #study-ai-copy{color:var(--accent-h);}
 #study-batch-error:empty{display:none;}
+#paper-batch-filename{overflow-wrap:anywhere;}
 #study-batch[data-paper-import]{scroll-padding-block-end:5rem;}
 #study-batch[data-paper-import] #study-batch-list{max-height:none;overflow:visible;}
 #study-batch[data-paper-import] .paper-import-footer{
@@ -4689,6 +4690,7 @@ onAuthStateChanged(auth,user=>{
 <dialog id="study-batch" class="local-dialog" aria-labelledby="study-batch-title">
   <div class="makeup-head"><h2 id="study-batch-title">批次貼上</h2><button type="button" class="btn popup-close" id="study-batch-close" aria-label="關閉批次貼上"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p id="study-batch-target" class="study-meta" hidden></p>
+  <p id="paper-batch-filename" class="study-meta" role="status" hidden></p>
   <form id="study-batch-input" class="study-editor" novalidate>
     <div class="study-filters" id="study-batch-scope"><label class="study-field"><span>科目</span><select id="study-batch-subject" required><option value="">請選擇科目</option><option>國文</option><option>英文</option><option>生物</option><option>普通化學</option><option>有機化學</option></select></label>
     <label class="study-field"><span>章節（選填）</span><select id="study-batch-chapter"></select></label></div>
@@ -4696,6 +4698,10 @@ onAuthStateChanged(auth,user=>{
       <button type="button" class="btn btn-sand" id="study-ai-copy">1. 複製出題指令</button>
       <p class="study-meta" id="study-ai-help">在 ChatGPT 或 Gemini 貼上指令並附上筆記。</p>
       <details id="study-ai-instructions"><summary>查看完整指令</summary><textarea id="study-ai-text" rows="5" aria-label="出題指令" readonly></textarea></details>
+    </div>
+    <div id="paper-batch-file-controls" hidden>
+      <button type="button" class="btn btn-sand" id="paper-batch-choose" aria-describedby="study-batch-error">選擇 JSON 檔</button>
+      <input type="file" id="paper-batch-file" accept=".json,application/json" hidden>
     </div>
     <label class="study-field"><span id="study-batch-json-label">JSON 題庫</span><textarea rows="6" id="study-batch-json" required aria-describedby="study-batch-error"></textarea></label>
     <details><summary>JSON 範例</summary><textarea aria-label="JSON 範例" id="study-batch-example" rows="2" readonly>[{"question":"「明亮的」英文怎麼說？","answer":"bright"}]</textarea><button type="button" class="btn btn-sand" id="study-batch-copy">複製範例</button></details>
@@ -9801,6 +9807,15 @@ const batchDialog=$id('study-batch');
   const batchChapter=$id('study-batch-chapter');
   const batchError=$id('study-batch-error');
   const batchApply=$id('study-batch-apply');
+  const batchFile=$id('paper-batch-file');
+  const batchFileButton=$id('paper-batch-choose');
+  const batchFileControls=$id('paper-batch-file-controls');
+  const batchFileName=$id('paper-batch-filename');
+  let batchFileReadVersion=0;
+  function showBatchFile(name=''){
+    batchFileName.hidden=!name;
+    batchFileName.textContent=name?'檔名 · '+name:'';
+  }
   let batchRows=[],batchOpener=null,batchSaving=false,batchPaperId=null,batchFilter='all';
   const paperBatchFilters={all:'全部',review:'需核對',missing:'待補正解',duplicate:'重複題號',invalid:'需修正'};
   function filterBatchRows(){
@@ -9827,6 +9842,8 @@ const batchDialog=$id('study-batch');
     if(batchPaperId)queueMicrotask(filterBatchRows);
   });
   function closeBatch(){
+    batchFileReadVersion++;
+    showBatchFile();
     batchDialog.close();
     batchRows=[];
     batchPaperId=null;
@@ -9843,6 +9860,7 @@ const batchDialog=$id('study-batch');
     else batchText.closest('label').after(batchError);
     batchText.removeAttribute('aria-invalid');
     batchError.textContent='';
+    $id('study-batch-back').textContent=preview&&!batchFileName.hidden?'返回選檔或貼上':'返回修改原文';
     (preview?$id('study-batch-summary'):batchPaperId?$id('study-ai-copy'):batchText).focus({preventScroll:true});
     batchDialog.scrollTop=0;
   }
@@ -9854,6 +9872,9 @@ const batchDialog=$id('study-batch');
     const p=paper(targetPaper);
     batchPaperId=p?.id??null;
     batchOpener=opener;
+    batchFileReadVersion++;
+    showBatchFile();
+    batchFileControls.hidden=!p;
     batchInput.reset();
     const subject=p?.subject||filters.subject;
     batchSubject.replaceChildren(new Option(subject,subject));
@@ -9871,7 +9892,7 @@ const batchDialog=$id('study-batch');
     batchText.setAttribute('aria-describedby',ai||p?'study-ai-help study-batch-error':'study-batch-error');
     $id('study-ai-copy').textContent=p?'複製 ChatGPT 指令':'1. 複製出題指令';
     $id('study-ai-text').setAttribute('aria-label',p?'整卷匯入指令':'出題指令');
-    $id('study-ai-help').textContent=p?'在 ChatGPT 上傳試卷 PDF，貼上指令，再把回傳的 JSON 貼到下方。':'在 ChatGPT 或 Gemini 貼上指令並附上筆記。已有 JSON 可直接貼到下方。';
+    $id('study-ai-help').textContent=p?'在 ChatGPT 上傳試卷 PDF 並貼上指令，再選擇或貼回取得的 JSON。':'在 ChatGPT 或 Gemini 貼上指令並附上筆記。已有 JSON 可直接貼到下方。';
     $id('study-batch-json-label').textContent=p?'貼回 JSON':ai?'貼上題目（JSON）':'JSON 題庫';
     $id('study-batch-preview-open').textContent=p?'預覽題目':'預覽';
     updateAiPrompt();
@@ -9967,25 +9988,58 @@ const batchDialog=$id('study-batch');
     batchApply.disabled=!selected||batchSaving;
     return batchRows.filter(row=>row.valid&&(row.checked??!row.duplicate));
   }
-  function reportBatchInputError(message){
+  function reportBatchInputError(message,fromFile=false){
+    (fromFile?batchFileControls:batchText.closest('label')).after(batchError);
     batchError.textContent=message;
-    batchText.setAttribute('aria-invalid','true');
-    batchText.focus();
+    if(fromFile)batchFileButton.focus();
+    else{
+      batchText.setAttribute('aria-invalid','true');
+      batchText.focus();
+    }
   }
   batchText.addEventListener('input',()=>{
-    if(!batchText.hasAttribute('aria-invalid'))return;
+    batchFileReadVersion++;
+    showBatchFile();
     batchText.removeAttribute('aria-invalid');
     batchError.textContent='';
   });
+  batchFileButton.addEventListener('click',()=>{
+    batchFile.value='';
+    batchFile.click();
+  });
+  batchFile.addEventListener('cancel',event=>event.stopPropagation());
+  batchFile.addEventListener('change',async()=>{
+    const file=batchFile.files[0];
+    if(!file||!batchPaperId||!batchDialog.open)return;
+    const version=++batchFileReadVersion;
+    batchText.removeAttribute('aria-invalid');
+    batchError.textContent='';
+    showBatchFile(file.name);
+    const stillReading=()=>version===batchFileReadVersion&&batchDialog.open;
+    let contents;
+    try{contents=await file.text();}
+    catch{
+      if(stillReading())reportBatchInputError('無法讀取檔案。請重新選檔，或改用貼上 JSON。',true);
+      return;
+    }
+    if(stillReading())previewBatch(contents,true);
+  });
   batchInput.addEventListener('submit',event=>{
     event.preventDefault();
+    batchFileReadVersion++;
+    showBatchFile();
+    previewBatch(batchText.value);
+  });
+  function previewBatch(contents,fromFile=false){
     let parsed;
-    const raw=batchText.value.trim();
-    if(!raw){reportBatchInputError('請先貼上 JSON，再預覽題目。');return;}
+    const raw=contents.trim();
+    const error=message=>reportBatchInputError(message,fromFile);
+    if(!raw){error(fromFile?'檔案內容是空白的。請重新選檔，或改用貼上 JSON。':'請先貼上 JSON，再預覽題目。');return;}
     const wrapped=raw.match(/^(\x60{3,}|~{3,})[ \t]*(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n\1[ \t]*$/i);
     try{parsed=JSON.parse(wrapped?wrapped[2]:raw);}
-    catch{reportBatchInputError('無法解析 JSON。請貼上完整的 JSON 陣列，或用一對程式碼圍欄包住。');return;}
-    if(!Array.isArray(parsed)||!parsed.length){reportBatchInputError('請貼上至少有一題的 JSON 陣列。');return;}
+    catch{error('無法解析 JSON。請使用完整的 JSON 陣列，或用一對程式碼圍欄包住。');return;}
+    if(!Array.isArray(parsed)){error('最外層必須是 JSON 陣列，例如 [{…}]。');return;}
+    if(!parsed.length){error('JSON 陣列沒有題目。請至少提供一題。');return;}
     batchRows=parsed.map((item,index)=>{
       const value=object(item)?item:{};
       const invalid=new Set();
@@ -10032,7 +10086,7 @@ const batchDialog=$id('study-batch');
     }).join('');
     batchStage(true);
     checkBatch();
-  });
+  }
   batchList.addEventListener('input',event=>{
     const element=event.target;
     const row=batchRows[[...batchList.children].indexOf(element.closest('li'))];
@@ -10047,7 +10101,12 @@ const batchDialog=$id('study-batch');
     }else if(element.type==='checkbox')row.checked=element.checked;
     checkBatch();
   });
-  $id('study-batch-back').addEventListener('click',()=>batchStage(false));
+  $id('study-batch-back').addEventListener('click',()=>{
+    const returningFromFile=!batchFileName.hidden;
+    showBatchFile();
+    batchStage(false);
+    if(returningFromFile)batchFileButton.focus({preventScroll:true});
+  });
   $id('study-batch-close').addEventListener('click',closeBatch);
   bindWideDialog(batchDialog,closeBatch);
   $id('study-batch-copy').addEventListener('click',async()=>{
