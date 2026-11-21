@@ -197,8 +197,8 @@ body{
 /* ── App Header ── */
 /* ── Toast notifications ── */
 #toast-container{
-  position:fixed;top:calc(var(--nav-h) + 10px);right:16px;z-index:9000;
-  display:flex;flex-direction:column;gap:8px;pointer-events:none;
+  position:fixed;inset:calc(env(safe-area-inset-top,0px) + 6px) 54px auto;z-index:9000;
+  display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;
 }
 .toast{
   background:var(--toast-bg);
@@ -206,14 +206,15 @@ body{
   color:#fff;border-radius:var(--r);
   padding:10px 16px;font-size:13px;font-weight:500;letter-spacing:-.1px;
   box-shadow:var(--shadow-lg);
-  pointer-events:auto;
-  transform:translateX(120%);opacity:0;
+  pointer-events:none;
+  transform:translateY(-6px);opacity:0;
   transition:transform .32s var(--ease-spring),opacity .25s;
-  max-width:280px;line-height:1.4;
-  display:flex;align-items:center;gap:8px;
+  max-width:min(360px,100%);line-height:1.4;overflow-wrap:anywhere;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
 }
-.toast.show{transform:translateX(0);opacity:1;}
-#toast-container:has(.toast-with-action){top:auto;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 28px);}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast-with-action.show button{pointer-events:auto;}
+#toast-container:has([data-toast-priority]:not([data-toast-leaving])) .toast-success:not(.toast-with-action){display:none;}
 .toast.toast-success{background:var(--toast-success);}
 .toast.toast-warn{background:var(--toast-warn);}
 .toast.toast-error{background:var(--toast-error);}
@@ -2170,6 +2171,12 @@ button:active:not(:disabled){filter:brightness(.91);}
 .cal-tag .cal-tag-name,.week-ev{color:var(--text-2);}
 .cal-cell .cal-tag.is-done,.week-ev.is-done{opacity:1!important;color:var(--text-3);text-decoration:line-through;}
 .cal-overflow{font-size:.6875rem;color:var(--text-2);}
+@media(max-width:767px){
+  #panel-cal .cal-grid .cal-cell{min-block-size:88px;min-height:88px;}
+  #panel-cal .cal-grid .cal-tag{min-height:15px;min-width:0;padding:0 2px;line-height:15px;gap:2px;}
+  #panel-cal .cal-grid .cal-tag-name{font-size:.6875rem;}
+  #panel-cal .cal-grid .cal-overflow{display:block;min-height:15px;line-height:15px;white-space:nowrap;padding-left:2px;}
+}
 .wch-day{min-width:0;border:0;}
 .week-day-button{
   width:100%;min-width:0;min-height:var(--ui-control);padding:2px 0;border:0;
@@ -3177,6 +3184,12 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-chapter-filter{display:flex;flex-wrap:wrap;align-items:end;gap:8px;}
 .study-chapter-filter .study-field{flex:1 1 15rem;}
 .study-chapter-filter select{width:100%;}
+.knowledge-search{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sp-2);margin-block:var(--sp-3);}
+.knowledge-search .study-field{flex:1 1 12rem;min-width:0;margin:0;}
+#knowledge-search-clear[hidden]{display:none;}
+.knowledge-empty{margin-block:var(--sp-3);padding:var(--sp-3);background:var(--card-2);border-radius:var(--r);}
+#study-room .knowledge-empty h3{margin:0 0 var(--sp-1);}
+.knowledge-empty .study-actions{justify-content:flex-start;}
 .study-editor{display:grid;gap:10px;}
 .study-supplements>summary{min-height:44px;align-content:center;border-top:1px solid var(--border-lt);color:var(--text-2);cursor:pointer;}
 .study-supplements>summary:hover{color:var(--text);}
@@ -4959,11 +4972,16 @@ function fmtDate(s){const[y,m,d]=s.split('-').map(Number);return`${m}月${d}日�
 // ── Toast notifications ───────────────────────────────────────────
 function toast(msg,type='',duration=2800,action=null){
   const c=document.getElementById('toast-container');
-  if(!isMobile()||document.activeElement?.closest('#phone-course-dialog')){
-    const host=document.activeElement?.closest('dialog[open]')||document.body;
-    if(c.parentElement!==host)host.append(c);
-  }if(!c)return;
+  if(!c)return;
+  const passiveSuccess=type==='success'&&!action;
+  if(passiveSuccess&&[...c.children].some(item=>!item.hasAttribute('data-toast-leaving')&&
+    (item.hasAttribute('data-toast-priority')||item.dataset.toastSuccess===msg)))return;
+  const host=topAppDialog()?.dialog||document.body;
+  if(c.parentElement!==host)host.append(c);
   const el=document.createElement('div');
+  el.setAttribute('role',type==='warn'||type==='error'?'alert':'status');
+  if(action||type==='warn'||type==='error')el.setAttribute('data-toast-priority','');
+  if(passiveSuccess)el.dataset.toastSuccess=msg;
   el.className='toast'+(type?' toast-'+type:'');
   const icons={success:'✓',warn:'⚠️',error:'✕'};
   if(icons[type]){const ic=document.createElement('span');ic.textContent=icons[type];el.appendChild(ic);}
@@ -4978,6 +4996,7 @@ function toast(msg,type='',duration=2800,action=null){
   c.appendChild(el);
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
   setTimeout(()=>{
+    el.setAttribute('data-toast-leaving','');
     el.classList.remove('show');
     setTimeout(()=>el.remove(),350);
   },duration);
@@ -7134,20 +7153,25 @@ function monthMarkup(y,m,slideClass=''){
       isTap?'tap-target-ready':'',
       isEmpty&&!isTap?'empty-day':''
     ].filter(Boolean).join(' ');
-    const tags=evts.slice(0,3).map(ev=>{
+    const exam=examMarkHtml(s);
+    const compact=isMobile();
+    const capacity=compact&&exam?1:3;
+    const limit=compact&&evts.length>capacity?capacity-1:capacity;
+    const tags=evts.slice(0,limit).map(ev=>{
       const c=course(ev.courseId);if(!c)return'';
-      const timeStr=ev.time?`<span class="cal-tag-time">${esc(lessonTimeLabel(ev))}</span>`:'';
+      const timeStr=ev.time&&!compact?`<span class="cal-tag-time">${esc(lessonTimeLabel(ev))}</span>`:'';
       return`<div class="cal-tag${ev.done?' is-done':''}" style="background:var(--lesson-bg,${c.color}18);--lesson-color:${c.color}">
         <span class="cal-tag-dot" style="background:${ev.done?'#b0aea5':c.color}"></span>
-        <span class="cal-tag-name" title="${esc(c.name)}">${esc(courseMark(c.name,2))}</span>
+        <span class="cal-tag-name" title="${esc(c.name)}">${esc(compact?c.name:courseMark(c.name,2))}</span>
         ${timeStr}
       </div>`;
     }).join('');
-    const more=evts.length>3?`<div class="cal-overflow">+${evts.length-3}</div>`:'';
+    const overflow=evts.length-limit;
+    const more=overflow>0?`<span class="cal-overflow">${compact?'＋':'+'}${overflow}${compact?' 堂':''}</span>`:'';
     html+=`<div class="${cls}" role="button" tabindex="0" data-calendar-date="${s}" aria-label="${s}，${evts.length} 堂課" aria-pressed="${s===S.selectedDate}" ${s===todayStr?'aria-current="date"':''} onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')"
          ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}')">
       <div class="date-num">${d}</div>
-      <div class="cal-tags">${examMarkHtml(s)}${tags}${more}</div>
+      <div class="cal-tags">${exam}${tags}${more}</div>
     </div>`;
   }
   return `<div class="cal-grid${slideClass?' '+slideClass:''}">${html}</div>`;
@@ -9384,6 +9408,7 @@ const studyRoom=(()=>{
   if(session?.paperId&&!data.papers?.some(p=>p.id===session.paperId))session=null;
   let screen=session?(session.index===session.queue.length?'results':'session'):'home';
   let filters={subject:'',chapter:''};
+  let knowledgeQuery='';
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
   let setupMode='practice',weakOnly=false,examSetup=false;
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
@@ -9733,19 +9758,39 @@ const studyRoom=(()=>{
     draw('新增科目知識庫','<form class="study-surface" id="study-subject-form"><label class="study-field"><span>科目名稱</span><input name="name" required></label>'+
       '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">建立科目</button></div></form>',subjectHub);
   }
+  function libraryRows(items){
+    return '<ul class="study-list">'+items.map(p=>{
+      const [label,kind]=status(p.id);
+      return '<li><div class="study-list-item"><p class="study-meta">'+esc(p.subject)+(p.chapter?' · '+esc(p.chapter):'')+
+        ' <span class="study-status '+kind+'">'+label+'</span></p><h3>'+esc(p.question)+'</h3></div>'+
+        '<div class="study-list-buttons">'+action('編輯','edit',false,'data-point="'+p.id+'"')+
+        action('刪除','delete',false,'data-point="'+p.id+'"')+'</div></li>';
+    }).join('')+'</ul>';
+  }
+  function renderKnowledgeResults(){
+    const items=filtered(false),query=knowledgeQuery.trim().normalize('NFKC').toLocaleLowerCase('zh-TW');
+    const matches=query?items.filter(p=>p.question.normalize('NFKC').toLocaleLowerCase('zh-TW').includes(query)):items;
+    const clear=$id('knowledge-search-clear');
+    if(clear)clear.hidden=!knowledgeQuery;
+    $id('knowledge-results').innerHTML=matches.length?libraryRows(matches):
+      query&&items.length?'<p class="study-empty" role="status">找不到符合的題目。可清除搜尋後再試。</p>':
+      '<div class="knowledge-empty"><h3>'+(filters.chapter?'這個分類還沒有題目':'這個科目還沒有題目')+'</h3>'+
+      '<p class="study-meta">讓 ChatGPT 整理筆記，再貼回題目。</p><div class="study-actions">'+
+      action('新增單題','add')+action('AI 快速匯入','ai-batch',true)+'</div></div>';
+  }
   function library(weak){
     const items=filtered(weak);
     const canPracticeChapter=!weak&&filters.chapter&&filters.chapter!==unfiled&&items.length;
+    const search=!weak&&items.length?'<div class="knowledge-search"><label class="study-field"><span>搜尋題目</span>'+
+      '<input type="search" id="knowledge-query" value="'+esc(knowledgeQuery)+'"></label>'+
+      '<button type="button" class="btn btn-sand" data-study-action="knowledge-search-clear" id="knowledge-search-clear" hidden>清除搜尋</button></div>':'';
     draw(esc(filters.subject)+(weak?' · 待加強':' · 知識庫'),'<div class="study-surface"><div class="study-chapter-filter">'+filterMarkup()+
-      (canPracticeChapter?action('練習本章','setup-chapter',true):'')+'</div>'+
-      (items.length?'<ul class="study-list">'+items.map(p=>{
-        const [label,kind]=status(p.id);
-        return '<li><div class="study-list-item"><p class="study-meta">'+esc(p.subject)+(p.chapter?' · '+esc(p.chapter):'')+
-          ' <span class="study-status '+kind+'">'+label+'</span></p><h3>'+esc(p.question)+'</h3></div>'+
-          '<div class="study-list-buttons">'+action('編輯','edit',false,'data-point="'+p.id+'"')+
-          action('刪除','delete',false,'data-point="'+p.id+'"')+'</div></li>';
-      }).join('')+'</ul>':'<p class="study-empty">'+(weak?'沒有符合的待加強知識點。':'沒有符合的知識點。')+'</p>')+
-      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):action('管理章節','chapters')+action('AI 快速匯入','ai-batch')+action('批次貼上','batch')+action('新增知識點','add',true))+'</div></div>','subject');
+      (canPracticeChapter?action('練習本章','setup-chapter',true):'')+'</div>'+search+
+      (weak?(items.length?libraryRows(items):'<p class="study-empty">沒有符合的待加強知識點。</p>'):
+        '<div id="knowledge-results"></div>')+
+      '<div class="study-actions">'+(weak?(items.length?action('練習待加強','setup-weak',true):''):
+        action('管理章節','chapters')+(items.length?action('新增單題','add')+action('AI 快速匯入','ai-batch',true):''))+'</div></div>','subject');
+    if(!weak)renderKnowledgeResults();
   }
   const newPointId=()=>'k-'+Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16).padStart(8,'0')).join('');
 const batchDialog=$id('study-batch');
@@ -9814,7 +9859,7 @@ const batchDialog=$id('study-batch');
     batchSubject.replaceChildren(new Option(subject,subject));
     batchChapter.closest('label').hidden=!!p;
     $id('study-batch-scope').hidden=!!p;
-    $id('study-ai-instructions').open=!p;
+    $id('study-ai-instructions').open=false;
     batchDialog.toggleAttribute('data-paper-import',!!p);
     const target=$id('study-batch-target');
     target.hidden=!p;
@@ -9826,8 +9871,8 @@ const batchDialog=$id('study-batch');
     batchText.setAttribute('aria-describedby',ai||p?'study-ai-help study-batch-error':'study-batch-error');
     $id('study-ai-copy').textContent=p?'複製 ChatGPT 指令':'1. 複製出題指令';
     $id('study-ai-text').setAttribute('aria-label',p?'整卷匯入指令':'出題指令');
-    $id('study-ai-help').textContent=p?'在 ChatGPT 上傳試卷 PDF，貼上指令，再把回傳的 JSON 貼到下方。':'在 ChatGPT 或 Gemini 貼上指令並附上筆記。';
-    $id('study-batch-json-label').textContent=p?'貼回 JSON':ai?'2. 貼上題目（JSON）':'JSON 題庫';
+    $id('study-ai-help').textContent=p?'在 ChatGPT 上傳試卷 PDF，貼上指令，再把回傳的 JSON 貼到下方。':'在 ChatGPT 或 Gemini 貼上指令並附上筆記。已有 JSON 可直接貼到下方。';
+    $id('study-batch-json-label').textContent=p?'貼回 JSON':ai?'貼上題目（JSON）':'JSON 題庫';
     $id('study-batch-preview-open').textContent=p?'預覽題目':'預覽';
     updateAiPrompt();
     showAppDialog(batchDialog,closeBatch);
@@ -10634,12 +10679,24 @@ const batchDialog=$id('study-batch');
     else if(event.target.name==='pastSubject')event.target.form.elements.targetPaper.innerHTML=paperChoices(event.target.value,'');
     else if(event.target.matches('[data-collection-subject]'))event.target.form.elements.collectionChapter.innerHTML=options(['',...chapters(event.target.value)],'','未分類');
     else if(id==='study-filter-chapter'){
+      if(screen==='library')knowledgeQuery='';
       filters.chapter=event.target.value==='unfiled'?unfiled:event.target.value.slice(8);
       render();
       $id(id).focus({preventScroll:true});
     }else if(event.target.name==='mode')setupMode=event.target.value;
   });
+  function updateKnowledgeSearch(event){
+    knowledgeQuery=event.target.value;
+    renderKnowledgeResults();
+  }
+  root.addEventListener('compositionend',event=>{
+    if(event.target.id==='knowledge-query')updateKnowledgeSearch(event);
+  });
   root.addEventListener('input',event=>{
+    if(event.target.id==='knowledge-query'){
+      if(!event.isComposing)updateKnowledgeSearch(event);
+      return;
+    }
     if(event.target.id==='paper-query'){
       paperSearch=event.target.value;
       updatePaperList();
@@ -10769,7 +10826,13 @@ const batchDialog=$id('study-batch');
       const p=paper(paperId),items=paperItems(paperId),ready=items.filter(canPracticePaper);
       if(p&&ready.length)start(ready.map(q=>q.id),'practice',{paperId,subject:p.subject,paperReview:items.map(paperReviewItem)},{shuffle:false});
     }else if(act==='paper-batch')openBatch(button,false,paperId);
-    else if(act==='batch'||act==='ai-batch')openBatch(button,act==='ai-batch');
+    else if(act==='ai-batch')openBatch(button,true);
+    else if(act==='knowledge-search-clear'){
+      const input=$id('knowledge-query');
+      input.value='';
+      updateKnowledgeSearch({target:input});
+      input.focus({preventScroll:true});
+    }
     else if(act==='sync-retry'&&account)retryLearning(account);
     else if(act==='home')go('home');
     else if(act==='library'||act==='weak'||act==='subject'&&!button.dataset.subject){
@@ -10778,6 +10841,7 @@ const batchDialog=$id('study-batch');
     }else if(act==='subject'){
       subjectHub=screen;
       knowledgeSubject=button.dataset.subject;
+      knowledgeQuery='';
       filters={subject:knowledgeSubject,chapter:''};
       go('subject');
     }else if(act==='new-subject'){
@@ -11263,6 +11327,7 @@ const batchDialog=$id('study-batch');
     paperResultRound=null;
     paperReviewReturn=null;
     filters={subject:'',chapter:''};
+    knowledgeQuery='';
     screen='home';
     if(!uid){
       showLearningSync('學習資料僅存於此瀏覽器');
