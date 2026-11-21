@@ -3858,6 +3858,15 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-md);}
 .paper-actions-menu-panel .btn{justify-content:flex-start;min-height:44px;}
 .paper-actions-menu-panel [data-study-action=paper-delete]{color:var(--danger-c);}
+#paper-answer-key{width:min(650px,calc(100% - 24px));overflow-wrap:anywhere;}
+#paper-answer-key-error:empty,#paper-answer-key-preview[hidden]{display:none;}
+#paper-answer-key-preview{margin-top:var(--sp-3);}
+#paper-answer-key-list li{display:block;}
+.paper-answer-key-check{display:flex;align-items:center;gap:var(--sp-2);min-height:44px;}
+.paper-answer-key-check input{accent-color:var(--accent);flex:none;}
+.paper-answer-key-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-2);margin:var(--sp-1) 0;}
+.paper-answer-key-values div{padding:var(--sp-2);background:var(--card-2);border-radius:var(--r-sm);}
+.paper-answer-key-values dd{margin:0;}
 .paper-archive-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sp-3);}
 .paper-archive-toolbar .study-field{flex:1 1 16rem;margin:0;}
 .paper-archive-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
@@ -3877,9 +3886,9 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 #study-batch[data-paper-import] #study-ai-copy{color:var(--accent-h);}
 #study-batch-error:empty{display:none;}
 #paper-batch-filename{overflow-wrap:anywhere;}
-#study-batch[data-paper-import]{scroll-padding-block-end:5rem;}
+:is(#study-batch[data-paper-import],#paper-answer-key){scroll-padding-block-end:5rem;}
 #study-batch[data-paper-import] #study-batch-list{max-height:none;overflow:visible;}
-#study-batch[data-paper-import] .paper-import-footer{
+:is(#study-batch[data-paper-import],#paper-answer-key) .paper-import-footer{
   position:sticky;bottom:0;z-index:1;padding-block:var(--sp-2);margin-top:var(--sp-2);
   background:var(--elevated);border-top:1px solid var(--border-lt);
 }
@@ -4687,6 +4696,21 @@ onAuthStateChanged(auth,user=>{
 <div class="tablet-overlay" id="tablet-overlay" onclick="closeTabletPanel()"></div>
 
 <!-- Bottom nav (mobile) -->
+<dialog id="paper-answer-key" class="local-dialog" aria-labelledby="paper-answer-key-title">
+  <div class="makeup-head"><h2 id="paper-answer-key-title">批次補官方答案</h2><button type="button" class="btn popup-close" id="paper-answer-key-close" aria-label="關閉批次補官方答案"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <p class="study-meta" id="paper-answer-key-target"></p>
+  <form id="paper-answer-key-form" class="study-editor" novalidate>
+    <label class="study-field"><span>題號與官方答案</span><textarea id="paper-answer-key-text" rows="5" aria-describedby="paper-answer-key-help paper-answer-key-error" placeholder="1. D&#10;2. B"></textarea></label>
+    <p class="study-meta" id="paper-answer-key-help">每行一題，依原題號和單選選項順序填寫，例如 1. D。已有不同正解時，請在預覽逐題勾選。</p>
+    <p class="study-error" id="paper-answer-key-error" role="alert"></p>
+    <div class="study-actions"><button class="btn btn-primary">預覽答案</button></div>
+  </form>
+  <section id="paper-answer-key-preview" hidden>
+    <p id="paper-answer-key-summary" role="status" tabindex="-1"></p>
+    <ul class="study-list" id="paper-answer-key-list"></ul>
+    <div class="study-actions paper-import-footer"><button class="btn btn-primary" type="button" id="paper-answer-key-save">儲存正解</button></div>
+  </section>
+</dialog>
 <dialog id="study-batch" class="local-dialog" aria-labelledby="study-batch-title">
   <div class="makeup-head"><h2 id="study-batch-title">批次貼上</h2><button type="button" class="btn popup-close" id="study-batch-close" aria-label="關閉批次貼上"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p id="study-batch-target" class="study-meta" hidden></p>
@@ -9734,7 +9758,7 @@ const studyRoom=(()=>{
     draw(esc(paperTitle(p)),'<div class="study-surface"><div class="paper-overview"><p class="study-meta">'+items.length+' 題</p>'+
       '<details id="paper-actions-menu"><summary aria-label="更多試卷選項" title="更多試卷選項">⋯</summary>'+
       '<div class="paper-actions-menu-panel">'+action('編輯試卷','paper-edit')+
-      action('刪除試卷','paper-delete')+'</div></details></div>'+
+      action('批次補官方答案','paper-official-answers')+action('刪除試卷','paper-delete')+'</div></details></div>'+
       (p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
@@ -9865,8 +9889,10 @@ const batchDialog=$id('study-batch');
     batchDialog.scrollTop=0;
   }
   const paperImportExample=[
-    {number:8,question:'下列何者正確？',options:['第一個選項','第二個選項'],group:'共用題組原文',
-      answer:'',explanation:'',sourcePage:'4',reviewNote:'圖例模糊，需核對原卷第 4 頁。',acceptedAnswers:[]}
+    {number:8,question:'哪一個構造主要進行光合作用？',options:['葉綠體','粒線體'],group:'觀察植物細胞的構造並回答下列問題。',
+      answer:'葉綠體',explanation:'',sourcePage:4},
+    {number:9,question:'圖中箭頭指向哪個構造【請見原卷】？',options:['細胞膜','細胞壁'],group:'觀察植物細胞的構造並回答下列問題。',
+      answer:'',explanation:'',sourcePage:'4–5',reviewNote:'第 9 題，PDF 第 5 頁箭頭模糊，請核對原圖。'}
   ];
   function openBatch(opener,ai=false,targetPaper=null){
     const p=paper(targetPaper);
@@ -9900,17 +9926,143 @@ const batchDialog=$id('study-batch');
     batchStage(false);
     if(!p)batchSubject.focus({preventScroll:true});
   }
+  const answerKeyDialog=$id('paper-answer-key');
+  const answerKeyText=$id('paper-answer-key-text');
+  const answerKeyError=$id('paper-answer-key-error');
+  const answerKeyPreview=$id('paper-answer-key-preview');
+  const answerKeyList=$id('paper-answer-key-list');
+  const answerKeySave=$id('paper-answer-key-save');
+  let answerKeyPaperId=null,answerKeyRows=[];
+  function closePaperAnswerKey(){
+    answerKeyDialog.close();
+    answerKeyPaperId=null;
+    $id('paper-actions-menu')?.querySelector('summary').focus({preventScroll:true});
+  }
+  function openPaperAnswerKey(){
+    const p=paper(paperId);
+    if(!p)return;
+    answerKeyPaperId=p.id;
+    $id('paper-actions-menu').open=false;
+    $id('paper-answer-key-target').textContent=p.subject+' · '+paperTitle(p);
+    answerKeyText.value='';
+    answerKeyError.textContent='';
+    answerKeyPreview.hidden=true;
+    showAppDialog(answerKeyDialog,closePaperAnswerKey);
+    answerKeyText.focus({preventScroll:true});
+  }
+  function matchAnswerKeyRows(){
+    const questions=new Map();
+    const lineCounts=new Map();
+    const lines=answerKeyText.value.split(/\r?\n/).map((value,i)=>{
+      const match=value.normalize('NFKC').trim().match(/^(.+?)(?:[.、:)]\s*|\s+)(.+)$/);
+      const number=match?.[1].trim()||'';
+      const key=number?learningJournal.numberKey(number):'';
+      if(key)lineCounts.set(key,(lineCounts.get(key)||0)+1);
+      return {line:i+1,value:value.trim(),number,key,choice:match?.[2].trim().toUpperCase()||''};
+    }).filter(line=>line.value);
+    for(const q of paperItems(answerKeyPaperId)){
+      if(!q.number.trim())continue;
+      const key=learningJournal.numberKey(q.number);
+      questions.set(key,questions.has(key)?null:q);
+    }
+    return lines.map(row=>{
+      const q=questions.get(row.key);
+      const option=/^[A-Z]$/.test(row.choice)?row.choice.charCodeAt(0)-65:-1;
+      const next=q?.options?.[option];
+      if(!row.key)return {...row,state:'invalid',label:'格式不符，請輸入題號與答案，例如 1. D'};
+      if(lineCounts.get(row.key)>1)return {...row,state:'invalid',label:'貼上的題號重複'};
+      if(q===null)return {...row,state:'invalid',label:'試卷內有重複題號'};
+      if(!q)return {...row,state:'invalid',label:'找不到這個原題號'};
+      if(!q.options?.length)return {...row,state:'invalid',label:'此題沒有單選選項'};
+      if(!next||q.options.filter(value=>value===next).length!==1)return {...row,state:'invalid',label:'無法對應唯一的選項'};
+      const state=q.answer===next?'same':q.answer.trim()?'replace':'fill';
+      return {...row,id:q.id,number:q.number,current:q.answer,next,state,
+        label:{same:'無變更',replace:'與現有正解不同，請勾選才會更新',fill:'補上空白正解'}[state]};
+    });
+  }
+  function updateAnswerKeyCount(){
+    const picked=answerKeyList.querySelectorAll('input:checked').length;
+    const unchanged=answerKeyRows.filter(row=>row.state==='same').length;
+    const issues=answerKeyRows.filter(row=>row.state==='invalid').length;
+    $id('paper-answer-key-summary').textContent='選取 '+picked+' 題 · 無變更 '+unchanged+' 題 · 需修正 '+issues+' 筆';
+    answerKeySave.disabled=!picked;
+    answerKeySave.textContent='儲存 '+picked+' 題正解';
+  }
+  function renderPaperAnswerKey(rows){
+    answerKeyRows=rows;
+    answerKeyList.innerHTML=rows.map((row,index)=>{
+      const title=row.number?'第 '+esc(row.number)+' 題':'第 '+row.line+' 行';
+      const changed=row.state==='fill'||row.state==='replace';
+      return '<li>'+(changed?'<label class="paper-answer-key-check"><input type="checkbox" data-answer-key-row="'+index+'"'+
+        (row.state==='fill'?' checked':'')+'><strong>'+title+' · '+esc(row.choice)+'</strong></label>':
+        '<strong>'+title+' · '+esc(row.choice||row.value)+'</strong>')+
+        '<p class="study-meta">'+esc(row.label)+'</p>'+
+        (changed?'<dl class="paper-answer-key-values"><div><dt>目前正解</dt><dd>'+esc(row.current||'未填')+'</dd></div><div><dt>新正解</dt><dd>'+esc(row.next)+'</dd></div></dl>':
+          row.state==='same'?'<p class="study-copy">'+esc(row.next)+'</p>':'')+'</li>';
+    }).join('');
+    answerKeyPreview.hidden=false;
+    updateAnswerKeyCount();
+    $id('paper-answer-key-summary').focus();
+  }
+  $id('paper-answer-key-close').addEventListener('click',closePaperAnswerKey);
+  bindWideDialog(answerKeyDialog,closePaperAnswerKey);
+  answerKeyText.addEventListener('input',()=>{
+    answerKeyPreview.hidden=true;
+    answerKeyRows=[];
+    answerKeyError.textContent='';
+  });
+  answerKeyList.addEventListener('change',updateAnswerKeyCount);
+  $id('paper-answer-key-form').addEventListener('submit',event=>{
+    event.preventDefault();
+    answerKeyError.textContent='';
+    if(!paper(answerKeyPaperId)){answerKeyError.textContent='找不到試卷，請返回清單後重試。';return;}
+    const rows=matchAnswerKeyRows();
+    if(!rows.length){answerKeyError.textContent='請貼上至少一行官方答案。';answerKeyText.focus();return;}
+    renderPaperAnswerKey(rows);
+  });
+  answerKeySave.addEventListener('click',()=>{
+    if(!answerKeyDialog.open||answerKeyPreview.hidden)return;
+    if(!paper(answerKeyPaperId)){
+      answerKeyError.textContent='這份試卷已刪除，無法儲存。';
+      answerKeySave.disabled=true;
+      return;
+    }
+    const current=matchAnswerKeyRows();
+    if(JSON.stringify(current)!==JSON.stringify(answerKeyRows)){
+      renderPaperAnswerKey(current);
+      answerKeyError.textContent='試卷資料已更新，請核對新版預覽後再儲存。';
+      return;
+    }
+    const updates=new Map([...answerKeyList.querySelectorAll('input:checked')].map(input=>{
+      const row=answerKeyRows[Number(input.dataset.answerKeyRow)];
+      return [row.id,row.next];
+    }));
+    if(!updates.size)return;
+    try{
+      saveLearning({...data,paperQuestions:data.paperQuestions.map(q=>updates.has(q.id)?{...q,answer:updates.get(q.id)}:q)});
+    }catch{
+      answerKeyError.textContent='無法儲存正解。請檢查儲存空間，再重試。';
+      return;
+    }
+    closePaperAnswerKey();
+    if(screen==='paper'){
+      render();
+      $id('paper-actions-menu')?.querySelector('summary').focus({preventScroll:true});
+    }
+    toast('已更新 '+updates.size+' 題正解','success');
+  });
   function updateAiPrompt(){
     const p=paper(batchPaperId);
     if(p){
       $id('study-ai-text').value=[
-        '請把我上傳的考古題 PDF 轉成 StudyOS 可匯入的有效 JSON 陣列。只回傳 JSON，保留原題號，不重新編號。',
-        '試卷：'+paperTitle(p)+' · '+p.subject,
-        '必填 number（原題號，整數或字串）和 question（原題幹）。依原順序把選項放入 options 字串陣列，沒有選項可用 []。',
-        '同組每題的 group 放入完整共用題組。保留原文、單位、符號與選項順序，勿自行補出缺失文字。',
-        '只有附件提供官方答案時才填 answer；單選的 answer 必須是 options 內對應選項的完整字串。缺官方答案時留空。explanation 可留空；acceptedAnswers 是選填的其他確認答案字串陣列。',
-        'sourcePage 填 PDF 頁碼（從 1 起算，跨頁可用字串），文字模糊、圖表看不清或缺頁時，在 reviewNote 寫原題號、來源頁碼及需核對的原因。',
-        '缺頁致原題號不明時，勿虛構題號，將缺頁頁碼附在最接近的可辨識題目的 reviewNote。無法讀出的圖表或題幹可在 question 標記【請見原卷】並填 reviewNote。',
+        '請依我上傳的試卷 PDF 整理考題，最後只輸出一個有效的 JSON 陣列，可直接儲存成 .json 或貼進 StudyOS。請勿輸出 Markdown、表格或額外說明。',
+        '目標試卷：'+paperTitle(p)+' · '+p.subject,
+        '依原卷順序逐題整理。必填 number（原題號，整數或字串）和 question（原題幹）。保留原題號、原文、單位、化學符號和選項順序。options 是字串陣列，非選擇題可用 []。',
+        '共用題組請把完整原文放入同組每一題的 group，保留段落。不得把題組當成獨立一題。',
+        '只有上傳資料附官方答案時才填 answer。單選答案必須逐字對應 options 中的完整選項字串，不要只填 A、B、C、D。官方答案缺漏或無法確定時填空字串，不要推測。explanation 一律先留空，個別詳解之後再補。acceptedAnswers 是選填的其他已確認答案字串陣列。',
+        'sourcePage 使用從 1 起算的 PDF 頁碼，單頁可用整數或字串，跨頁可用字串，例如「4–5」。文字、圖表、圖片、化學結構看不清或缺頁時，在 reviewNote 標註原題號、PDF 頁碼及要回原卷核對的項目。',
+        '無法辨識的文字或圖表可在 question 寫【請見原卷】。不要自行重畫結構或補出缺字。缺頁致題號無法判定時，將待核對頁碼附在最接近的可辨識題目，不虛構題號。',
+        '輸出前核對可辨識的原題號、題數、選項順序，確保 JSON 可解析且沒有重複題號。範例第 8 題假設有附官方答案，第 9 題沒有。',
         'JSON 範例：'+JSON.stringify(paperImportExample),
       ].join('\n');
       return;
@@ -10875,7 +11027,8 @@ const batchDialog=$id('study-batch');
       menu.open=false;
       menu.querySelector('summary').focus();
       deletePaper(paperId);
-    }else if(act==='paper-new'||act==='paper-edit'){
+    }else if(act==='paper-official-answers')openPaperAnswerKey();
+    else if(act==='paper-new'||act==='paper-edit'){
       editingPaper=act==='paper-edit'?paperId:null;
       go('paper-editor');
       root.querySelector('[name=year]').focus();
@@ -11381,6 +11534,7 @@ const batchDialog=$id('study-batch');
     account?.stop?.();
     account=null;
     closeBatch();
+    if(answerKeyDialog.open)closePaperAnswerKey();
     data=fresh();
     session=null;
     paperResultRound=null;
