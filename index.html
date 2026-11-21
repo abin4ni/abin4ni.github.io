@@ -3987,6 +3987,22 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-question-context .study-copy{margin-block-end:0;}
 #paper-explanation-form{margin-block-start:var(--sp-4);}
 #paper-explanation-form[hidden],#paper-question-copy-text[hidden],#study-ai-prompt[hidden]{display:none;}
+#study-batch-scope[hidden],#paper-batch-filters[hidden],#paper-batch-empty[hidden]{display:none;}
+#study-ai-instructions summary{cursor:pointer;min-height:44px;align-content:center;}
+#study-batch[data-paper-import] #study-ai-copy{border-color:var(--accent);color:var(--accent-h);}
+#paper-batch-filters{justify-content:flex-start;margin:var(--sp-2) 0;}
+#paper-batch-filters button[aria-pressed=true]{background:var(--accent-tint);color:var(--accent-h);outline:1px solid var(--accent);}
+.paper-batch-row{border-top:1px solid var(--border-lt);}
+.paper-batch-row summary{min-height:44px;cursor:pointer;padding:var(--sp-2);overflow-wrap:anywhere;}
+.paper-batch-stem{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.paper-batch-page{color:var(--text-2);font-size:var(--ui-caption);margin-inline-start:var(--sp-2);}
+.paper-batch-row summary .study-batch-status{display:block;font-size:var(--ui-caption);}
+.paper-batch-row summary .study-batch-status:empty{display:none;}
+@media(max-width:767px){
+  #study-answer-form:has(.paper-answer-actions){overflow:visible;}
+  .paper-answer-actions{position:sticky;bottom:0;z-index:2;margin-top:var(--sp-3);padding:var(--sp-2) 0;
+    background:var(--surface);border-top:1px solid var(--border-lt);}
+}
 .paper-result + .paper-result{margin-block-start:var(--sp-4);}
 .paper-result-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-block:var(--sp-3);}
 .paper-result-counts div{display:grid;gap:3px;text-align:center;background:var(--card-2);border-radius:var(--r-sm);padding:8px 2px;}
@@ -3999,7 +4015,24 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 #paper-result-list li + li{border-top:1px solid var(--border-lt);}
 #paper-result-list button{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px 12px;
   min-height:44px;width:100%;padding:8px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--text);text-align:start;white-space:normal;font:inherit;cursor:pointer;}
-#paper-result-list button:hover{background:var(--accent-tint);}
+#paper-result-list button:hover,#paper-result-list button[aria-current=true]{background:var(--accent-tint);}
+.paper-review-layout{display:grid;gap:var(--sp-4);align-items:start;}
+.paper-review-sidebar{display:none;}
+.paper-review-detail{min-width:0;}
+.paper-review-answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-3);}
+.paper-review-answers > div{min-width:0;background:var(--card-2);border-radius:var(--r-sm);padding:var(--sp-3);}
+.paper-review-answers > div .study-copy{margin-block-end:0;}
+#study-room .paper-review-answers h3{margin-block-start:0;}
+.paper-review-original{margin-block-start:var(--sp-4);}
+@media(max-width:479px){
+  .paper-review-answers{grid-template-columns:1fr;}
+}
+@media(min-width:800px){
+  #study-room:has(.paper-review-layout){width:min(100%,1120px);}
+  .paper-review-layout{grid-template-columns:minmax(220px,.85fr) minmax(0,2fr);}
+  .paper-review-sidebar{display:block;position:sticky;top:16px;min-width:0;}
+  .paper-review-sidebar #paper-result-list{max-height:60vh;overflow-y:auto;overscroll-behavior:contain;}
+}
 #paper-result-list button:focus-visible{outline-offset:-2px;}
 .paper-result-status{font-size:var(--ui-caption);color:var(--text-2);overflow-wrap:anywhere;}
 .paper-result-status[data-outcome=incorrect]{color:var(--danger-c);}
@@ -4753,12 +4786,12 @@ onAuthStateChanged(auth,user=>{
   <div class="makeup-head"><h2 id="study-batch-title">批次貼上</h2><button type="button" class="btn popup-close" id="study-batch-close" aria-label="關閉批次貼上"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p id="study-batch-target" class="study-meta" hidden></p>
   <form id="study-batch-input" class="study-editor">
-    <div class="study-filters"><label class="study-field"><span>科目</span><select id="study-batch-subject" required><option value="">請選擇科目</option><option>國文</option><option>英文</option><option>生物</option><option>普通化學</option><option>有機化學</option></select></label>
+    <div class="study-filters" id="study-batch-scope"><label class="study-field"><span>科目</span><select id="study-batch-subject" required><option value="">請選擇科目</option><option>國文</option><option>英文</option><option>生物</option><option>普通化學</option><option>有機化學</option></select></label>
     <label class="study-field"><span>章節（選填）</span><select id="study-batch-chapter"></select></label></div>
     <div id="study-ai-prompt" hidden class="study-editor">
       <button type="button" class="btn btn-sand" id="study-ai-copy">1. 複製出題指令</button>
-      <textarea id="study-ai-text" rows="5" aria-label="出題指令" readonly></textarea>
       <p class="study-meta" id="study-ai-help">在 ChatGPT 或 Gemini 貼上指令並附上筆記。</p>
+      <details id="study-ai-instructions"><summary>查看完整指令</summary><textarea id="study-ai-text" rows="5" aria-label="出題指令" readonly></textarea></details>
     </div>
     <label class="study-field"><span id="study-batch-json-label">JSON 題庫</span><textarea rows="6" id="study-batch-json" required></textarea></label>
     <details><summary>JSON 範例</summary><textarea aria-label="JSON 範例" id="study-batch-example" rows="2" readonly>[{"question":"「明亮的」英文怎麼說？","answer":"bright"}]</textarea><button type="button" class="btn btn-sand" id="study-batch-copy">複製範例</button></details>
@@ -4767,7 +4800,9 @@ onAuthStateChanged(auth,user=>{
   <p id="study-batch-error" class="study-error" role="alert"></p>
   <section id="study-batch-preview" hidden>
     <p id="study-batch-summary" role="status" tabindex="-1"></p>
+    <div class="study-actions" id="paper-batch-filters" role="group" aria-label="預覽分類" hidden></div>
     <ol id="study-batch-list"></ol>
+    <p id="paper-batch-empty" class="study-empty" hidden>此分類沒有題目。</p>
     <div class="study-actions"><button type="button" class="btn btn-sand" id="study-batch-back">返回修改原文</button><button type="button" class="btn btn-primary" id="study-batch-apply">匯入 0 題</button></div>
   </section>
 </dialog>
@@ -9463,7 +9498,7 @@ const studyRoom=(()=>{
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
   let paperSearch='',mixedArchive=false;
-  let paperResultSession=null,paperResultFilter='all',paperReviewReturn=null;
+  let paperResultRound=null,paperResultFilter='all',paperReviewReturn=null;
   const paper=id=>data.papers?.find(p=>p.id===id);
   const point=id=>{
     const knowledge=data.points.find(p=>p.id===id);
@@ -9497,6 +9532,7 @@ const studyRoom=(()=>{
   function go(next){
     const returningHome=next==='home'&&screen!=='home';
     if(next!=='setup')examSetup=false;
+    if(next==='session'){paperResultRound=null;paperReviewReturn=null;}
     screen=next;
     render();
     const subject=homeMode==='papers'?paperSubject:knowledgeSubject;
@@ -9743,9 +9779,13 @@ const studyRoom=(()=>{
     const items=paperItems(p.id);
     const active=resumableToday()||unfinishedOtherPractice();
     const ready=items.filter(canPracticePaper);
+    const checkpoint=readPaperReview(p.id);
+    const position=checkpoint?.position;
+    const selected=position?.id&&availableReviewQuestion(checkpoint.round,position.id);
+    const review=checkpoint?action(selected?'繼續檢討'+esc(paperReviewLabel(selected)):'查看本次檢討','paper-review-resume'):'';
     draw(esc(paperTitle(p)),'<div class="study-surface">'+(p.school&&p.name!==p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+(p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<p class="study-meta">'+items.length+' 題</p><div class="study-actions">'+action('編輯試卷','paper-edit')+
-      action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
+      action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
@@ -9796,7 +9836,31 @@ const batchDialog=$id('study-batch');
   const batchChapter=$id('study-batch-chapter');
   const batchError=$id('study-batch-error');
   const batchApply=$id('study-batch-apply');
-  let batchRows=[],batchOpener=null,batchSaving=false,batchPaperId=null;
+  let batchRows=[],batchOpener=null,batchSaving=false,batchPaperId=null,batchFilter='all';
+  const paperBatchFilters={all:'全部',review:'需核對',missing:'待補正解',duplicate:'重複題號',invalid:'需修正'};
+  function filterBatchRows(){
+    let shown=0;
+    for(const row of batchRows){
+      const element=batchList.children[row.index];
+      const visible=batchFilter==='all'||row[batchFilter==='invalid'?'hasIssues':batchFilter]||element.contains(document.activeElement);
+      element.hidden=!visible;
+      if(visible)shown++;
+    }
+    $id('paper-batch-empty').hidden=!!shown;
+  }
+  const batchFilters=$id('paper-batch-filters');
+  batchFilters.addEventListener('click',event=>{
+    const button=event.target.closest('[data-batch-filter]');
+    if(!button)return;
+    batchFilter=button.dataset.batchFilter;
+    button.focus({preventScroll:true});
+    for(const option of batchFilters.children)option.setAttribute('aria-pressed',String(option===button));
+    filterBatchRows();
+    batchList.scrollTop=0;
+  });
+  batchList.addEventListener('focusout',()=>{
+    if(batchPaperId)queueMicrotask(filterBatchRows);
+  });
   function closeBatch(){
     batchDialog.close();
     batchRows=[];
@@ -9810,7 +9874,7 @@ const batchDialog=$id('study-batch');
     batchInput.hidden=preview;
     $id('study-batch-preview').hidden=!preview;
     batchError.textContent='';
-    (preview?$id('study-batch-summary'):batchText).focus({preventScroll:true});
+    (preview?$id('study-batch-summary'):batchPaperId?$id('study-ai-copy'):batchText).focus({preventScroll:true});
     batchDialog.scrollTop=0;
   }
   const paperImportExample=[
@@ -9825,6 +9889,9 @@ const batchDialog=$id('study-batch');
     const subject=p?.subject||filters.subject;
     batchSubject.replaceChildren(new Option(subject,subject));
     batchChapter.closest('label').hidden=!!p;
+    $id('study-batch-scope').hidden=!!p;
+    $id('study-ai-instructions').open=!p;
+    batchDialog.toggleAttribute('data-paper-import',!!p);
     const target=$id('study-batch-target');
     target.hidden=!p;
     target.textContent=p?'匯入試卷 · '+p.subject+' · '+paperTitle(p):'';
@@ -9832,14 +9899,14 @@ const batchDialog=$id('study-batch');
     batchChapter.innerHTML=options(['',...chapters(filters.subject)],filters.chapter,'未分類');
     $id('study-batch-title').textContent=p?'整卷匯入':ai?'AI 快速匯入':'批次貼上';
     $id('study-ai-prompt').hidden=!ai&&!p;
-    $id('study-ai-copy').textContent=p?'複製 ChatGPT 匯入指令':'1. 複製出題指令';
+    $id('study-ai-copy').textContent=p?'複製 ChatGPT 指令':'1. 複製出題指令';
     $id('study-ai-text').setAttribute('aria-label',p?'整卷匯入指令':'出題指令');
     $id('study-ai-help').textContent=p?'在 ChatGPT 上傳試卷 PDF，貼上指令，再把回傳的 JSON 貼到下方。':'在 ChatGPT 或 Gemini 貼上指令並附上筆記。';
-    $id('study-batch-json-label').textContent=ai||p?'2. 貼上題目（JSON）':'JSON 題庫';
+    $id('study-batch-json-label').textContent=p?'貼回 JSON':ai?'2. 貼上題目（JSON）':'JSON 題庫';
     updateAiPrompt();
     showAppDialog(batchDialog,closeBatch);
     batchStage(false);
-    batchSubject.focus({preventScroll:true});
+    if(!p)batchSubject.focus({preventScroll:true});
   }
   function updateAiPrompt(){
     const p=paper(batchPaperId);
@@ -9870,22 +9937,22 @@ const batchDialog=$id('study-batch');
   $id('study-ai-copy').addEventListener('click',async()=>{
     const field=$id('study-ai-text');
     try{await navigator.clipboard.writeText(field.value);toast(batchPaperId?'已複製整卷匯入指令':'已複製出題指令','success');}
-    catch{field.focus();field.select();toast('請複製已選取的指令。','warn');}
+    catch{$id('study-ai-instructions').open=true;field.focus();field.select();toast('請複製已選取的指令。','warn');}
   });
   function batchQuestion(value){return value.normalize('NFC').trim().replace(/\s+/g,' ');}
   function checkBatch(){
     const chapter=batchChapter.value.trim();
     const seen=new Set(batchPaperId?paperItems(batchPaperId).map(p=>learningJournal.numberKey(p.number)):
       data.points.filter(p=>p.subject===batchSubject.value&&p.chapter===chapter).map(p=>batchQuestion(p.question)));
-    let selected=0,valid=0,duplicates=0,invalid=0,missing=0,review=0;
+    let selected=0,valid=0,duplicates=0,invalid=0;
     for(const row of batchRows){
       const issues=[];
       if(!row.question.trim())issues.push('請填寫題目');
       const answer=row.answer.trim();
       if(!answer&&!batchPaperId)issues.push('請填寫參考答案');
       if(batchPaperId){
-        if(!answer)missing++;
-        if(row.reviewNote.trim())review++;
+        row.missing=!answer;
+        row.review=!!row.reviewNote.trim();
         if(new Set(row.options).size!==row.options.length)issues.push('選項不得重複');
         if(answer&&row.options.length&&!row.options.includes(answer))issues.push('正解須為選項中的完整文字');
       }
@@ -9893,7 +9960,8 @@ const batchDialog=$id('study-batch');
       const key=batchPaperId?learningJournal.numberKey(row.number):batchQuestion(row.question);
       if(batchPaperId&&!key)issues.push('請填寫原題號');
       row.duplicate=!!key&&seen.has(key);
-      row.valid=!issues.length&&!(batchPaperId&&row.duplicate);
+      row.hasIssues=issues.length>0;
+      row.valid=!row.hasIssues&&!(batchPaperId&&row.duplicate);
       if(row.valid&&(!batchPaperId||row.checked!==false))seen.add(key);
       if(row.duplicate)duplicates++;
       if(row.valid&&!row.duplicate)valid++;
@@ -9908,13 +9976,22 @@ const batchDialog=$id('study-batch');
       if(batchPaperId){
         if(!answer)flags.push('待補答案');
         if(row.reviewNote.trim())flags.push('需核對'+(row.sourcePage.trim()?'（原卷第 '+row.sourcePage.trim()+' 頁）':''));
-        element.querySelector('legend').textContent=row.number.trim()?'原題號 '+row.number.trim():'第 '+(row.index+1)+' 筆';
+        element.querySelector('.paper-batch-number').textContent=row.number.trim()?'原題號 '+row.number.trim():'第 '+(row.index+1)+' 筆';
+        element.querySelector('.paper-batch-page').textContent=row.sourcePage.trim()?'PDF 第 '+row.sourcePage.trim()+' 頁':'';
+        element.querySelector('.paper-batch-stem').textContent=row.question.trim().replace(/\s+/g,' ');
       }
       element.querySelector('.study-batch-status').textContent=flags.join(' · ');
     }
-    $id('study-batch-summary').textContent=(batchPaperId?'辨識 '+batchRows.length+' 題 · ':'')+
-      '可匯入 '+valid+' 題 · 需修正 '+invalid+' 題 · '+(batchPaperId?'重複題號':'疑似重複')+' '+duplicates+' 題'+
-      (batchPaperId?' · 缺正解 '+missing+' 題 · 需核對 '+review+' 題':'');
+    if(batchPaperId){
+      const uniqueCount=rows=>new Set(rows.map(row=>row.number.trim()?'題:'+learningJournal.numberKey(row.number):'列:'+row.index)).size;
+      const total=uniqueCount(batchRows);
+      const counts={all:total,review:uniqueCount(batchRows.filter(row=>row.review)),missing:uniqueCount(batchRows.filter(row=>row.missing)),
+        duplicate:uniqueCount(batchRows.filter(row=>row.duplicate)),invalid:uniqueCount(batchRows.filter(row=>row.hasIssues))};
+      for(const button of batchFilters.children)button.textContent=paperBatchFilters[button.dataset.batchFilter]+' '+counts[button.dataset.batchFilter];
+      filterBatchRows();
+      $id('study-batch-summary').textContent='辨識 '+total+' 題'+(total!==batchRows.length?'（'+batchRows.length+' 筆）':'')+' · 預計匯入 '+selected+' 題';
+    }else $id('study-batch-summary').textContent=
+      '可匯入 '+valid+' 題 · 需修正 '+invalid+' 題 · 疑似重複 '+duplicates+' 題';
     batchApply.textContent='匯入 '+selected+' 題';
     batchApply.disabled=!selected||batchSaving;
     return batchRows.filter(row=>row.valid&&(row.checked??!row.duplicate));
@@ -9957,11 +10034,20 @@ const batchDialog=$id('study-batch');
     const fields=[...(batchPaperId?[['number','原題號']]:[]),['question','題目'],
       ...(batchPaperId?[['optionText','選項（每行一個）'],['group','共用題組'],['sourcePage','PDF 頁碼'],['reviewNote','核對事項']]:[]),
       ['answer',batchPaperId?'官方正解（可留空）':'參考答案'],['explanation','詳解'],['acceptedAnswers','其他答案（每行一個）']];
-    batchList.innerHTML=batchRows.map(row=>'<li><fieldset class="study-editor"><legend>第 '+(row.index+1)+' 題</legend>'+
-      '<label><input type="checkbox" aria-label="匯入第 '+(row.index+1)+' 題"> 匯入這題</label>'+
-      '<p class="study-batch-status" role="status"></p>'+fields.map(([key,label])=>
-        '<label class="study-field"><span>'+label+'</span><textarea rows="2" data-batch-field="'+key+'">'+esc(row[key])+'</textarea></label>'
-      ).join('')+'</fieldset></li>').join('');
+
+    batchFilter='all';
+    batchFilters.hidden=!batchPaperId;
+    $id('paper-batch-empty').hidden=true;
+    batchFilters.innerHTML=batchPaperId?Object.keys(paperBatchFilters).map(key=>
+      '<button type="button" class="btn btn-sand" data-batch-filter="'+key+'" aria-pressed="'+(key==='all')+'"></button>').join(''):'';
+    batchList.innerHTML=batchRows.map(row=>{
+      const fieldsHTML=fields.map(([key,label])=>'<label class="study-field"><span>'+label+'</span><textarea rows="2" data-batch-field="'+key+'">'+esc(row[key])+'</textarea></label>').join('');
+      const checkbox='<label><input type="checkbox" aria-label="匯入第 '+(row.index+1)+' 筆"> 匯入這題</label>';
+      const status=batchPaperId?'<span class="study-batch-status"></span>':'<p class="study-batch-status"></p>';
+      if(!batchPaperId)return '<li><fieldset class="study-editor"><legend>第 '+(row.index+1)+' 題</legend>'+checkbox+status+fieldsHTML+'</fieldset></li>';
+      return '<li><details class="paper-batch-row"><summary><strong class="paper-batch-number"></strong><span class="paper-batch-page"></span>'+
+        '<span class="paper-batch-stem"></span>'+status+'</summary><fieldset class="study-editor">'+checkbox+fieldsHTML+'</fieldset></details></li>';
+    }).join('');
     batchStage(true);
     checkBatch();
   });
@@ -10149,7 +10235,7 @@ const batchDialog=$id('study-batch');
       }
     }
     const previous=session;
-    session={mode,queue,index:0,results:[],phase:'question',answer:'',...extra};
+    session={mode,queue,index:0,results:[],phase:'question',answer:'',...(extra?.paperId?{paperResultId:newPointId()}:{}),...extra};
     const roundOperation=account&&session.origin==='today'?createTodayRound():null;
     if(!persist(null,null,roundOperation)){
       session=previous;
@@ -10316,13 +10402,17 @@ const batchDialog=$id('study-batch');
     const cards=mode==='cards';
     const reference='<div class="study-reference"><h3>參考答案</h3><p class="study-copy">'+esc(p.answer)+'</p>'+
       (p.explanation?'<h3>解析</h3><p class="study-copy">'+esc(p.explanation)+'</p>':'')+'</div>';
-    let body='<p class="study-meta">'+(index+1)+'／'+queue.length+' · '+esc(p.subject)+((p.paperId||session.paperMix)&&p.number?' · 第 '+esc(p.number)+' 題':p.chapter?' · '+esc(p.chapter):'')+
-      '</p><h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'')+questionContext(p);
+    const isPaperAnswer=!!session.paperId&&phase==='question'&&!cards;
+    const progress=(index+1)+'／'+queue.length;
+    const meta=session.paperId&&p.number?'第 '+esc(p.number)+' 題 · '+progress+' · '+esc(p.subject):
+      progress+' · '+esc(p.subject)+(session.paperMix&&p.number?' · 第 '+esc(p.number)+' 題':p.chapter?' · '+esc(p.chapter):'');
+    let body=(isPaperAnswer?'<form id="study-answer-form">':'')+'<p class="study-meta">'+meta+
+      '</p>'+questionContext(p)+'<h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'');
     if(phase==='question'){
       body+=cards?'<div class="study-actions">'+action('翻面','flip',true)+'</div>':
-        '<form id="study-answer-form">'+(p.options?.length?'<fieldset class="past-answer-choices"><legend>你的答案</legend>'+p.options.map(option=>'<label><input type="radio" name="answer" required value="'+esc(option)+'" '+(option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>':
+        (isPaperAnswer?'':'<form id="study-answer-form">')+(p.options?.length?'<fieldset class="past-answer-choices"><legend>你的答案</legend>'+p.options.map(option=>'<label><input type="radio" name="answer" required value="'+esc(option)+'" '+(option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>':
         '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3" required>'+esc(answer)+'</textarea></label>')+
-        '<p class="study-error" role="alert"></p><div class="study-actions">'+action(session.origin==='today'||session.paperId||session.paperMix?'跳過':'直接看答案','view')+
+        '<p class="study-error" role="alert"></p><div class="study-actions'+(isPaperAnswer?' paper-answer-actions':'')+'">'+action(session.origin==='today'||session.paperId||session.paperMix?'跳過':'直接看答案','view')+
         '<button class="btn btn-primary">送出答案</button></div></form>';
     }else{
       if(answer)body+='<p class="study-meta">你的答案</p><p class="study-copy">'+esc(answer)+'</p>';
@@ -10362,21 +10452,96 @@ const batchDialog=$id('study-batch');
     });
   }
   function paperReviewLabel(row){return row.number?'第 '+row.number+' 題':'未編題號';}
+  function paperReviewStorage(id){
+    return key+':paper-review:'+JSON.stringify([account?.uid??null,id]);
+  }
+  function paperReviewPositionKey(round){
+    return paperReviewStorage(round.paperId)+':'+(round.paperResultId||'legacy');
+  }
+  function readPaperReviewPosition(round){
+    try{return JSON.parse(localStorage.getItem(paperReviewPositionKey(round)));}catch{return null;}
+  }
+  function savePaperReviewPosition(round,position){
+    try{localStorage.setItem(paperReviewPositionKey(round),JSON.stringify(position));}catch{}
+  }
+  function readPaperReview(id){
+    try{
+      const round=JSON.parse(localStorage.getItem(paperReviewStorage(id)));
+      if(round?.paperId===id&&roundComplete(round)&&Array.isArray(round.results))return {round,position:readPaperReviewPosition(round)};
+    }catch{}
+    return null;
+  }
+  function rememberCompletedPaper(round){
+    try{localStorage.setItem(paperReviewStorage(round.paperId),JSON.stringify(round));}catch{}
+  }
+  function availableReviewQuestion(round,id){
+    return point(id)?.paperId===round.paperId&&paperResultRows(round).find(row=>row.id===id);
+  }
+  function reviewScrollPositions(){
+    return [root,root.closest('.app-shell'),document.scrollingElement,$id('paper-result-list')]
+      .map(element=>[element,element?.scrollTop||0]);
+  }
+  function restoreReviewScroll(positions=[],sidebarOnly=false){
+    reviewScrollPositions().forEach(([element],index)=>{
+      if(element&&(!sidebarOnly||index===3))element.scrollTop=positions[index]||0;
+    });
+  }
+  function choosePaperReview(id){
+    const row=availableReviewQuestion(paperResultRound,id);
+    if(!row){toast('這道題目已不在試卷中。','warn');return;}
+    const saved=paperReviewReturn?.scroll;
+    const scroll=reviewScrollPositions().map(([,top],index)=>saved&&index!==3?saved[index]:top);
+    paperReviewReturn={id,scroll};
+    go('paper-review-detail');
+    restoreReviewScroll(scroll,true);
+    const list=$id('paper-result-list'),current=list?.querySelector('[aria-current=true]');
+    if(current&&list.clientHeight&&list.scrollHeight>list.clientHeight){
+      const bounds=list.getBoundingClientRect(),item=current.getBoundingClientRect();
+      if(item.bottom>bounds.bottom)list.scrollTop+=item.bottom-bounds.bottom;
+      else if(item.top<bounds.top)list.scrollTop-=bounds.top-item.top;
+      scroll[3]=list.scrollTop;
+    }
+    savePaperReviewPosition(paperResultRound,{...paperReviewReturn,filter:paperResultFilter});
+  }
+  function rememberPaperReview(){
+    if(!paperResultRound||!root.getClientRects().length||!['results','paper-review-detail'].includes(screen))return;
+    const previous=readPaperReviewPosition(paperResultRound);
+    if(screen==='results'&&previous?.id)return;
+    const scroll=reviewScrollPositions().map(([,top])=>top);
+    if(paperReviewReturn?.scroll)scroll.splice(0,3,...paperReviewReturn.scroll.slice(0,3));
+    else if(previous?.scroll)scroll[3]=previous.scroll[3];
+    const position={id:paperReviewReturn?.id||previous?.id,filter:paperResultFilter,scroll};
+    if(JSON.stringify(position)!==JSON.stringify(previous))savePaperReviewPosition(paperResultRound,position);
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='hidden')rememberPaperReview();
+  });
+  window.addEventListener('pagehide',rememberPaperReview);
+  function paperResultListPanel(className=''){
+    return '<section class="study-surface paper-result '+className+'" aria-labelledby="paper-result-title"><h3 id="paper-result-title">逐題檢討</h3>'+
+      '<div class="study-mode-options paper-result-filters" role="group" aria-label="篩選作答狀態">'+
+        Object.entries(paperResultFilters).map(([key,label])=>'<button type="button" class="btn btn-sand" data-study-action="paper-review-filter" data-paper-result-filter="'+key+
+          '" aria-pressed="'+(paperResultFilter===key)+'">'+label+'</button>').join('')+'</div>'+
+      '<ul id="paper-result-list"></ul><p id="paper-result-empty" class="study-empty" role="status" hidden>此篩選沒有題目。</p></section>';
+  }
   function renderPaperResultList(rows){
     const visible=rows.filter(row=>paperResultFilter==='all'||row.kind===paperResultFilter);
     const list=$id('paper-result-list');
-    list.innerHTML=visible.map(row=>'<li><button type="button" data-study-action="paper-review-detail" data-paper-result-question="'+esc(row.id)+'">'+
+    list.innerHTML=visible.map(row=>'<li><button type="button" data-study-action="paper-review-detail" data-paper-result-question="'+esc(row.id)+'"'+
+      (paperReviewReturn?.id===row.id?' aria-current="true"':'')+'>'+
       '<strong>'+esc(paperReviewLabel(row))+'</strong><span class="paper-result-status" data-outcome="'+row.kind+'">'+esc(row.status)+'</span></button></li>').join('');
     $id('paper-result-empty').hidden=visible.length>0;
   }
-  function renderPaperResults(currentPaper){
-    const rows=paperResultRows(session),counts={correct:0,incorrect:0,unanswered:0};
+  function renderPaperResults(currentPaper,round){
+    const rows=paperResultRows(round),counts={correct:0,incorrect:0,unanswered:0};
     for(const row of rows)counts[row.kind]++;
-    if(paperResultSession!==session){
-      paperResultSession=session;
-      paperResultFilter=counts.incorrect?'incorrect':'all';
+    if(paperResultRound!==round){
+      paperResultRound=round;
+      const position=readPaperReviewPosition(round);
+      paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:counts.incorrect?'incorrect':'all';
+      if(!readPaperReview(currentPaper.id))rememberCompletedPaper(round);
     }
-    const retryCount=retryQuestionIds().length,earlier=previousRounds();
+    const retryCount=retryQuestionIds(round).length,earlier=previousRounds(round);
     const pending=rows.filter(row=>row.pending).length;
     draw('試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(paperTitle(currentPaper))+'</p>'+
       '<dl id="paper-result-counts" class="paper-result-counts">'+Object.entries(counts).map(([key,count])=>
@@ -10384,41 +10549,42 @@ const batchDialog=$id('study-batch');
       (pending?'<p class="study-meta">未作答含 '+pending+' 題尚未補正解</p>':'')+
       '<div class="study-actions">'+action('返回試卷','paper-return',!retryCount)+
       (retryCount?action('重練本卷錯題（'+retryCount+' 題）','retry',true):'')+'</div></div>'+
-      '<section class="study-surface paper-result" aria-labelledby="paper-result-title"><h3 id="paper-result-title">逐題檢討</h3>'+
-      '<div class="study-mode-options paper-result-filters" role="group" aria-label="篩選作答狀態">'+
-        Object.entries(paperResultFilters).map(([key,label])=>'<button type="button" class="btn btn-sand" data-study-action="paper-review-filter" data-paper-result-filter="'+key+
-          '" aria-pressed="'+(paperResultFilter===key)+'">'+label+'</button>').join('')+'</div>'+
-      '<ul id="paper-result-list"></ul><p id="paper-result-empty" class="study-empty" role="status" hidden>此篩選沒有題目。</p></section>'+
+      paperResultListPanel()+
       (earlier.length?'<details class="study-supplements study-previous-results"><summary>查看先前輪次結果</summary>'+
         earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,true)).join('')+'</details>':''),false);
     renderPaperResultList(rows);
   }
-  function reviewScrollPositions(){
-    const shell=root.closest('.app-shell'),documentScroll=document.scrollingElement;
-    return [root,shell,documentScroll].map(element=>[element,element.scrollTop]);
-  }
   function renderPaperReviewDetail(){
-    const row=paperResultRows(session).find(item=>item.id===paperReviewReturn?.id);
-    if(!row){go('results');return;}
-    const q=point(row.id),answer=row.record?.answer;
-    const ownAnswer=answer||(!row.record||row.record.outcome==='viewed'?'未作答':'此筆舊紀錄未保存答案');
-    const reference=row.pending?'尚未補正解':row.record?.reference||q?.answer||'目前沒有可顯示的正解';
-    draw(esc(paperReviewLabel(row)),'<div class="study-surface paper-review-detail">'+
-      '<p class="study-meta">'+esc(paperTitle(paper(session.paperId)))+' · '+esc(row.status)+'</p>'+
-      '<h3>題目</h3><p class="study-copy">'+esc(q?.question||'這道題目已不在題庫。')+'</p>'+
-      (q?questionContext(q)+choiceList(q):'')+
-      '<h3>你的答案</h3><p class="study-copy">'+esc(ownAnswer)+'</p>'+
-      '<h3>正解</h3><p class="study-copy">'+esc(reference)+'</p>'+
-      '<h3>解析</h3><p class="study-copy" id="paper-review-explanation">'+esc(q?.explanation||'尚無解析')+'</p>'+
-      (q?paperQuestionTools(q):'')+'</div>','paper-review-back');
+    const round=paperResultRound;
+    const row=round&&availableReviewQuestion(round,paperReviewReturn?.id);
+    if(!row){
+      const scroll=paperReviewReturn?.scroll;
+      paperReviewReturn=null;
+      go('results');
+      restoreReviewScroll(scroll);
+      return;
+    }
+    const q=point(row.id);
+    const ownAnswer=row.record?.answer||(!row.record||row.record.outcome==='viewed'?'未作答':'此筆舊紀錄未保存答案');
+    const reference=row.pending?'尚未補正解':row.record?.reference||q.answer||'目前沒有可顯示的正解';
+    draw(esc(paperReviewLabel(row)),'<div class="paper-review-layout">'+paperResultListPanel('paper-review-sidebar')+
+      '<section class="study-surface paper-review-detail">'+
+      '<p class="study-meta">'+esc(paperTitle(paper(round.paperId)))+' · '+esc(row.status)+'</p>'+
+      '<div class="paper-review-answers"><div><h3>我的答案</h3><p class="study-copy">'+esc(ownAnswer)+'</p></div>'+
+      '<div><h3>正解</h3><p class="study-copy">'+esc(reference)+'</p></div></div>'+
+      paperQuestionTools(q)+
+      '<h3>詳解</h3><p class="study-copy" id="paper-review-explanation">'+esc(q.explanation||'尚無詳解')+'</p>'+
+      '<details class="study-supplements paper-review-original"><summary>查看完整題目與選項</summary>'+
+      questionContext(q)+'<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+choiceList(q)+'</details></section></div>','paper-review-back');
+    renderPaperResultList(paperResultRows(round));
   }
-  function retryQuestionIds(){
-    if(!roundComplete(session)||session.mode!=='practice'||data.todayRetries?.[session.roundId])return [];
-    if(session.paperId)return paperResultRows(session).filter(row=>{
+  function retryQuestionIds(round=session){
+    if(!roundComplete(round)||round.mode!=='practice'||data.todayRetries?.[round.roundId])return [];
+    if(round.paperId)return paperResultRows(round).filter(row=>{
       const q=point(row.id);
-      return row.kind==='incorrect'&&q?.paperId===session.paperId&&canPracticePaper(q);
+      return row.kind==='incorrect'&&q?.paperId===round.paperId&&canPracticePaper(q);
     }).map(row=>row.id);
-    return [...new Set(session.results.filter(result=>result.outcome==='incorrect'&&point(result.id)).map(result=>result.id))];
+    return [...new Set(round.results.filter(result=>result.outcome==='incorrect'&&point(result.id)).map(result=>result.id))];
   }
   function roundSubject(){
     return session?.subject||session?.queue.map(id=>point(id)?.subject).find(Boolean)||filters.subject;
@@ -10431,10 +10597,13 @@ const batchDialog=$id('study-batch');
     ]:Object.entries(outcomes);
     return '<dl class="study-result">'+rows.map(([key,label])=>'<dt>'+label+'</dt><dd>'+totals[key]+'</dd>').join('')+'</dl>';
   }
-  function previousRounds(){
-    return Array.isArray(session?.previousResults)?session.previousResults.filter(Array.isArray):[];
+  function previousRounds(round=session){
+    return Array.isArray(round?.previousResults)?round.previousResults.filter(Array.isArray):[];
   }
   function results(){
+    const round=paperResultRound||session;
+    const currentPaper=roundComplete(round)&&paper(round.paperId);
+    if(currentPaper){renderPaperResults(currentPaper,round);return;}
     const r=session?.results||[];
     const canReturnToday=session?.origin==='today'||Boolean(session?.returnMode);
     if(session?.mode==='cards'){
@@ -10444,8 +10613,6 @@ const batchDialog=$id('study-batch');
     }
     const retryCount=retryQuestionIds().length;
     const fromToday=session?.origin==='today';
-    const currentPaper=paper(session?.paperId);
-    if(currentPaper){renderPaperResults(currentPaper);return;}
     const earlier=previousRounds();
     const back=canReturnToday?action(fromToday?'回到今日':'返回今日','today-back',!retryCount):
       session?.paperMix?action('返回混合刷題','paper-mix-return',!retryCount):action(subjectNames().includes(roundSubject())?'返回科目':'返回學習室','subject-back',!retryCount);
@@ -10459,8 +10626,12 @@ const batchDialog=$id('study-batch');
   let startingRetry=false;
   async function retryRound(){
     if(screen!=='results'||startingRetry)return;
-    if(!retryQuestionIds().length){render();return;}
-    const previous=session, owner=account;
+    const previous=paperResultRound||session, owner=account;
+    if(!retryQuestionIds(previous).length){render();return;}
+    if(paperResultRound&&session&&!roundComplete(session)){
+      toast('請先完成目前的練習，再重練本卷錯題。','warn');
+      return;
+    }
     const {origin,returnMode}=previous;
     const retryOf=origin==='today'&&owner?previous.roundId:null;
     startingRetry=true;
@@ -10471,12 +10642,12 @@ const batchDialog=$id('study-batch');
         const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('studyos-today-retry:'+retryOf));
         roundId='k-'+Array.from(new Uint8Array(hash,0,16),n=>n.toString(16).padStart(2,'0')).join('');
       }
-      if(account!==owner||session!==previous||screen!=='results')return;
-      const ids=retryQuestionIds();
+      if(account!==owner||(paperResultRound||session)!==previous||screen!=='results')return;
+      const ids=retryQuestionIds(previous);
       if(!ids.length){render();return;}
       start(ids,'practice',{
         ...(previous.paperId?{paperReview:paperReviewEntries(previous).filter(entry=>ids.includes(entry.id))}:{}),
-        origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,mixedSubject:previous.mixedSubject,mixedArchive:previous.mixedArchive,subject:roundSubject(),previousResults:[...previousRounds(),previous.results],
+        origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,mixedSubject:previous.mixedSubject,mixedArchive:previous.mixedArchive,subject:previous.subject||roundSubject(),previousResults:[...previousRounds(previous),previous.results],
         ...(roundId?{roundId,retryOf}:{}),
       },{shuffle:false});
     }catch{
@@ -10570,22 +10741,37 @@ const batchDialog=$id('study-batch');
         questionId=button.dataset.question||null;
       }
       go(act==='paper-question'?'paper-question':'paper-question-editor');
-    }else if(act==='paper-review-filter'&&screen==='results'){
+    }else if(act==='paper-review-resume'){
+      const checkpoint=readPaperReview(paperId);
+      if(!checkpoint)return;
+      paperResultRound=checkpoint.round;
+      const position=checkpoint.position;
+      paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:'all';
+      const selected=position?.id&&availableReviewQuestion(paperResultRound,position.id);
+      paperReviewReturn=selected?{id:selected.id,scroll:position.scroll}:null;
+      go(selected?'paper-review-detail':'results');
+      restoreReviewScroll(position?.scroll,!!selected);
+    }else if(act==='paper-review-filter'&&paperResultRound&&['results','paper-review-detail'].includes(screen)){
       paperResultFilter=button.dataset.paperResultFilter;
       for(const option of root.querySelectorAll('[data-paper-result-filter]'))option.setAttribute('aria-pressed',String(option===button));
-      renderPaperResultList(paperResultRows(session));
-    }else if(act==='paper-review-detail'&&screen==='results'){
-      paperReviewReturn={id:button.dataset.paperResultQuestion,scroll:reviewScrollPositions()};
-      go('paper-review-detail');
-      for(const [element] of paperReviewReturn.scroll)element.scrollTop=0;
+      renderPaperResultList(paperResultRows(paperResultRound));
+      $id('paper-result-list').scrollTop=0;
+      const previous=readPaperReviewPosition(paperResultRound);
+      const position=paperReviewReturn||{id:previous?.id};
+      if(screen==='results')position.scroll=reviewScrollPositions().map(([,top])=>top);
+      else if(position.scroll)position.scroll[3]=0;
+      savePaperReviewPosition(paperResultRound,{...position,filter:paperResultFilter});
+    }else if(act==='paper-review-detail'&&paperResultRound&&['results','paper-review-detail'].includes(screen)){
+      choosePaperReview(button.dataset.paperResultQuestion);
     }else if(act==='paper-review-back'){
+      rememberPaperReview();
       const previous=paperReviewReturn;
       paperReviewReturn=null;
       go('results');
       if(previous){
         const row=[...root.querySelectorAll('[data-paper-result-question]')].find(button=>button.dataset.paperResultQuestion===previous.id);
         (row||$id('study-heading')).focus({preventScroll:true});
-        for(const [element,top] of previous.scroll)element.scrollTop=top;
+        restoreReviewScroll(previous.scroll);
       }
     }else if(act==='paper-question-detail')go('paper-question');
     else if(act==='paper-collect-back')go(collectBack);
@@ -10610,8 +10796,9 @@ const batchDialog=$id('study-batch');
       paperSearch='';go('papers');
     }else if(act==='paper-list')go('papers');
     else if(['paper-open','paper-return','paper-duplicate'].includes(act)){
-      paperId=button.dataset.paper||(screen==='results'?session?.paperId:paperId)||paperId;
+      paperId=button.dataset.paper||(screen==='results'?(paperResultRound||session)?.paperId:paperId)||paperId;
       if(screen==='results'&&paper(paperId)){paperSubject=paper(paperId).subject;paperSubjectRef=paperRef(paper(paperId));}
+      if(screen==='results'){rememberPaperReview();paperResultRound=null;paperReviewReturn=null;}
       go('paper');
     }else if(act==='paper-new'||act==='paper-edit'){
       editingPaper=act==='paper-edit'?paperId:null;
@@ -10685,7 +10872,8 @@ const batchDialog=$id('study-batch');
     }else if(act==='next'){
       if(session.origin==='today')syncTodaySession();
       else{session.index++;session.phase='question';session.answer='';}
-      persist();
+      const saved=persist();
+      if(saved&&session.paperId&&roundComplete(session))rememberCompletedPaper(session);
       go(session.index===session.queue.length?'results':'session');
     }else if(session?.phase==='grade'&&Object.hasOwn(outcomes,act))record(act);
   });
@@ -10704,7 +10892,7 @@ const batchDialog=$id('study-batch');
       }
       render();
       root.querySelector('[data-study-action=paper-explanation-open]')?.focus({preventScroll:true});
-      for(const [element,top] of scroll)element.scrollTop=top;
+      restoreReviewScroll(scroll.map(([,top])=>top));
       toast('已儲存詳解','success');
     }else if(form.id==='past-subject-form'){
       const name=values.get('name').trim().normalize('NFC');
@@ -10976,6 +11164,7 @@ const batchDialog=$id('study-batch');
     if(JSON.stringify(next)===JSON.stringify(data))return;
     data=next;
     lastSaved=structuredClone(next);
+    const paperScroll=paperResultRound&&['results','paper-review-detail'].includes(screen)&&reviewScrollPositions().map(([,top])=>top);
     const activeToday=screen==='session'&&session?.origin==='today';
     const before=activeToday?JSON.stringify(session):'';
     if(session?.origin==='today')syncTodaySession(true);
@@ -10987,7 +11176,11 @@ const batchDialog=$id('study-batch');
       if(roundComplete(session))screen='results';
       render();
     }else if(screen==='papers'&&$id('paper-archive-results'))updatePaperList();
-    else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open&&($id('paper-explanation-form')?.hidden??true))render();
+    else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open&&($id('paper-explanation-form')?.hidden??true)){
+      const previousScreen=screen;
+      render();
+      if(paperScroll&&screen===previousScreen)restoreReviewScroll(paperScroll);
+    }
     briefChanged();
   }
   async function flushLearning(){
@@ -11079,7 +11272,7 @@ const batchDialog=$id('study-batch');
     closeBatch();
     data=fresh();
     session=null;
-    paperResultSession=null;
+    paperResultRound=null;
     paperReviewReturn=null;
     filters={subject:'',chapter:''};
     screen='home';
