@@ -3983,6 +3983,10 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .past-question-link{border:0;background:none;color:var(--text);font:inherit;text-align:start;width:100%;min-height:44px;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer;}
 .past-question-link:hover,.past-question-link:focus-visible{color:var(--accent-h);}
 .past-options{padding-inline-start:1.5rem;overflow-wrap:anywhere;}
+.paper-question-context,.paper-review-note{padding:var(--sp-3);background:var(--card-2);border-radius:var(--r-sm);margin-block:var(--sp-3);overflow-wrap:anywhere;white-space:pre-wrap;}
+.paper-question-context .study-copy{margin-block-end:0;}
+#paper-explanation-form{margin-block-start:var(--sp-4);}
+#paper-explanation-form[hidden],#paper-question-copy-text[hidden],#study-ai-prompt[hidden]{display:none;}
 .paper-result + .paper-result{margin-block-start:var(--sp-4);}
 .paper-result-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-block:var(--sp-3);}
 .paper-result-counts div{display:grid;gap:3px;text-align:center;background:var(--card-2);border-radius:var(--r-sm);padding:8px 2px;}
@@ -4754,7 +4758,7 @@ onAuthStateChanged(auth,user=>{
     <div id="study-ai-prompt" hidden class="study-editor">
       <button type="button" class="btn btn-sand" id="study-ai-copy">1. 複製出題指令</button>
       <textarea id="study-ai-text" rows="5" aria-label="出題指令" readonly></textarea>
-      <p class="study-meta">在 ChatGPT 或 Gemini 貼上指令並附上筆記。</p>
+      <p class="study-meta" id="study-ai-help">在 ChatGPT 或 Gemini 貼上指令並附上筆記。</p>
     </div>
     <label class="study-field"><span id="study-batch-json-label">JSON 題庫</span><textarea rows="6" id="study-batch-json" required></textarea></label>
     <details><summary>JSON 範例</summary><textarea aria-label="JSON 範例" id="study-batch-example" rows="2" readonly>[{"question":"「明亮的」英文怎麼說？","answer":"bright"}]</textarea><button type="button" class="btn btn-sand" id="study-batch-copy">複製範例</button></details>
@@ -9184,6 +9188,7 @@ const learningJournal=(()=>{
     date.setUTCDate(date.getUTCDate()+intervals[step]);
     return {step,due:date.toISOString().slice(0,10)};
   }
+  const paperMetadata=['group','sourcePage','reviewNote'];
   const numberKey=value=>String(value).trim().normalize('NFKC').toLowerCase().replace(/^0+(?=\d+$)/,'');
   function valid(op){
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
@@ -9193,7 +9198,8 @@ const learningJournal=(()=>{
       (value.subjectRef===undefined||text(value.subjectRef))&&(value.school===undefined||text(value.school)&&!!value.school.trim())&&text(value.year)&&/^\d{1,4}$/.test(value.year)&&Number(value.year)>0&&text(value.name)&&!!value.name.trim()&&text(value.source);
     if(op.kind==='paper-question')return validPointId(op.target)&&objectValue(value)&&(validPointId(value.paperId)||value.paperId===''&&text(value.subject)&&!!value.subject.trim())&&text(value.number)&&
       (value.subjectRef===undefined||text(value.subjectRef))&&text(value.question)&&!!value.question.trim()&&text(value.answer)&&
-      text(value.explanation)&&strings(value.accepted)&&(value.options===undefined||strings(value.options));
+      text(value.explanation)&&strings(value.accepted)&&(value.options===undefined||strings(value.options))&&
+      paperMetadata.every(key=>value[key]===undefined||text(value[key]));
     if(op.kind==='answer')return validPointId(op.target)&&outcomes.has(value);
     if(op.kind==='today-round')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject&&
       Array.isArray(value.queue)&&value.queue.length>0&&value.queue.length<=TODAY_ROUND_LIMIT&&value.queue.every(validPointId)&&
@@ -9368,7 +9374,7 @@ const learningJournal=(()=>{
     }
     return ops;
   }
-  return {fresh,valid,project,changes,numberKey};
+  return {fresh,valid,project,changes,numberKey,paperMetadata};
 })();
 
 const studyRoom=(()=>{
@@ -9623,10 +9629,45 @@ const studyRoom=(()=>{
   }
   function sourceLabel(q){
     const p=paper(q.paperId);
-    return p?[p.subject,paperTitle(p),q.number?'第 '+q.number+' 題':'',p.source].filter(Boolean).join(' · '):q.subject+' · 未歸卷';
+    return p?[p.subject,paperTitle(p),q.number?'第 '+q.number+' 題':'',p.source,q.sourcePage?'原卷第 '+q.sourcePage+' 頁':''].filter(Boolean).join(' · '):q.subject+' · 未歸卷';
   }
   function choiceList(q){
     return q.options?.length?'<ol class="past-options">'+q.options.map(option=>'<li>'+esc(option)+'</li>').join('')+'</ol>':'';
+  }
+
+  function questionContext(q){
+    return (q.group?'<div class="paper-question-context"><h3>共用題組</h3><p class="study-copy">'+esc(q.group)+'</p></div>':'')+
+      (q.reviewNote?'<p class="study-meta paper-review-note">需核對'+(q.sourcePage?' · 原卷第 '+esc(q.sourcePage)+' 頁':'')+'<br>'+esc(q.reviewNote)+'</p>':'');
+  }
+  function paperQuestionTools(q){
+    const attrs='data-question="'+esc(q.id)+'"';
+    return '<div class="study-actions">'+action('複製題目給 AI','paper-question-copy',false,attrs)+
+      action(q.explanation?'編輯詳解':'新增詳解','paper-explanation-open',false,attrs)+collectionAction(q)+'</div>'+
+      '<textarea id="paper-question-copy-text" rows="8" aria-label="可複製的 AI 解題指令" readonly hidden></textarea>'+
+      '<form id="paper-explanation-form" class="paper-explanation-form study-editor" data-question="'+esc(q.id)+'" hidden>'+
+      '<label class="study-field"><span>詳解</span><textarea name="explanation" id="paper-explanation-text" rows="8" placeholder="解題關鍵／推理過程／易錯點">'+esc(q.explanation)+'</textarea></label>'+
+      '<p class="study-error" role="alert"></p><div class="study-actions">'+action('取消','paper-explanation-cancel')+
+      '<button class="btn btn-primary">儲存詳解</button></div></form>';
+  }
+  async function copyPaperQuestion(q){
+    const fallback=$id('paper-question-copy-text');
+    const prompt=[
+      '請先解說下列題目，再以「解題關鍵／推理過程／易錯點」三段整理成可貼回 StudyOS 的純文字。',
+      '試卷來源：'+sourceLabel(q),
+      q.group?'共用題組：\n'+q.group:'',
+      '題幹：\n'+q.question,
+      q.options?.length?'選項（原順序）：\n'+q.options.map((item,index)=>(index+1)+'. '+item).join('\n'):'',
+      '已確認正解：'+(q.answer||'未提供，請標明推論與不確定之處。'),
+      q.reviewNote?'原卷需核對：'+q.reviewNote:'',
+    ].filter(Boolean).join('\n\n');
+    try{await navigator.clipboard.writeText(prompt);toast('已複製題目與解題指令','success');}
+    catch{
+      if(!fallback?.isConnected)return;
+      fallback.value=prompt;
+      fallback.hidden=false;
+      fallback.focus();fallback.select();
+      toast('請複製已選取的題目與指令。','warn');
+    }
   }
   function collectionAction(q){
     return data.points.some(p=>p.sourceQuestionId===q.id)?'<p class="study-meta">已收藏到知識庫</p>':
@@ -9637,9 +9678,9 @@ const studyRoom=(()=>{
     const q=point(questionId);
     if(!q){go(questionBack);return;}
     draw('題目詳情','<div class="study-surface"><p class="study-meta">'+esc(sourceLabel(q))+'</p><h3 class="study-copy">'+
-      esc(q.question)+'</h3>'+choiceList(q)+'<p class="study-copy">'+esc(q.answer||'待補答案')+'</p>'+
-      (q.explanation?'<p class="study-copy">'+esc(q.explanation)+'</p>':'')+
-      '<div class="study-actions">'+action('編輯題目','paper-question-edit')+collectionAction(q)+'</div></div>',
+      esc(q.question)+'</h3>'+questionContext(q)+choiceList(q)+'<h3>正解</h3><p class="study-copy">'+esc(q.answer||'待補答案')+'</p>'+
+      '<h3>詳解</h3><p class="study-copy">'+esc(q.explanation||'尚無詳解')+'</p>'+paperQuestionTools(q)+
+      '<div class="study-actions">'+action('編輯題目','paper-question-edit')+'</div></div>',
       questionBack==='paper'?'paper-return':'paper-mix-return');
   }
   function collectionFields(subject){
@@ -9662,7 +9703,7 @@ const studyRoom=(()=>{
       '<label class="study-field">選項（選填，每行一個）<textarea name="choices" rows="3">'+esc(q?.options?.join('\n'))+'</textarea></label>'+
       '<label class="study-field">正解（未確認可留空）<textarea name="answer" rows="2">'+esc(q?.answer)+'</textarea></label>'+
       '<label class="study-field">其他可接受答案（短答自動判分，每行一個）<textarea name="accepted" rows="2">'+esc(q?.accepted?.join('\n'))+'</textarea></label>'+
-      '<label class="study-field">解析<textarea name="explanation" rows="4">'+esc(q?.explanation)+'</textarea></label>'+
+      (!q?'<label class="study-field">詳解<textarea name="explanation" rows="4"></textarea></label>':'')+
       (!q?'<details class="study-supplements"><summary>同時收藏到知識庫</summary><label><input type="checkbox" name="collect"> 收藏這題</label>'+
         collectionFields(librarySubject)+'</details>':'')+
       '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">儲存題目</button></div></form>',
@@ -9684,7 +9725,8 @@ const studyRoom=(()=>{
     const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('studyos-paper-collection:'+q.id));
     const id='k-'+Array.from(new Uint8Array(hash,0,16),n=>n.toString(16).padStart(2,'0')).join('');
     const {question,answer,explanation,accepted,options}=q;
-    return {id,subject,chapter,question,answer,explanation,accepted,sourceQuestionId:q.id,source:sourceLabel(q),...(options?.length?{options}:{})};
+    return {id,subject,chapter,question:q.group?q.group+'\n\n'+question:question,answer,explanation,accepted,
+      sourceQuestionId:q.id,source:sourceLabel(q),...(options?.length?{options}:{})};
   }
   function paperEditor(){
     const p=paper(editingPaper);
@@ -9703,7 +9745,7 @@ const studyRoom=(()=>{
     const ready=items.filter(canPracticePaper);
     draw(esc(paperTitle(p)),'<div class="study-surface">'+(p.school&&p.name!==p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+(p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<p class="study-meta">'+items.length+' 題</p><div class="study-actions">'+action('編輯試卷','paper-edit')+
-      action('批次貼上','paper-batch')+action('新增單題','paper-question-new')+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
+      action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
@@ -9771,6 +9813,10 @@ const batchDialog=$id('study-batch');
     (preview?$id('study-batch-summary'):batchText).focus({preventScroll:true});
     batchDialog.scrollTop=0;
   }
+  const paperImportExample=[
+    {number:8,question:'下列何者正確？',options:['第一個選項','第二個選項'],group:'共用題組原文',
+      answer:'',explanation:'',sourcePage:'4',reviewNote:'圖例模糊，需核對原卷第 4 頁。',acceptedAnswers:[]}
+  ];
   function openBatch(opener,ai=false,targetPaper=null){
     const p=paper(targetPaper);
     batchPaperId=p?.id??null;
@@ -9782,17 +9828,34 @@ const batchDialog=$id('study-batch');
     const target=$id('study-batch-target');
     target.hidden=!p;
     target.textContent=p?'匯入試卷 · '+p.subject+' · '+paperTitle(p):'';
-    $id('study-batch-example').value=JSON.stringify([p?{number:1,question:'題目',answer:'參考答案'}:{question:'「明亮的」英文怎麼說？',answer:'bright'}]);
+    $id('study-batch-example').value=JSON.stringify(p?paperImportExample:[{question:'「明亮的」英文怎麼說？',answer:'bright'}],null,2);
     batchChapter.innerHTML=options(['',...chapters(filters.subject)],filters.chapter,'未分類');
-    $id('study-batch-title').textContent=ai?'AI 快速匯入':'批次貼上';
-    $id('study-ai-prompt').hidden=!ai;
-    $id('study-batch-json-label').textContent=ai?'2. 貼上題目（JSON）':'JSON 題庫';
+    $id('study-batch-title').textContent=p?'整卷匯入':ai?'AI 快速匯入':'批次貼上';
+    $id('study-ai-prompt').hidden=!ai&&!p;
+    $id('study-ai-copy').textContent=p?'複製 ChatGPT 匯入指令':'1. 複製出題指令';
+    $id('study-ai-text').setAttribute('aria-label',p?'整卷匯入指令':'出題指令');
+    $id('study-ai-help').textContent=p?'在 ChatGPT 上傳試卷 PDF，貼上指令，再把回傳的 JSON 貼到下方。':'在 ChatGPT 或 Gemini 貼上指令並附上筆記。';
+    $id('study-batch-json-label').textContent=ai||p?'2. 貼上題目（JSON）':'JSON 題庫';
     updateAiPrompt();
     showAppDialog(batchDialog,closeBatch);
     batchStage(false);
     batchSubject.focus({preventScroll:true});
   }
   function updateAiPrompt(){
+    const p=paper(batchPaperId);
+    if(p){
+      $id('study-ai-text').value=[
+        '請把我上傳的考古題 PDF 轉成 StudyOS 可匯入的有效 JSON 陣列。只回傳 JSON，保留原題號，不重新編號。',
+        '試卷：'+paperTitle(p)+' · '+p.subject,
+        '必填 number（原題號，整數或字串）和 question（原題幹）。依原順序把選項放入 options 字串陣列，沒有選項可用 []。',
+        '同組每題的 group 放入完整共用題組。保留原文、單位、符號與選項順序，勿自行補出缺失文字。',
+        '只有附件提供官方答案時才填 answer；單選的 answer 必須是 options 內對應選項的完整字串。缺官方答案時留空。explanation 可留空；acceptedAnswers 是選填的其他確認答案字串陣列。',
+        'sourcePage 填 PDF 頁碼（從 1 起算，跨頁可用字串），文字模糊、圖表看不清或缺頁時，在 reviewNote 寫原題號、來源頁碼及需核對的原因。',
+        '缺頁致原題號不明時，勿虛構題號，將缺頁頁碼附在最接近的可辨識題目的 reviewNote。無法讀出的圖表或題幹可在 question 標記【請見原卷】並填 reviewNote。',
+        'JSON 範例：'+JSON.stringify(paperImportExample),
+      ].join('\n');
+      return;
+    }
     const chapter=batchChapter.value;
     $id('study-ai-text').value=[
       '請根據我接下來附上的筆記出 5–10 題複習題。',
@@ -9806,20 +9869,27 @@ const batchDialog=$id('study-batch');
   batchChapter.addEventListener('change',updateAiPrompt);
   $id('study-ai-copy').addEventListener('click',async()=>{
     const field=$id('study-ai-text');
-    try{await navigator.clipboard.writeText(field.value);toast('已複製出題指令','success');}
-    catch{field.focus();field.select();toast('請複製已選取的出題指令。','warn');}
+    try{await navigator.clipboard.writeText(field.value);toast(batchPaperId?'已複製整卷匯入指令':'已複製出題指令','success');}
+    catch{field.focus();field.select();toast('請複製已選取的指令。','warn');}
   });
   function batchQuestion(value){return value.normalize('NFC').trim().replace(/\s+/g,' ');}
   function checkBatch(){
     const chapter=batchChapter.value.trim();
     const seen=new Set(batchPaperId?paperItems(batchPaperId).map(p=>learningJournal.numberKey(p.number)):
       data.points.filter(p=>p.subject===batchSubject.value&&p.chapter===chapter).map(p=>batchQuestion(p.question)));
-    let selected=0,valid=0,duplicates=0,invalid=0;
+    let selected=0,valid=0,duplicates=0,invalid=0,missing=0,review=0;
     for(const row of batchRows){
       const issues=[];
       if(!row.question.trim())issues.push('請填寫題目');
-      if(!row.answer.trim())issues.push('請填寫參考答案');
-      for(const key of row.invalid)issues.push(key==='acceptedAnswers'?'acceptedAnswers 須為字串陣列':'欄位 '+key+' 須為字串');
+      const answer=row.answer.trim();
+      if(!answer&&!batchPaperId)issues.push('請填寫參考答案');
+      if(batchPaperId){
+        if(!answer)missing++;
+        if(row.reviewNote.trim())review++;
+        if(new Set(row.options).size!==row.options.length)issues.push('選項不得重複');
+        if(answer&&row.options.length&&!row.options.includes(answer))issues.push('正解須為選項中的完整文字');
+      }
+      for(const key of row.invalid)issues.push(['acceptedAnswers','options'].includes(key)?key+' 須為字串陣列':'欄位 '+key+' 格式錯誤');
       const key=batchPaperId?learningJournal.numberKey(row.number):batchQuestion(row.question);
       if(batchPaperId&&!key)issues.push('請填寫原題號');
       row.duplicate=!!key&&seen.has(key);
@@ -9833,9 +9903,18 @@ const batchDialog=$id('study-batch');
       const element=batchList.children[row.index];
       element.querySelector('input[type=checkbox]').checked=checked;
       element.querySelector('input[type=checkbox]').disabled=!row.valid;
-      element.querySelector('.study-batch-status').textContent=[...issues,...(row.duplicate?[batchPaperId?'重複題號':'疑似重複']:[])].join(' · ');
+      const flags=[...issues];
+      if(row.duplicate)flags.push(batchPaperId?'重複題號，保留既有題目':'疑似重複');
+      if(batchPaperId){
+        if(!answer)flags.push('待補答案');
+        if(row.reviewNote.trim())flags.push('需核對'+(row.sourcePage.trim()?'（原卷第 '+row.sourcePage.trim()+' 頁）':''));
+        element.querySelector('legend').textContent=row.number.trim()?'原題號 '+row.number.trim():'第 '+(row.index+1)+' 筆';
+      }
+      element.querySelector('.study-batch-status').textContent=flags.join(' · ');
     }
-    $id('study-batch-summary').textContent='可匯入 '+valid+' 題 · 需修正 '+invalid+' 題 · '+(batchPaperId?'重複題號':'疑似重複')+' '+duplicates+' 題';
+    $id('study-batch-summary').textContent=(batchPaperId?'辨識 '+batchRows.length+' 題 · ':'')+
+      '可匯入 '+valid+' 題 · 需修正 '+invalid+' 題 · '+(batchPaperId?'重複題號':'疑似重複')+' '+duplicates+' 題'+
+      (batchPaperId?' · 缺正解 '+missing+' 題 · 需核對 '+review+' 題':'');
     batchApply.textContent='匯入 '+selected+' 題';
     batchApply.disabled=!selected||batchSaving;
     return batchRows.filter(row=>row.valid&&(row.checked??!row.duplicate));
@@ -9852,7 +9931,18 @@ const batchDialog=$id('study-batch');
       const value=object(item)?item:{};
       const invalid=new Set();
       const row={index,invalid,checked:null};
-      if(batchPaperId)row.number=text(value.number)||Number.isSafeInteger(value.number)?String(value.number):'';
+      if(batchPaperId){
+        for(const key of ['number',...learningJournal.paperMetadata]){
+          const v=value[key];
+          const allowed=text(v)||(['number','sourcePage'].includes(key)&&Number.isSafeInteger(v));
+          if(Object.hasOwn(value,key)&&!allowed)invalid.add(key);
+          row[key]=allowed?String(v):'';
+        }
+        const choices=value.options;
+        if(Object.hasOwn(value,'options')&&(!Array.isArray(choices)||!choices.every(text)))invalid.add('options');
+        row.options=Array.isArray(choices)?choices.filter(text).map(option=>option.trim()).filter(Boolean):[];
+        row.optionText=row.options.join('\n');
+      }
       for(const key of ['question','answer','explanation']){
         const v=value[key];
         if(Object.hasOwn(value,key)&&!text(v))invalid.add(key);
@@ -9864,7 +9954,9 @@ const batchDialog=$id('study-batch');
       row.acceptedAnswers=row.aliases.join('\n');
       return row;
     });
-    const fields=[...(batchPaperId?[['number','原題號']]:[]),['question','題目'],['answer','參考答案'],['explanation','解析'],['acceptedAnswers','其他答案（每行一個）']];
+    const fields=[...(batchPaperId?[['number','原題號']]:[]),['question','題目'],
+      ...(batchPaperId?[['optionText','選項（每行一個）'],['group','共用題組'],['sourcePage','PDF 頁碼'],['reviewNote','核對事項']]:[]),
+      ['answer',batchPaperId?'官方正解（可留空）':'參考答案'],['explanation','詳解'],['acceptedAnswers','其他答案（每行一個）']];
     batchList.innerHTML=batchRows.map(row=>'<li><fieldset class="study-editor"><legend>第 '+(row.index+1)+' 題</legend>'+
       '<label><input type="checkbox" aria-label="匯入第 '+(row.index+1)+' 題"> 匯入這題</label>'+
       '<p class="study-batch-status" role="status"></p>'+fields.map(([key,label])=>
@@ -9880,7 +9972,8 @@ const batchDialog=$id('study-batch');
     const key=element.dataset.batchField;
     if(key){
       row[key]=element.value;
-      row.invalid.delete(key);
+      row.invalid.delete(key==='optionText'?'options':key);
+      if(key==='optionText')row.options=element.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
       if(key==='acceptedAnswers')row.aliases=element.value.split(/\r?\n/).filter(v=>v.trim());
       if(key==='question'||key==='number')row.checked=null;
     }else if(element.type==='checkbox')row.checked=element.checked;
@@ -9902,8 +9995,12 @@ const batchDialog=$id('study-batch');
     batchApply.disabled=true;
     const subject=batchSubject.value,chapter=batchChapter.value.trim();
     const targetPaper=batchPaperId;
-    const points=selected.map(row=>({id:newPointId(),...(targetPaper?{paperId:targetPaper,number:row.number.trim()}:{subject,chapter}),question:row.question,answer:row.answer,
-      explanation:row.explanation,accepted:row.aliases}));
+    const points=selected.map(row=>{
+      const destination=targetPaper?{paperId:targetPaper,number:row.number.trim(),options:row.options}: {subject,chapter};
+      if(targetPaper)for(const key of learningJournal.paperMetadata)if(row[key].trim())destination[key]=row[key].trim();
+      return {id:newPointId(),...destination,question:row.question,answer:targetPaper?row.answer.trim():row.answer,
+        explanation:row.explanation,accepted:row.aliases};
+    });
     const next=targetPaper?{...data,paperQuestions:[...(data.paperQuestions||[]),...points]}:{...data,points:[...data.points,...points]};
     try{saveLearning(next);}
     catch{
@@ -10220,7 +10317,7 @@ const batchDialog=$id('study-batch');
     const reference='<div class="study-reference"><h3>參考答案</h3><p class="study-copy">'+esc(p.answer)+'</p>'+
       (p.explanation?'<h3>解析</h3><p class="study-copy">'+esc(p.explanation)+'</p>':'')+'</div>';
     let body='<p class="study-meta">'+(index+1)+'／'+queue.length+' · '+esc(p.subject)+((p.paperId||session.paperMix)&&p.number?' · 第 '+esc(p.number)+' 題':p.chapter?' · '+esc(p.chapter):'')+
-      '</p><h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'');
+      '</p><h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'')+questionContext(p);
     if(phase==='question'){
       body+=cards?'<div class="study-actions">'+action('翻面','flip',true)+'</div>':
         '<form id="study-answer-form">'+(p.options?.length?'<fieldset class="past-answer-choices"><legend>你的答案</legend>'+p.options.map(option=>'<label><input type="radio" name="answer" required value="'+esc(option)+'" '+(option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>':
@@ -10309,11 +10406,11 @@ const batchDialog=$id('study-batch');
     draw(esc(paperReviewLabel(row)),'<div class="study-surface paper-review-detail">'+
       '<p class="study-meta">'+esc(paperTitle(paper(session.paperId)))+' · '+esc(row.status)+'</p>'+
       '<h3>題目</h3><p class="study-copy">'+esc(q?.question||'這道題目已不在題庫。')+'</p>'+
-      (q?choiceList(q):'')+
+      (q?questionContext(q)+choiceList(q):'')+
       '<h3>你的答案</h3><p class="study-copy">'+esc(ownAnswer)+'</p>'+
       '<h3>正解</h3><p class="study-copy">'+esc(reference)+'</p>'+
       '<h3>解析</h3><p class="study-copy" id="paper-review-explanation">'+esc(q?.explanation||'尚無解析')+'</p>'+
-      (q?'<div class="study-actions">'+collectionAction(q)+'</div>':'')+'</div>','paper-review-back');
+      (q?paperQuestionTools(q):'')+'</div>','paper-review-back');
   }
   function retryQuestionIds(){
     if(!roundComplete(session)||session.mode!=='practice'||data.todayRetries?.[session.roundId])return [];
@@ -10492,7 +10589,18 @@ const batchDialog=$id('study-batch');
       }
     }else if(act==='paper-question-detail')go('paper-question');
     else if(act==='paper-collect-back')go(collectBack);
-    else if(act==='paper-collect'){
+    else if(act==='paper-question-copy'){
+      const q=point(button.dataset.question);
+      if(q)copyPaperQuestion(q);
+    }else if(act==='paper-explanation-open'||act==='paper-explanation-cancel'){
+      const form=$id('paper-explanation-form');
+      form.hidden=act==='paper-explanation-cancel';
+      if(form.hidden){
+        form.reset();
+        form.querySelector('.study-error').textContent='';
+        root.querySelector('[data-study-action=paper-explanation-open]').focus();
+      }else $id('paper-explanation-text').focus();
+    }else if(act==='paper-collect'){
       questionId=button.dataset.question;
       if(data.points.some(p=>p.sourceQuestionId===questionId)){toast('此題已收藏到知識庫。');return;}
       collectBack=screen;
@@ -10585,7 +10693,20 @@ const batchDialog=$id('study-batch');
     event.preventDefault();
     const form=event.target;
     const values=new FormData(form);
-    if(form.id==='past-subject-form'){
+    if(form.id==='paper-explanation-form'){
+      const q=data.paperQuestions?.find(q=>q.id===form.dataset.question);
+      if(!q){form.querySelector('.study-error').textContent='找不到這道題目。';return;}
+      const explanation=values.get('explanation').trim();
+      const scroll=reviewScrollPositions();
+      if(explanation!==q.explanation){
+        data.paperQuestions=data.paperQuestions.map(item=>item===q?{...item,explanation}:item);
+        if(!persist()){form.querySelector('.study-error').textContent='無法儲存詳解，請再試一次。';return;}
+      }
+      render();
+      root.querySelector('[data-study-action=paper-explanation-open]')?.focus({preventScroll:true});
+      for(const [element,top] of scroll)element.scrollTop=top;
+      toast('已儲存詳解','success');
+    }else if(form.id==='past-subject-form'){
       const name=values.get('name').trim().normalize('NFC');
       if(!name||(data.paperSubjects||[]).some(item=>item.name===name)){
         form.querySelector('.study-error').textContent='請填寫未使用的獨立考科名稱。';return;
@@ -10686,9 +10807,9 @@ const batchDialog=$id('study-batch');
       const subject=p?.subject||pastSubjects().find(item=>item.key===subjectRef)?.name;
       const answer=values.get('answer').trim();
       const choices=values.get('choices').split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
-      q={id:q?.id||newPointId(),paperId:target,subject,subjectRef,number:values.get('number').trim(),
+      q={...q,id:q?.id||newPointId(),paperId:target,subject,subjectRef,number:values.get('number').trim(),
         question:values.get('question').trim(),answer,options:choices,accepted:choices.length?[]:values.get('accepted').split(/\r?\n/).map(v=>v.trim()).filter(Boolean),
-        explanation:values.get('explanation').trim()};
+        explanation:q?.explanation??values.get('explanation').trim()};
       if(!subject||!q.question||target&&!p){error.textContent='請選考科並填寫題目。';return;}
       if(choices.length&&(new Set(choices).size!==choices.length||answer&&!choices.includes(answer))){
         error.textContent='選項不得重複，正解請填入其中一個選項的完整文字。';return;
@@ -10866,7 +10987,7 @@ const batchDialog=$id('study-batch');
       if(roundComplete(session))screen='results';
       render();
     }else if(screen==='papers'&&$id('paper-archive-results'))updatePaperList();
-    else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open)render();
+    else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open&&($id('paper-explanation-form')?.hidden??true))render();
     briefChanged();
   }
   async function flushLearning(){
