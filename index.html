@@ -80,8 +80,6 @@ const studyTheme=(()=>{
   --accent:      #397a73;
   --accent-h:    #2f6962;
   --accent-2:    var(--accent);     /* legacy: used to be Apple blue */
-  --accent-soft: rgba(var(--accent-rgb),.10);
-  --accent-ring: rgba(var(--accent-rgb),.22);
   --accent-tint: #f0f6f5;
   --note-bg:     var(--accent-tint);
 
@@ -120,7 +118,6 @@ const studyTheme=(()=>{
   --shadow-md:  0 4px 14px rgba(43,42,39,.08);
   --shadow-lg:  0 10px 30px rgba(43,42,39,.12);
   --shadow-pop: 0 8px 28px rgba(43,42,39,.14), 0 0 0 1px rgba(55,53,47,.06);
-  --shadow-card:var(--shadow-md);
 
   /* ── Glass (reduced) ── */
   --glass-bg:     rgba(255,255,255,.94);
@@ -137,14 +134,12 @@ const studyTheme=(()=>{
   /* ── Layout & motion (unchanged) ── */
   --nav-h: 52px;
   --bot-h: 64px;
-  --calendar-max: 900px;
   --side-panel-w: 360px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-ios: cubic-bezier(0.22,1,0.36,1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-fast:  150ms;
   --dur-base:  220ms;
-  --dur-slow:  320ms;
 }
 
 /* ── Reset ── */
@@ -244,9 +239,6 @@ body{
 #confirm-dialog p{font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.5;}
 #confirm-btns{display:flex;gap:10px;justify-content:center;}
 
-/* ── Dashboard bar → hidden, replaced by header inline stats ── */
-.dashboard-bar{display:none !important;}
-.dash-stat,.dash-val,.dash-lbl{/* kept for JS renderDashboard compat */}
 
 /* ── Header inline stats ── */
 .header-stats{
@@ -314,10 +306,8 @@ body{
   border-color:var(--success);background:rgba(var(--success-rgb),.1);
 }
 
-/* ── Today summary in day panel header ── */
-.day-today-summary{
-  display:flex;gap:8px;margin-bottom:10px;
-}
+/* Day panel statistics */
+
 .day-today-stat{
   flex:1;background:var(--card);border:1px solid var(--border-lt);
   border-radius:var(--r-sm);padding:7px 10px;text-align:center;
@@ -328,7 +318,6 @@ body{
 
 .app-header{
   height:var(--nav-h);
-  flex-shrink:0;
   background:var(--glass-bg);
   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
   border-bottom:1px solid var(--border-lt);
@@ -352,7 +341,7 @@ body{
 .progress-track-fill{height:100%;background:var(--accent);transition:width .6s var(--ease);}
 
 /* ── Sync status ── */
-.sync-bar{display:flex;align-items:center;gap:8px;}
+
 .sync-dot{
   width:7px;height:7px;border-radius:50%;flex-shrink:0;
   background:var(--border);transition:background .3s;
@@ -362,18 +351,6 @@ body{
 .sync-dot.error{background:var(--danger-c);}
 .sync-dot.offline{background:rgba(0,0,0,.2);}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.sync-label{font-size:11px;color:var(--text-3);}
-#sync-popover{
-  display:none;position:fixed;z-index:200;
-  background:var(--glass-bg);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-  border:1px solid var(--glass-border);border-radius:var(--r);
-  padding:20px;box-shadow:var(--shadow-lg);width:280px;
-}
-#sync-popover h3{font-size:15px;font-weight:600;margin-bottom:8px;letter-spacing:-.3px;}
-#sync-popover p{font-size:12px;color:var(--text-2);margin-bottom:12px;line-height:1.6;}
-.sync-pop-note{font-size:11px;color:var(--text-3);margin-top:8px;line-height:1.5;}
-.sync-pop-note a{color:var(--accent);text-decoration:none;}
-.sync-connected-info{font-size:12px;color:var(--done-c);margin-bottom:10px;padding:8px 12px;background:var(--done-bg);border-radius:var(--r-sm);}
 
 /* ── App shell ── */
 .app-shell{
@@ -409,7 +386,7 @@ body{
   font-size:10px;font-weight:600;letter-spacing:.8px;
   text-transform:uppercase;color:var(--text-3);margin-bottom:10px;
 }
-.panel-l,.cal-panel,.panel-r,.memo-area,.course-card,.todo-card,.day-card,.day-group,.memo-card,.day-today-stat{border-radius:24px;}
+.panel-l,.cal-panel,.panel-r,.memo-area,.course-card,.todo-card,.day-card,.memo-card,.day-today-stat{border-radius:24px;}
 
 /* ── Bottom nav (mobile only) ── */
 .bottom-nav{display:none;}
@@ -507,13 +484,6 @@ body{
 .exam-badge.danger{background:var(--danger-bg);color:var(--danger-c);}
 .course-meta{font-size:11px;color:var(--text-3);margin-bottom:6px;letter-spacing:-.05px;}
 .course-progress-row{display:flex;align-items:center;gap:10px;margin-top:2px;}
-.progress-ring-wrap{position:relative;width:36px;height:36px;flex-shrink:0;}
-.progress-ring-bg{fill:none;stroke:rgba(0,0,0,.07);stroke-width:3;}
-.progress-ring-fill{fill:none;stroke-width:3;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .6s var(--ease);}
-.progress-ring-pct{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:9px;font-weight:700;color:var(--text-2);letter-spacing:-.3px;
-}
 .progress-bar-col{flex:1;}
 .progress-wrap{height:4px;background:rgba(0,0,0,.08);border-radius:980px;overflow:hidden;}
 .progress-fill{height:100%;border-radius:980px;transition:width .6s var(--ease);}
@@ -853,7 +823,6 @@ body{
 .day-card.is-done{background:var(--done-bg);border-color:rgba(var(--success-rgb),.2);}
 .day-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .day-name{font-size:13px;font-weight:600;flex:1;letter-spacing:-.1px;}
-.day-actions{display:flex;gap:4px;}
 .act-btn{
   font-family:var(--sans);font-size:11px;
   background:var(--sand);border:none;border-radius:980px;
@@ -862,17 +831,6 @@ body{
 }
 .act-btn:hover{background:rgba(0,0,0,.1);}
 .act-btn.done-btn{background:var(--done-bg);color:var(--done-c);}
-.time-wrap{display:flex;align-items:center;gap:6px;margin-top:8px;}
-.time-lbl{font-size:11px;color:var(--text-3);flex-shrink:0;}
-.time-selects{display:flex;gap:4px;align-items:center;}
-.time-sel{width:auto;min-width:58px;font-variant-numeric:tabular-nums;}
-.time-colon{font-size:14px;font-weight:600;color:var(--text-3);line-height:1;}
-.time-clear{
-  font-size:13px;color:var(--text-3);cursor:pointer;
-  margin-left:2px;background:none;border:none;padding:3px 5px;
-  border-radius:6px;transition:all .15s;
-}
-.time-clear:hover{color:var(--danger-c);background:var(--danger-bg);}
 
 /* Exam pencil + popover */
 .exam-pen-btn{
@@ -898,32 +856,7 @@ body{
 .exam-scope-checks input{flex:none;accent-color:var(--accent);}
 
 /* ── Day group cards ── */
-.day-group{
-  border:1px solid var(--border-lt);border-radius:var(--r);
-  margin-bottom:8px;overflow:hidden;box-shadow:var(--shadow-sm);
-  background:rgba(255,255,255,.7);
-  backdrop-filter:saturate(180%) blur(12px);
-  -webkit-backdrop-filter:saturate(180%) blur(12px);
-  transition:box-shadow .28s var(--ease-ios), transform .28s var(--ease-ios);
-}
-.day-group:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
-.day-group-head{
-  display:flex;align-items:center;gap:7px;
-  padding:9px 14px;
-  background:rgba(245,245,247,.7);
-  border-bottom:1px solid var(--border-lt);
-}
-.day-group-name{font-size:12px;font-weight:700;flex:1;letter-spacing:-.1px;}
-.day-group-count{font-size:11px;color:var(--text-3);}
-.day-group-item{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 14px;background:var(--card);border-bottom:1px solid var(--border-lt);
-}
-.day-group-item:last-child{border-bottom:none;}
-.day-group-item.is-done{background:var(--done-bg);}
-.dgi-label{font-size:12px;color:var(--text-2);}
-.dgi-label.crossed{text-decoration:line-through;opacity:.5;}
-.dgi-actions{display:flex;gap:4px;}
+
 
 .panel-r #day-label{
   font-size:14px;
@@ -956,8 +889,7 @@ body{
   flex-direction:column;
   gap:10px;
 }
-.day-course-list .day-card,
-.day-course-list .day-group{
+.day-course-list .day-card{
   margin-bottom:0;
 }
 .day-panel-stats{
@@ -1007,7 +939,6 @@ body{
 /* ── Auth bar ── */
 .auth-area{display:flex;align-items:center;gap:7px;}
 .sync-status{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-3);}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
 @media(max-width:600px){.sync-status{display:none;}}
 
 /* ── Course list collapse ── */
@@ -1246,7 +1177,6 @@ body{
     border-left:1px solid var(--border-lt);
   }
   .fab-manage{display:flex;}
-  .dashboard-bar{display:none !important;}
   .cal-cell{min-height:78px;}
   .bottom-nav{display:none !important;}
   .memo-scroll{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));}
@@ -1262,7 +1192,6 @@ body{
     overflow:hidden;
     position:relative;
   }
-  .app-shell{padding-bottom:var(--bot-h);}
   .panel-l,.cal-panel,.panel-r{
     position:absolute;inset:0;
     overflow-y:auto;display:none !important;
@@ -1451,27 +1380,26 @@ body{
 body{line-height:var(--lh);letter-spacing:var(--tracking);}
 :root *{letter-spacing:var(--tracking);}
 .section-label,.memo-area-title,.cal-lbl,.wch-day,.day-label-today-badge{letter-spacing:var(--tracking-label);}
-.app-header h1,.modal h2,#confirm-dialog h3,#sync-popover h3{letter-spacing:0;}
-.hstat-val,.dts-val,.progress-ring-pct,.day-group-name,.memo-card-name,.day-label-today-badge{font-weight:600;}
-.hstat-val,.dts-val,.date-num,.wch-date,.progress-ring-pct,.cal-tag-time{font-variant-numeric:tabular-nums;}
+.app-header h1,.modal h2,#confirm-dialog h3{letter-spacing:0;}
+.hstat-val,.dts-val,.memo-card-name,.day-label-today-badge{font-weight:600;}
+.hstat-val,.dts-val,.date-num,.wch-date,.cal-tag-time{font-variant-numeric:tabular-nums;}
 .section-label,.memo-area-title,.cal-lbl,.quick-input-hint,.dts-lbl,.exam-badge,.lesson-chip{font-size:11px;}
 
 /* ── Glass → solid surfaces ── */
-.course-card,.todo-card,.cal-cell,.day-card,.day-group,.memo-area,.memo-card,.day-memo-wrap,.day-today-stat{
+.course-card,.todo-card,.cal-cell,.day-card,.memo-area,.memo-card,.day-memo-wrap,.day-today-stat{
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
-.course-card,.todo-card,.day-card,.day-group,.cal-cell{background:var(--card);}
-.day-group-head{background:var(--card-2);}
+.course-card,.todo-card,.day-card,.cal-cell{background:var(--card);}
 .memo-area{background:var(--card-2);border-radius:var(--r);box-shadow:none;}
 .app-header,.bottom-nav{background:var(--header-bg);}
 
 /* ── Radius unification ── */
-.course-card,.todo-card,.day-card,.day-group,.memo-card,.day-memo-wrap,.day-today-stat{border-radius:var(--r);}
+.course-card,.todo-card,.day-card,.memo-card,.day-memo-wrap,.day-today-stat{border-radius:var(--r);}
 .cal-cell{border-radius:var(--r-sm);}
 .panel-l,.cal-panel,.panel-r{border-radius:var(--r-lg);}
 
 /* ── Calmer hover / press (no lift, no scale) ── */
-.course-card:hover,.todo-card:hover,.day-card:hover,.day-group:hover,.memo-card:hover{
+.course-card:hover,.todo-card:hover,.day-card:hover,.memo-card:hover{
   transform:none;box-shadow:var(--shadow);border-color:var(--border-strong);
 }
 .cal-cell:hover:not(.empty){
@@ -1507,7 +1435,6 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 .cal-tag,.week-ev{border-radius:var(--r-tag);}
 .tap-hint{border-radius:var(--r-btn);}
 .lesson-chip{background:var(--sunken);}
-.progress-ring-bg{stroke:var(--border);}
 .progress-wrap{background:var(--sunken);}
 .done-check{border-color:var(--border-strong);}
 
@@ -1516,7 +1443,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   background:var(--scrim);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
 }
 .day-panel-overlay{background:var(--scrim-lt);-webkit-backdrop-filter:none;backdrop-filter:none;}
-.modal,#confirm-dialog,#sync-popover,#exam-popover{
+.modal,#confirm-dialog,#exam-popover{
   background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--shadow-pop);
 }
 .toast,#drag-ghost{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--shadow-pop);}
@@ -1591,10 +1518,6 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 
 /* Progress row */
 .course-card .course-progress-row{gap:12px;margin-top:4px;}
-.course-card .progress-ring-wrap,
-.course-card .progress-ring-wrap svg{width:40px;height:40px;}
-.course-card .progress-ring-wrap svg{display:block;}
-.course-card .progress-ring-pct{font-size:10px;}
 /* the remaining-count <b> carries an inline colour, so one !important is required */
 .course-card .progress-bar-col b{font-size:12px;font-weight:700;color:var(--accent) !important;}
 
@@ -1667,38 +1590,11 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 .schedule-time-picker{margin-bottom:12px;}
 .schedule-time-picker [hidden],.schedule-time-picker input[type="hidden"]{display:none;}
 .schedule-time-trigger{display:block;text-align:start;font-variant-numeric:tabular-nums;cursor:pointer;}
-.schedule-time-editor{
-  margin-top:6px;padding:10px;background:var(--surface);
-  border:1px solid var(--border);border-radius:var(--r-sm);
-}
-.day-time-hint{font-size:12px;color:var(--text-2);margin-bottom:8px;}
-.day-time-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px;}
-.day-time-column>span{display:block;font-size:12px;font-weight:600;text-align:center;margin-bottom:4px;}
-.day-time-list{
-  --time-row-height:44px;
-  position:relative;height:calc(3 * var(--time-row-height) + 2px);overflow-y:auto;
-  overscroll-behavior-y:contain;scroll-snap-type:y mandatory;touch-action:pan-y;
-  border:1px solid var(--border);border-radius:var(--r-xs);
-}
-.day-time-list::before,.day-time-list::after{content:'';display:block;height:var(--time-row-height);}
-.day-time-list:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-.day-time-list [role="option"]{
-  display:grid;place-items:center;height:var(--time-row-height);cursor:pointer;scroll-snap-align:center;
-  font-size:15px;font-variant-numeric:tabular-nums;
-}
-.day-time-list [role="option"][aria-selected="true"]{
-  background:var(--accent-tint);color:var(--accent);font-weight:700;
-}
-.schedule-time-manual-input{font-size:16px;}
 .schedule-time-error{margin-bottom:8px;color:var(--danger-c);font-size:12px;}
 .schedule-time-error:empty{display:none;}
-.day-time-actions{display:flex;flex-wrap:wrap;gap:6px;}
-.day-time-actions .btn{min-width:0;min-height:44px;padding-inline:10px;white-space:normal;}
 
 /* Keep each lesson's actions available even in the narrow day panel. */
 .day-card-head .day-name{min-width:0;overflow-wrap:anywhere;}
-.day-actions,.dgi-actions{flex-shrink:0;}
-.day-reschedule-button{min-width:44px;min-height:44px;white-space:nowrap;}
 #reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{
   position:fixed;inset:0;margin:auto;width:min(440px,calc(100% - 24px));
   max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - env(safe-area-inset-bottom,0px));
@@ -1795,7 +1691,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
     min-height:44px;border-radius:10px;font-size:14px;line-height:1.35;white-space:normal;
   }
   .panel-l .btn:active,.panel-r .btn:active,.cal-panel button:active{filter:brightness(.92);}
-  .course-card,.todo-card,.day-card,.day-group,.day-memo-wrap,#day-schedule-form{
+  .course-card,.todo-card,.day-card,.day-memo-wrap,#day-schedule-form{
     border-radius:var(--touch-radius);box-shadow:none;
   }
   .course-card .course-head{display:grid;grid-template-columns:9px minmax(0,1fr) repeat(3,auto);gap:6px;align-items:start;margin-bottom:8px;}
@@ -1849,21 +1745,14 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   .day-panel-stats .day-today-stat{border-radius:10px;box-shadow:none;}
   .day-card{padding:10px;}
   .day-card-head{align-items:center;display:grid;grid-template-columns:44px 9px minmax(0,1fr);gap:4px 6px;margin-bottom:0;}
-  .day-card-head .day-name,.day-group-name{font-size:15px;line-height:1.45;min-width:0;overflow-wrap:anywhere;}
+  .day-card-head .day-name{font-size:15px;line-height:1.45;min-width:0;overflow-wrap:anywhere;}
   .day-card-head .day-name.is-done{color:var(--text-2);opacity:1;}
-  .day-card-head .day-actions{grid-column:3;justify-self:end;}
-  .day-card>.time-wrap{margin-top:4px;}
-  .day-group-item{padding:6px 8px;}
-  .day-group-item>div{min-width:0;}
-  .day-group-count{white-space:nowrap;}
-  .day-actions .act-btn,.dgi-actions .act-btn,.time-clear{min-height:44px;min-width:44px;border-radius:10px;font-size:13px;}
   #day-events .done-check{
     width:44px;height:44px;border:0;transform:none;background:transparent;position:relative;isolation:isolate;color:transparent;
   }
   #day-events .done-check::before{content:'';position:absolute;inset:11px;border:2px solid var(--border-strong);border-radius:50%;z-index:-1;}
   #day-events .done-check.checked{color:white;font-size:13px;}
   #day-events .done-check.checked::before{background:var(--done-c);border-color:var(--done-c);}
-  .time-wrap,.time-selects{flex-wrap:wrap;gap:4px;}
   .day-memo-title{align-items:flex-start;}
   .day-memo-title .btn{font-size:12px;padding-inline:8px;}
   .day-memo-wrap .memo-preview-row,.memo-row .memo-item-text{font-size:14px;line-height:1.5;}
@@ -1875,7 +1764,6 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   .panel-l,.panel-r{padding:16px 14px 20px;}
   .cal-panel.mob-active{padding-bottom:16px;}
   .day-card-head{grid-template-columns:44px 9px minmax(0,1fr) auto;}
-  .day-card-head .day-actions{grid-column:4;}
   .day-card-head .day-name{grid-column:3;}
   .cal-head{grid-template-columns:minmax(0,1fr) minmax(128px,1fr);}
   .cal-head .cal-title{grid-column:1;grid-row:1;font-size:19px;}
@@ -1896,7 +1784,6 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 }
 @media(max-width:359px){
   .day-card-head{grid-template-columns:44px 9px minmax(0,1fr);}
-  .day-card-head .day-actions{grid-column:3;}
   .cal-head .cal-title{font-size:17px;}
 }
 @media(min-width:768px) and (width < 1200px){
@@ -1936,7 +1823,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   .cal-head .cal-course-filter{grid-column:1/-1;grid-row:2;}
 }
 @media(width < 1200px) and (prefers-reduced-motion:reduce){
-  .cal-grid,.course-card,.todo-card,.done-check,.progress-ring-fill{animation:none!important;transition:none!important;}
+  .cal-grid,.course-card,.todo-card,.done-check{animation:none!important;transition:none!important;}
 }
 
 /* ═══ StudyOS UI v2 · navigation, folds, density (cross-device) ═══ */
@@ -1991,8 +1878,8 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   .course-planning-form{border:0;border-top:1px solid var(--border-lt);border-radius:0;background:none;padding:14px 0 0;}
   .quick-course-section{border:0;background:var(--accent-tint);border-radius:var(--r);padding:12px 14px;}
   .quick-course-section .section-label{margin-bottom:8px;}
-  .day-card,.day-group{background:none;border:0;border-bottom:1px solid var(--border-lt);border-radius:0;padding:10px 0;}
-  .day-card:hover,.day-group:hover{box-shadow:none;transform:none;}
+  .day-card{background:none;border:0;border-bottom:1px solid var(--border-lt);border-radius:0;padding:10px 0;}
+  .day-card:hover{box-shadow:none;transform:none;}
 }
 
 /* ── Phone ── */
@@ -2077,7 +1964,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 #panel-r .day-completed-count{color:var(--done-c);}
 #panel-r .day-progress-count{color:var(--accent-h);}
 #panel-r .day-course-list{gap:0;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);padding-inline:10px;min-width:0;}
-#panel-r .day-card,#panel-r .day-group{
+#panel-r .day-card{
   padding:8px 0;margin:0;border:0;border-radius:0;box-shadow:none;background:none;transform:none;
 }
 #panel-r .day-course-list>*+*{border-top:1px solid var(--border-lt);}
@@ -2085,30 +1972,17 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   display:grid;grid-template-columns:44px 8px minmax(0,1fr);align-items:center;
   gap:6px;margin:0;
 }
-#panel-r .day-name,#panel-r .day-group-name{
+#panel-r .day-name{
   font-size:16px;line-height:1.4;color:var(--text);min-width:0;overflow-wrap:anywhere;
 }
-#panel-r .day-name.is-done,#panel-r .dgi-label.crossed{color:var(--text-3);opacity:1;}
-#panel-r .day-card-tools{
-  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px 8px;
-  padding-inline-start:6px;
-}
-#panel-r .time-wrap,#panel-r .time-selects{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0;}
-#panel-r .time-lbl,#panel-r .day-group-count{font-size:12px;color:var(--text-2);}
-#panel-r .day-actions,#panel-r .dgi-actions{display:flex;gap:2px;flex-shrink:0;}
-#panel-r .act-btn,#panel-r .time-clear{
+#panel-r .day-name.is-done{color:var(--text-3);opacity:1;}
+#panel-r .act-btn{
   background:none;color:var(--accent-h);font-size:13px;font-weight:600;
   border-radius:var(--r-sm);padding:0 7px;min-height:44px;min-width:44px;
 }
 #panel-r .act-btn[onclick^="removeEvent"]{color:var(--text-3);}
 #panel-r :is(.act-btn,.time-clear,.day-panel-close,.day-memo-title button):active{background:var(--sunken-h);}
 #panel-r #day-schedule-open:active{background:var(--accent-h);}
-#panel-r .day-group-head{border:0;background:var(--card-2);border-radius:var(--r-sm);padding:6px 8px;}
-#panel-r .day-group-item{align-items:flex-start;padding:4px 0;background:none;}
-#panel-r .day-group-content{flex:1;min-width:0;}
-#panel-r .day-group-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0 8px;}
-#panel-r .day-group-count{white-space:nowrap;}
-#panel-r .day-actions,#panel-r .dgi-actions{margin-inline-start:auto;}
 #panel-r #day-events .done-check{
   position:relative;isolation:isolate;width:44px;height:44px;border:0;
   background:transparent;color:transparent;transform:none;
@@ -2231,7 +2105,7 @@ button:active:not(:disabled){filter:brightness(.91);}
   border:0;border-radius:50%;background:none;color:var(--text-2);
 }
 .course-card .course-actions .exam-pen-btn:hover{background:var(--accent-tint);color:var(--accent-h);}
-.course-card .course-actions .del-btn,.day-card-delete,.memo-delete,.pop-clear,.confirm-danger{color:var(--danger-c);}
+.course-card .course-actions .del-btn,.memo-delete,.pop-clear,.confirm-danger{color:var(--danger-c);}
 .course-card .course-actions .del-btn:hover,.memo-delete:hover,.pop-clear:hover{background:var(--danger-bg);}
 .course-list-footer{margin:0;border-top:1px solid var(--border-lt);}
 .course-expand-btn{min-height:var(--ui-control);background:none;color:var(--accent-h);}
@@ -2317,20 +2191,16 @@ button:active:not(:disabled){filter:brightness(.91);}
 .memo-card{box-shadow:none;border-radius:var(--r-sm);background:var(--card-2);}
 .memo-card:hover{box-shadow:none;transform:none;}
 #panel-r #day-schedule-open{font-size:var(--ui-label);}
-#panel-r .day-card-delete{color:var(--danger-c);}
 #panel-r .day-panel-title{font-weight:600;}
-#day-schedule-form,.schedule-time-editor{background:var(--card-2);border:1px solid var(--border-lt);border-radius:var(--r);}
-#day-schedule-form .schedule-time-editor{background:var(--surface);}
+#day-schedule-form{background:var(--card-2);border:1px solid var(--border-lt);border-radius:var(--r);}
 .schedule-time-trigger{display:flex;justify-content:space-between;align-items:center;}
 .schedule-time-trigger .ui-icon{width:16px;height:16px;color:var(--text-3);}
-.day-time-list{background:var(--surface);border-color:var(--border-lt);}
-.day-time-list [aria-selected="true"]{background:var(--nav-sel);}
 #day-schedule-form .day-schedule-actions{margin-top:var(--sp-3);}
 #reschedule-original,#repeat-preview-summary,#repeat-preview-notice{color:var(--text-2);overflow-wrap:anywhere;}
 #repeat-preview-body{padding:var(--sp-3);background:var(--card-2);border-radius:var(--r-sm);}
 #repeat-preview-dates li{border-bottom:1px solid var(--border-lt);}
 #repeat-preview .day-schedule-actions{margin-top:4px;}
-.modal,#confirm-dialog,#exam-popover,#sync-popover,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{
+.modal,#confirm-dialog,#exam-popover,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{
   border:1px solid var(--border-lt);border-radius:var(--r-xl);box-shadow:var(--shadow-pop);
 }
 .modal,#confirm-dialog,#memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog{padding:clamp(16px,3vw,24px);}
@@ -2343,7 +2213,7 @@ button:active:not(:disabled){filter:brightness(.91);}
   animation:panel-appear 160ms var(--ease-ios);
 }
 @keyframes panel-appear{from{opacity:0;translate:0 5px;}to{opacity:1;translate:0 0;}}
-.course-card.new-card,.progress-ring-fill,.progress-fill,.progress-track-fill{animation:none;transition:none;}
+.course-card.new-card,.progress-fill,.progress-track-fill{animation:none;transition:none;}
 @media(max-width:767px){
   :root{--bot-h:calc(86px + env(safe-area-inset-bottom,0px));}
   .header-row{padding-inline:10px;gap:4px;}
@@ -2919,7 +2789,6 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
     display:grid;place-items:center;min-width:44px;min-height:44px;list-style:none;
     font-size:var(--ui-caption);color:var(--accent-h);cursor:pointer;
   }
-  #calendar-more>summary::-webkit-details-marker{display:none;}
   #calendar-more .cal-progress{
     position:absolute;inset:100% 10px auto;padding:4px;
     background:var(--surface);border:1px solid var(--border-lt);
@@ -2951,8 +2820,6 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
   #panel-cal .cal-head .cal-course-filter{grid-area:2/2/3/4;}
   #panel-cal #phone-schedule-open{grid-area:3/1/4/4;justify-self:start;}
 }
-#memo-course-picker{margin:12px 0;}
-#memo-course-picker select{width:100%;}
 :is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#calendar-more) .popup-close{
   display:grid;place-items:center;width:44px;height:44px;min-height:44px;flex:0 0 44px;
   padding:0;margin:0 0 0 auto;border:0;border-radius:50%;background:var(--sunken);color:var(--text-2);
@@ -3085,7 +2952,6 @@ body:has(#memo-modal[open]) #wide-day #day-panel-close{visibility:hidden;}
 body:has(#lesson-time-dialog[open]) :is(#wide-day #day-panel-close,#day-edit-close,#reschedule-form .popup-close){visibility:hidden;}
 #lesson-time-dialog .makeup-head{justify-content:flex-start;}
 #lesson-time-dialog .popup-close{margin:0;}
-#lesson-time-unset{margin:0 0 8px;font-size:13px;color:var(--text-2);}
 /* 課程備忘錄入口卡片：色點與名稱首行對齊、統一內距與間距、預覽使用次要字色（只改樣式） */
 .memo-card{--mc-name:13px;--mc-pv:12px;padding:12px;gap:6px;align-items:stretch;overflow:hidden;}
 :is(#wide-memo-grid,#day-course-memos) .memo-card{--mc-name:14px;--mc-pv:13px;}
@@ -3183,7 +3049,6 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 #account-panel{right:0;}
 #panel-r #day-panel-close[hidden]{display:none!important;}
 .week-wrap :is(.wch-spacer,.wch-day,.unsched-lbl,.week-slot-unsched,.wt-label,.week-slot){border-inline:0;}
-.week-wrap .week-unsched-row{border-bottom:0;}
 .week-wrap :is(.unsched-lbl,.week-slot-unsched,.wt-label,.week-slot){border-bottom:1px solid var(--border-lt);}
 .wide-cal-tools.phone-cal-summary{position:relative;z-index:11;}
 #calendar-more>summary{
@@ -3270,7 +3135,6 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 [data-theme=dark] #panel-r #day-events .done-check.checked{color:var(--on-accent);}
 [data-theme=dark] :is(.week-slot-unsched,.day-group-head,.setup-modal pre){background:var(--card-2);}
 [data-theme=dark] :is(.progress-track,.progress-wrap){background:var(--sunken);}
-[data-theme=dark] .progress-ring-bg{stroke:var(--border);}
 [data-theme=dark] .sync-dot.offline{background:var(--text-3);}
 [data-theme=dark] :is(.cal-tag,.week-ev) :is(.cal-tag-dot,.dot){
   filter:brightness(1.32);box-shadow:0 0 0 1px var(--border-strong);
@@ -3419,9 +3283,6 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 }
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{
   transition:transform 250ms cubic-bezier(.2,.7,.25,1),width 250ms cubic-bezier(.2,.7,.25,1),height 250ms cubic-bezier(.2,.7,.25,1);
-}
-@media(prefers-reduced-motion:reduce){
-  :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{transition:none;}
 }
 #study-batch{width:min(650px,calc(100% - 24px));} #study-batch-list{list-style:none;padding:0;margin:8px 0;max-height:46dvh;overflow:auto;overscroll-behavior:contain;} #study-batch-list fieldset{min-width:0;border:1px solid var(--border-lt);border-radius:var(--r);padding:10px;margin:8px 2px;} #study-batch-list input{accent-color:var(--accent);} #study-batch-summary,.study-batch-status{color:var(--text-2);} #study-batch .study-error{margin-top:8px;} #study-batch .study-error:empty{margin:0;}
 
@@ -3971,8 +3832,19 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 :is(.form-label,.lesson-time-field legend,label:has(+ :is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger))){display:block;margin-block-end:var(--field-label-gap);}
 .lesson-range-row .form-label{margin:0;}
 #quick-input{padding-inline-end:36px;}
-.time-sel{width:auto;}
 #paper-home-tools[hidden],#paper-query-clear[hidden],#study-paper-form button[hidden]{display:none;}
+.paper-overview{display:flex;justify-content:space-between;align-items:center;gap:var(--sp-2);}
+.paper-overview p{margin:0;}
+#paper-actions-menu{position:relative;}
+#paper-actions-menu summary{display:grid;place-items:center;list-style:none;width:44px;height:44px;border-radius:50%;
+  cursor:pointer;background:var(--card-2);color:var(--text);font-size:1.375rem;line-height:1;}
+#paper-actions-menu summary::-webkit-details-marker{display:none;}
+#paper-actions-menu[open] summary{background:var(--accent-tint);color:var(--accent-h);}
+.paper-actions-menu-panel{position:absolute;inset:calc(100% + 4px) 0 auto auto;z-index:3;
+  min-width:9rem;padding:var(--sp-2);display:grid;gap:4px;background:var(--elevated);
+  border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-md);}
+.paper-actions-menu-panel .btn{justify-content:flex-start;min-height:44px;}
+.paper-actions-menu-panel [data-study-action=paper-delete]{color:var(--danger-c);}
 .paper-archive-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sp-3);}
 .paper-archive-toolbar .study-field{flex:1 1 16rem;margin:0;}
 .paper-archive-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
@@ -5789,12 +5661,8 @@ function openExamPicker(id, btnEl){
   const pop=document.getElementById('exam-popover');
   document.getElementById('exam-pop-input').value=c.examDate||'';
   pop.style.display='block';
-  if(!isMobile()&&wideCourse.open){
-    setTimeout(()=>document.addEventListener('click',_examOutside),0);
-    document.getElementById('exam-pop-input').focus();
-    return;
-  }
-  positionExamPicker();
+  if(!isMobile()&&wideCourse.open)document.getElementById('exam-pop-input').focus();
+  else positionExamPicker();
   setTimeout(()=>document.addEventListener('click',_examOutside),0);
 }
 function _examOutside(e){
@@ -5929,16 +5797,6 @@ function toggleDone(date,eid){
     });
   }
 }
-function setTime(date,eid,val){const ev=(S.calendar[date]||[]).find(e=>e.id===eid);if(ev)writeLessonTimes(ev,{time:val,endTime:ev.endTime});saveState();renderPartial(renderDayPanel,renderCalendar);}
-function setTimeParts(date,eid,h,m){
-  const ev=(S.calendar[date]||[]).find(e=>e.id===eid);if(!ev)return;
-  const cur=ev.time||'00:00';const[ch,cm]=cur.split(':').map(Number);
-  const nh=h!=null?parseInt(h):ch,nm=m!=null?parseInt(m):cm;
-  const time=padTime(nh)+':'+padTime(nm);
-  writeLessonTimes(ev,{time,endTime:ev.endTime});
-  saveState();renderDayPanel();renderCalendar();
-}
-
 // ── Repeat Schedule ───────────────────────────────────────────────
 let lastRepeatBatch=null;
 let repeatPreview=null;
@@ -6414,7 +6272,6 @@ function renderExamProgressDetail(plan){
 
 let examProgressOrigin='card';
 document.getElementById('exam-day-close').addEventListener('click',()=>{document.getElementById('exam-day-dialog').close();});
-document.getElementById('exam-day-dialog').addEventListener('keydown',e=>e.stopPropagation());
 document.getElementById('exam-day-dialog').addEventListener('close',()=>{if(examDayReturn&&!examDayReturn.chose)focusCalendarExam();});
 document.getElementById('exam-day-list').addEventListener('click',e=>{
   const b=e.target.closest('button[data-ed-course]');if(!b)return;
@@ -6441,7 +6298,6 @@ document.getElementById('course-list').addEventListener('click',event=>{
   openExamProgress(button.dataset.examProgress,'card');
 });
 examProgressClose.addEventListener('click',()=>examProgressDialog.close());
-examProgressDialog.addEventListener('keydown',event=>event.stopPropagation());
 examProgressDialog.addEventListener('close',()=>{
   if(examProgressCourseId!==null)focusExamProgress(examProgressCourseId);
   examProgressCourseId=null;
@@ -9356,9 +9212,10 @@ const learningJournal=(()=>{
       results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
     const todayRetries=Object.fromEntries([...rounds.values()].filter(round=>round.retryOf).map(round=>[round.retryOf,round.id]));
     const review=Object.fromEntries(kept.filter(p=>reviews.has(p.id)).map(p=>[p.id,reviews.get(p.id)]));
+    for(const id of deleted)papers.delete(id);
     const paperNumbers=new Map();
     const keptPaperQuestions=[...paperQuestions.values()].filter(p=>{
-      if(points.has(p.id)||p.paperId&&!papers.has(p.paperId))return false;
+      if(deleted.has(p.id)||points.has(p.id)||p.paperId&&!papers.has(p.paperId))return false;
       if(!p.paperId||!p.number.trim())return true;
       if(!paperNumbers.has(p.paperId))paperNumbers.set(p.paperId,new Set());
       const seen=paperNumbers.get(p.paperId),number=numberKey(p.number);
@@ -9375,11 +9232,14 @@ const learningJournal=(()=>{
     for(const [kind,key] of [['paper','papers'],['paper-question','paperQuestions'],['paper-subject','paperSubjects']]){
       const old=new Map((before[key]||[]).map(item=>[item.id,item]));
       for(const item of after[key]||[]){
-        if(!same(old.get(item.id),item)){
+        const previous=old.get(item.id);
+        old.delete(item.id);
+        if(!same(previous,item)){
           const {id,...value}=item;
           add(kind,id,value);
         }
       }
+      if(kind!=='paper-subject')for(const id of old.keys())add('delete',id,null);
     }
     const oldPoints=new Map(before.points.map(p=>[p.id,p]));
     const newIds=new Set(after.points.map(p=>p.id));
@@ -9417,7 +9277,7 @@ const studyRoom=(()=>{
   const builtins=['國文','英文','生物','普通化學','有機化學'];
   const outcomes={correct:'答對',incorrect:'答錯',partial:'部分答對',missed:'沒答出來',viewed:'直接看答案'};
   const root=$id('study-room');
-  const fresh=()=>({version:1,points:[],progress:{}});
+  const {fresh}=learningJournal;
   const object=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
   const text=v=>typeof v==='string';
   const count=v=>Number.isSafeInteger(v)&&v>=0;
@@ -9472,7 +9332,18 @@ const studyRoom=(()=>{
   function withLocalReview(saved){
     const projection=saved.syncJournal?learningJournal.project(saved.syncJournal):null;
     const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
-    return {...saved,review:projection?.review??{},chapterRefs:projection?.chapterRefs??{},answered};
+    const restored={...saved,review:projection?.review??{},chapterRefs:projection?.chapterRefs??{},answered};
+    // Old clients can export a raw paper alongside its delete operation.
+    const deleted=new Set(Object.values(saved.syncJournal||{}).filter(op=>op.kind==='delete').map(op=>op.target));
+    if(deleted.size){
+      if(saved.papers)restored.papers=saved.papers.filter(p=>!deleted.has(p.id));
+      if(saved.paperQuestions){
+        restored.paperQuestions=saved.paperQuestions.filter(q=>!deleted.has(q.id)&&!deleted.has(q.paperId));
+        if(saved.paperProgress)restored.paperProgress=Object.fromEntries(restored.paperQuestions.filter(q=>saved.paperProgress[q.id])
+          .map(q=>[q.id,saved.paperProgress[q.id]]));
+      }
+    }
+    return restored;
   }
   function roundComplete(round){
     return !!round&&Array.isArray(round.queue)&&round.index===round.queue.length;
@@ -9491,6 +9362,7 @@ const studyRoom=(()=>{
       }
     }
   }catch{}
+  if(session?.paperId&&!data.papers?.some(p=>p.id===session.paperId))session=null;
   let screen=session?(session.index===session.queue.length?'results':'session'):'home';
   let filters={subject:'',chapter:''};
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
@@ -9595,7 +9467,7 @@ const studyRoom=(()=>{
       action('混合刷題','paper-mix',true)+action('歷屆試卷','paper-archive')+'</div><div id="study-home-cards" class="study-subject-grid">'+studyHomeCards()+'</div>'+
       (resume?'<div class="study-home-actions">'+action('繼續練習','resume')+'</div>':''),false);
   }
-  const paperSchool=p=>p.school||p.name;
+  const paperSchool=p=>p.school?.trim()||'未設定學校';
   function paperTitle(p){return p.year+' 年度 · '+paperSchool(p);}
   function paperItems(id){
     return (data.paperQuestions||[]).filter(p=>p.paperId===id).sort((a,b)=>
@@ -9624,7 +9496,7 @@ const studyRoom=(()=>{
     const groups=new Map();
     for(const p of papers){
       const year=String(Number(p.year));
-      if(query&&![paperSchool(p),p.name,year,year+' 年度',year+'年度'].some(value=>normalizePaperSearch(value).includes(query)))continue;
+      if(query&&![p.school||'',year,year+' 年度',year+'年度'].some(value=>normalizePaperSearch(value).includes(query)))continue;
       if(!groups.has(year))groups.set(year,[]);
       groups.get(year).push(p);
     }
@@ -9768,10 +9640,33 @@ const studyRoom=(()=>{
     const p=paper(editingPaper);
     draw(p?'編輯試卷':'新增試卷','<form id="study-paper-form" class="study-editor study-surface">'+
       '<label class="study-field"><span>年度</span><input name="year" inputmode="numeric" maxlength="4" required value="'+esc(p?.year)+'"></label>'+
-      '<label class="study-field"><span>學校</span><input name="school" required value="'+esc(p?.school)+'"></label>'+
-      (p&&!p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+
+      '<label class="study-field"><span>學校</span><input name="school"'+(!p||p.school?' required':'')+
+      ' value="'+esc(p?.school)+'"></label>'+
+      (p&&p.name!==p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+
       '<p class="study-error" role="alert"></p><div class="study-actions"><button type="button" data-study-action="paper-duplicate" class="btn btn-sand" hidden>開啟既有試卷</button>'+
       '<button class="btn btn-primary">儲存試卷</button></div></form>',p?'paper-return':'paper-list');
+  }
+  function deletePaper(id){
+    const p=paper(id);
+    if(!p)return;
+    const owner=account,count=paperItems(id).length;
+    const message='將刪除「'+p.subject+'・'+paperTitle(p)+'」。'+
+      (count?'本卷 '+count+' 題及作答紀錄也會刪除，已收藏到知識庫的副本會保留。':'這份試卷目前沒有題目。');
+    showConfirm('刪除試卷',message,()=>{
+      if(owner!==account||!paper(id))return;
+      const items=new Set(paperItems(id).map(item=>item.id));
+      if(items.size!==count){deletePaper(id);return;}
+      data.papers=data.papers.filter(item=>item.id!==id);
+      data.paperQuestions=(data.paperQuestions||[]).filter(item=>!items.has(item.id));
+      for(const item of items)delete data.paperProgress?.[item];
+      const previous=session;
+      if(session?.paperId===id||session&&!roundComplete(session)&&session.queue.some(item=>items.has(item)))session=null;
+      if(!persist()){session=previous;return;}
+      if(paperResultRound?.paperId===id){paperResultRound=null;paperReviewReturn=null;}
+      paperId=null;
+      go('papers');
+      toast('已刪除試卷','success');
+    });
   }
   function paperPage(){
     const p=paper(paperId);
@@ -9783,9 +9678,12 @@ const studyRoom=(()=>{
     const position=checkpoint?.position;
     const selected=position?.id&&availableReviewQuestion(checkpoint.round,position.id);
     const review=checkpoint?action(selected?'繼續檢討'+esc(paperReviewLabel(selected)):'查看本次檢討','paper-review-resume'):'';
-    draw(esc(paperTitle(p)),'<div class="study-surface">'+(p.school&&p.name!==p.school?'<p class="study-meta">原試卷名稱 '+esc(p.name)+'</p>':'')+(p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
-      '<p class="study-meta">'+items.length+' 題</p><div class="study-actions">'+action('編輯試卷','paper-edit')+
-      action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
+    draw(esc(paperTitle(p)),'<div class="study-surface"><div class="paper-overview"><p class="study-meta">'+items.length+' 題</p>'+
+      '<details id="paper-actions-menu"><summary aria-label="更多試卷選項" title="更多試卷選項">⋯</summary>'+
+      '<div class="paper-actions-menu-panel">'+action('編輯試卷','paper-edit')+
+      action('刪除試卷','paper-delete')+'</div></details></div>'+
+      (p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
+      '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
@@ -10075,6 +9973,11 @@ const batchDialog=$id('study-batch');
   });
   batchApply.addEventListener('click',()=>{
     if(batchSaving||!batchDialog.open)return;
+    if(batchPaperId&&!paper(batchPaperId)){
+      batchError.textContent='這份試卷已刪除。可以返回保留貼上的 JSON。';
+      batchApply.disabled=true;
+      return;
+    }
     const selected=checkBatch();
     if(!selected.length)return;
     batchSaving=true;
@@ -10674,6 +10577,18 @@ const batchDialog=$id('study-batch');
     else if(screen==='session')play();
     else results();
   }
+  document.addEventListener('click',event=>{
+    const menu=$id('paper-actions-menu');
+    if(menu?.open&&!menu.contains(event.target))menu.open=false;
+  });
+  document.addEventListener('keydown',event=>{
+    const menu=$id('paper-actions-menu');
+    if(event.key==='Escape'&&menu?.open){
+      menu.open=false;
+      menu.querySelector('summary').focus();
+      event.preventDefault();
+    }
+  });
   root.addEventListener('change',event=>{
     const id=event.target.id;
     if(id==='paper-mix-subject'){mixedSubject=event.target.value;render();$id(id).focus();}
@@ -10800,6 +10715,11 @@ const batchDialog=$id('study-batch');
       if(screen==='results'&&paper(paperId)){paperSubject=paper(paperId).subject;paperSubjectRef=paperRef(paper(paperId));}
       if(screen==='results'){rememberPaperReview();paperResultRound=null;paperReviewReturn=null;}
       go('paper');
+    }else if(act==='paper-delete'){
+      const menu=$id('paper-actions-menu');
+      menu.open=false;
+      menu.querySelector('summary').focus();
+      deletePaper(paperId);
     }else if(act==='paper-new'||act==='paper-edit'){
       editingPaper=act==='paper-edit'?paperId:null;
       go('paper-editor');
@@ -10908,14 +10828,22 @@ const batchDialog=$id('study-batch');
       const rawYear=values.get('year').normalize('NFKC').trim(),school=values.get('school').trim();
       const error=form.querySelector('.study-error'),link=form.querySelector('[data-study-action=paper-duplicate]');
       const previous=paper(editingPaper);
-      if(!/^\d{1,4}$/.test(rawYear)||Number(rawYear)<1||!school||!previous&&!paperSubjectRef){
-        error.textContent='請填寫有效年度（1 至 4 位數字）與學校。';
+      if(editingPaper&&!previous){
+        error.textContent='這份試卷已刪除，請返回試卷清單。';
         return;
       }
-      const p={...previous,id:editingPaper||newPointId(),subject:previous?.subject||paperSubject,
-        subjectRef:previous?paperRef(previous):paperSubjectRef,year:String(Number(rawYear)),school,name:previous?.name||school,source:previous?.source||''};
-      const duplicate=(data.papers||[]).find(item=>item.id!==p.id&&paperRef(item)===p.subjectRef&&
-        Number(item.year)===Number(p.year)&&normalizePaperSearch(paperSchool(item))===normalizePaperSearch(school));
+      if(!/^\d{1,4}$/.test(rawYear)||Number(rawYear)<1){
+        error.textContent='請填寫有效年度（1 至 4 位數字）。';
+        return;
+      }
+      if((!previous||previous.school)&&!school||!previous&&!paperSubjectRef){
+        error.textContent='請填寫學校。';
+        return;
+      }
+      const p={...(previous||{id:newPointId(),subject:paperSubject,subjectRef:paperSubjectRef,name:school,source:''}),
+        year:String(Number(rawYear)),...(school?{school}:{})};
+      const duplicate=school&&(data.papers||[]).find(item=>item.id!==p.id&&paperRef(item)===paperRef(p)&&
+        Number(item.year)===Number(p.year)&&normalizePaperSearch(item.school||'')===normalizePaperSearch(school));
       if(duplicate){
         error.textContent='這個考科、年度和學校已有試卷。';
         link.dataset.paper=duplicate.id;
@@ -10987,7 +10915,9 @@ const batchDialog=$id('study-batch');
     if(savingQuestion)return;
     const editor=form.id==='past-question-form',owner=account,error=form.querySelector('.study-error');
     const checked=!editor||values.has('collect');
-    let q=questionId?point(questionId):null;
+    const editingId=questionId;
+    let q=editingId?point(editingId):null;
+    if(editingId&&!q){error.textContent='這道題目已刪除。';return;}
     if(editor){
       const target=questionBack==='paper'?paperId:values.get('targetPaper')||'';
       const p=paper(target);
@@ -11018,6 +10948,10 @@ const batchDialog=$id('study-batch');
     try{
       const item=checked?await collectionPoint(q,subject,chapter):null;
       if(!form.isConnected||owner!==account)return;
+      if((editingId&&!point(editingId))||(q.paperId&&!paper(q.paperId))){
+        error.textContent='這道題目或所屬試卷已刪除。';
+        return;
+      }
       if(item&&data.points.some(p=>p.sourceQuestionId===q.id)){
         error.textContent='此題已收藏到知識庫。';return;
       }
@@ -11115,11 +11049,13 @@ const batchDialog=$id('study-batch');
   function guestLearningChanges(state){
     const history=state.guest.syncJournal||{};
     const existing=new Set(Object.values(state.operations).filter(op=>
-      op.kind==='delete'||op.kind==='paper-question'||(op.kind==='point'&&op.value.subject&&op.value.question&&op.value.answer)).map(op=>op.target));
-    const restored=Object.entries(history).filter(([id])=>!Object.hasOwn(state.operations,id));
+      ['delete','paper','paper-question'].includes(op.kind)||(op.kind==='point'&&op.value.subject&&op.value.question&&op.value.answer)).map(op=>op.target));
+    const seededKinds=['point','paper','paper-question','baseline'];
+    const restored=Object.entries(history).filter(([id,op])=>!Object.hasOwn(state.operations,id)&&
+      !(op.clock===0&&seededKinds.includes(op.kind)&&existing.has(op.target)));
     const changes=learningJournal.changes(learningJournal.fresh(),state.guest,null,null).filter(op=>
-      !['point','baseline','paper-question'].includes(op.kind)||(!existing.has(op.target)&&!Object.values(history).some(entry=>
-        (entry.kind==='point'||entry.kind==='delete'||entry.kind==='paper-question')&&entry.target===op.target)));
+      !['point','baseline','paper','paper-question'].includes(op.kind)||(!existing.has(op.target)&&!Object.values(history).some(entry=>
+        ['point','delete','paper','paper-question'].includes(entry.kind)&&entry.target===op.target)));
     return {restored,changes};
   }
   function projectAccount(state,refs){
@@ -11131,11 +11067,15 @@ const batchDialog=$id('study-batch');
   }
   function saveLearning(next,answer,move,roundOperation){
     if(!account){
-      if(next.syncJournal||answer||move){
+      const removedPaper=(lastSaved.papers?.length||0)>(next.papers?.length||0);
+      if(next.syncJournal||answer||move||removedPaper){
         const journal={...next.syncJournal};
         if(!next.syncJournal){
           let initialClock=0;
-          for(const op of learningJournal.changes(learningJournal.fresh(),lastSaved))journal[newPointId()]={...op,clock:++initialClock};
+          for(const op of learningJournal.changes(learningJournal.fresh(),lastSaved)){
+            const fromSnapshot=removedPaper&&['point','paper','paper-question','baseline'].includes(op.kind);
+            journal[newPointId()]={...op,clock:fromSnapshot?0:++initialClock};
+          }
         }
         let clock=Object.values(journal).reduce((max,op)=>Math.max(max,op.clock),0);
         const refs=new Map();
@@ -11159,11 +11099,20 @@ const batchDialog=$id('study-batch');
     lastSaved=structuredClone(next);
     briefChanged();
   }
+  function clearDeletedPaperPractice(){
+    const lostSession=session?.paperId&&!paper(session.paperId);
+    const lostReview=paperResultRound?.paperId&&!paper(paperResultRound.paperId);
+    if(lostSession)session=null;
+    if(lostReview){paperResultRound=null;paperReviewReturn=null;}
+    if((lostSession&&screen==='session')||((lostReview||lostSession)&&screen==='results')||
+      (lostReview&&screen==='paper-review-detail'))screen='papers';
+  }
   function applyLearning(state){
     const next=projectAccount(state);
     if(JSON.stringify(next)===JSON.stringify(data))return;
     data=next;
     lastSaved=structuredClone(next);
+    clearDeletedPaperPractice();
     const paperScroll=paperResultRound&&['results','paper-review-detail'].includes(screen)&&reviewScrollPositions().map(([,top])=>top);
     const activeToday=screen==='session'&&session?.origin==='today';
     const before=activeToday?JSON.stringify(session):'';
@@ -11304,6 +11253,7 @@ const batchDialog=$id('study-batch');
       if(session?.origin==='today'&&Array.isArray(session.queue))syncTodaySession();
       else if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
       if(session)screen=session.index===session.queue.length?'results':'session';
+      clearDeletedPaperPractice();
       listenLearning(state);
     }
     lastSaved=structuredClone(data);
