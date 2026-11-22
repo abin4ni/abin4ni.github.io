@@ -3907,10 +3907,18 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-batch-row summary .study-batch-status{display:block;font-size:var(--ui-caption);}
 .paper-batch-row summary .study-batch-status:empty{display:none;}
 @media(max-width:767px){
-  #study-answer-form:has(.paper-answer-actions){overflow:visible;}
+  #study-answer-form:has(.paper-answer-actions),#paper-exam-form{overflow:visible;}
   .paper-answer-actions{position:sticky;bottom:0;z-index:2;margin-top:var(--sp-3);padding:var(--sp-2) 0;
     background:var(--surface);border-top:1px solid var(--border-lt);}
 }
+.paper-exam-tools{justify-content:flex-start;}
+.paper-exam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.25rem,1fr));gap:var(--sp-2);margin-block:var(--sp-3);}
+.paper-exam-grid .btn{display:grid;gap:2px;min-height:52px;padding:var(--sp-2);white-space:normal;text-align:center;}
+.paper-exam-grid .btn[aria-current="step"]{outline:2px solid var(--accent);outline-offset:-2px;}
+.paper-exam-grid small{font-size:var(--ui-caption);font-weight:400;}
+.paper-exam-tools .btn[aria-pressed=true]{background:var(--accent-tint);color:var(--accent-h);}
+.paper-exam-answer-actions{flex-wrap:wrap;}
+.paper-exam-answer-actions .btn{min-height:44px;}
 .paper-result + .paper-result{margin-block-start:var(--sp-4);}
 .paper-result-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-block:var(--sp-3);}
 .paper-result-counts div{display:grid;gap:3px;text-align:center;background:var(--card-2);border-radius:var(--r-sm);padding:8px 2px;}
@@ -5033,13 +5041,13 @@ function toast(msg,type='',duration=2800,action=null){
 }
 
 // ── Confirm dialog (replaces native confirm) ──────────────────────
-function showConfirm(title,msg,onYes,yesLabel='確定刪除',yesClass='btn-primary'){
+function showConfirm(title,msg,onYes,yesLabel='確定刪除',yesClass='btn-primary',cancelLabel='取消'){
   document.getElementById('confirm-title').textContent=title;
   document.getElementById('confirm-msg').textContent=msg;
   const btns=document.getElementById('confirm-btns');
   btns.innerHTML='';
   const cancelBtn=document.createElement('button');
-  cancelBtn.className='btn btn-sand';cancelBtn.textContent='取消';
+  cancelBtn.className='btn btn-sand';cancelBtn.textContent=cancelLabel;
   cancelBtn.onclick=hideConfirm;
   const yesBtn=document.createElement('button');
   yesBtn.className='btn '+yesClass;yesBtn.textContent=yesLabel;
@@ -9340,7 +9348,9 @@ const learningJournal=(()=>{
       const ref=refs.get(chapterKey(move[0],move[1]));
       add('move',move[0],ref?[...move,ref]:move);
     }
-    if(answer?.roundId)add('today-answer',answer.roundId,[answer.id,answer.outcome],answer.day);
+    if(Array.isArray(answer)){
+      for(const {id,outcome,opId} of answer)ops.push({kind:'answer',target:id,value:outcome,opId});
+    }else if(answer?.roundId)add('today-answer',answer.roundId,[answer.id,answer.outcome],answer.day);
     else if(answer)add('answer',answer.id,answer.outcome,answer.day);
     else for(const key of ['progress','paperProgress']){
       for(const [id,p] of Object.entries(after[key]||{}))if(!same(before[key]?.[id],p))add('baseline',id,p);
@@ -9433,7 +9443,7 @@ const studyRoom=(()=>{
       data=withLocalReview(stored.data);
       const s=stored.session;
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
-        (s.origin==='today'||roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)||data.paperQuestions?.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
+        (s.origin==='today'||s.mockExam||roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)||data.paperQuestions?.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
         ['question','revealed','grade','feedback'].includes(s.phase)&&text(s.answer)&&
         Array.isArray(s.results)&&s.results.every(r=>object(r)&&(s.origin==='today'||s.queue.includes(r.id))&&Object.hasOwn(outcomes,r.outcome))){
         session=s;
@@ -9449,7 +9459,7 @@ const studyRoom=(()=>{
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
   let paperSearch='',mixedArchive=false;
-  let paperResultRound=null,paperResultFilter='all',paperReviewReturn=null;
+  let paperResultRound=null,paperResultFilter='all',paperReviewReturn=null,examMapOpen=false;
   const paper=id=>data.papers?.find(p=>p.id===id);
   const point=id=>{
     const knowledge=data.points.find(p=>p.id===id);
@@ -9787,6 +9797,7 @@ const studyRoom=(()=>{
     const items=paperItems(p.id);
     const active=resumableToday()||unfinishedOtherPractice();
     const ready=items.filter(canPracticePaper);
+    const sameMock=active&&session?.mockExam&&session.paperId===p.id;
     const checkpoint=readPaperReview(p.id);
     const position=checkpoint?.position;
     const selected=position?.id&&availableReviewQuestion(checkpoint.round,position.id);
@@ -9796,7 +9807,9 @@ const studyRoom=(()=>{
       '<div class="paper-actions-menu-panel">'+action('編輯試卷','paper-edit')+
       action('批次補官方答案','paper-official-answers')+action('刪除試卷','paper-delete')+'</div></details></div>'+
       (p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
-      '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(active||ready.length?action(active?'繼續練習':'開始作答','paper-start',true):'')+
+      '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(!sameMock&&(active||ready.length)?action(active?'繼續練習':'開始作答','paper-start',!!active):'')+
+      (items.length&&(!active||sameMock)?
+        action(active?'繼續模擬考':'模擬考','paper-exam-start',!active):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
@@ -10633,7 +10646,76 @@ const batchDialog=$id('study-batch');
     return eligible.some(v=>v===answer||(p.subject==='英文'&&/^[A-Za-z]+$/.test(answer)&&
       /^[A-Za-z]+$/.test(v)&&/[a-z]/.test(v)&&v.toLowerCase()===answer.toLowerCase()))?'correct':'incorrect';
   }
+  function answerField(p,answer,required=false){
+    const constraint=required?' required':'';
+    if(p.options?.length)return '<fieldset class="past-answer-choices"><legend>你的答案</legend>'+
+      p.options.map(option=>'<label><input type="radio" name="answer"'+constraint+' value="'+esc(option)+'" '+
+        (option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>';
+    return '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3"'+constraint+'>'+esc(answer)+'</textarea></label>';
+  }
+  function examUnanswered(round){
+    return round.queue.filter(id=>point(id)&&!round.mockExam.answers[id]?.trim()).length;
+  }
+  function examAnswerStatus(round,id){
+    if(!point(id))return '題目已移除';
+    return (round.mockExam.answers[id]?.trim()?'已作答':'未作答')+(round.mockExam.marked[id]?' · 已標記':'');
+  }
+  function renderMockExam(){
+    const {queue,index,mockExam}=session,id=queue[index],q=point(id);
+    const marked=Boolean(mockExam.marked[id]),answer=mockExam.answers[id]||'';
+    const label=paperReviewLabel(session.paperReview[index]);
+    let grid='';
+    if(examMapOpen)grid='<div id="paper-exam-grid" class="paper-exam-grid" role="group" aria-label="模擬考題號表">'+session.paperReview.map((entry,i)=>
+      action(esc(paperReviewLabel(entry))+'<small>'+examAnswerStatus(session,entry.id)+'</small>','paper-exam-jump',false,
+        'data-index="'+i+'"'+(i===index?' aria-current="step"':''))
+    ).join('')+'</div>';
+    draw('模擬考','<section class="study-surface"><p class="study-meta">'+esc(label)+' · '+(index+1)+'／'+queue.length+
+      ' · <span class="paper-exam-status">未作答 '+examUnanswered(session)+' 題</span></p>'+
+      '<div class="study-actions paper-exam-tools">'+
+      action(examMapOpen?'收起題號表':'開啟題號表','paper-exam-map',false,'aria-expanded="'+examMapOpen+'"'+(examMapOpen?' aria-controls="paper-exam-grid"':''))+
+      (q?action(marked?'已標記待回看':'標記待回看','paper-exam-mark',false,'aria-pressed="'+marked+'"'):'')+'</div>'+grid+
+      '<form id="paper-exam-form">'+(q?questionContext(q,true)+'<h3 class="study-copy">'+esc(q.question)+'</h3>'+
+        answerField(q,answer):'<p class="study-empty">這題已從試卷移除，可繼續作答其他題目。</p>')+
+      '<div class="study-actions paper-answer-actions paper-exam-answer-actions">'+
+      (index?action('上一題','paper-exam-jump',false,'data-index="'+(index-1)+'"'):'')+
+      (q?action('清除答案','paper-exam-clear',false,answer?'':'disabled'):'')+
+      action('交卷','paper-exam-submit',index===queue.length-1)+
+      (index+1<queue.length?action('下一題','paper-exam-jump',true,'data-index="'+(index+1)+'"'):'')+
+      '</div></form></section>','paper-exam-exit');
+  }
+  function submitMockExam(round){
+    if(session!==round||roundComplete(round))return;
+    const previous=readPaperReview(round.paperId)?.round;
+    if(previous?.paperResultId===round.paperResultId){
+      session=previous;
+      go('results');
+      return;
+    }
+    const results=[],changes=[];
+    const paperReview=round.paperReview.map((entry,index)=>{
+      const q=point(entry.id),answer=round.mockExam.answers[entry.id]?.trim();
+      const pending=Boolean(q&&!canPracticePaper(q));
+      if(q&&answer){
+        const outcome=pending?null:grade(answer,q);
+        results.push({id:q.id,answer,reference:q.answer,outcome:outcome||'viewed',...(!outcome?{ungraded:true}:{})});
+        if(outcome){
+          // This round and the question's original position identify the submitted answer.
+          const opId=round.paperResultId.slice(0,26)+index.toString(16).padStart(8,'0');
+          changes.push({id:q.id,outcome,opId});
+        }
+      }
+      return {...entry,pending};
+    });
+    session={...round,index:round.queue.length,results,paperReview};
+    if(!persist(changes)){
+      session=round;
+      return;
+    }
+    rememberCompletedPaper(session);
+    go('results');
+  }
   function play(){
+    if(session?.mockExam){renderMockExam();return;}
     const p=point(session?.queue[session.index]);
     if(!p){go('home');return;}
     const {mode,index,queue,phase,answer}=session;
@@ -10648,8 +10730,7 @@ const batchDialog=$id('study-batch');
       '</p>'+(session.wrongBook?'<p class="study-meta">'+esc(sourceLabel(p))+'</p>':'')+questionContext(p,!!session.paperId)+'<h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'');
     if(phase==='question'){
       body+=cards?'<div class="study-actions">'+action('翻面','flip',true)+'</div>':
-        (isPaperAnswer?'':'<form id="study-answer-form">')+(p.options?.length?'<fieldset class="past-answer-choices"><legend>你的答案</legend>'+p.options.map(option=>'<label><input type="radio" name="answer" required value="'+esc(option)+'" '+(option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>':
-        '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3" required>'+esc(answer)+'</textarea></label>')+
+        (isPaperAnswer?'':'<form id="study-answer-form">')+answerField(p,answer,true)+
         '<p class="study-error" role="alert"></p><div class="study-actions'+(isPaperAnswer?' paper-answer-actions':'')+'">'+action(session.origin==='today'||session.paperId||session.paperMix?'跳過':'直接看答案','view')+
         '<button class="btn btn-primary">送出答案</button></div></form>';
     }else{
@@ -10683,8 +10764,8 @@ const batchDialog=$id('study-batch');
     return paperReviewEntries(round).map(entry=>{
       const record=records.get(entry.id);
       const pending=entry.pending||record?.reference===''||!record&&round.queue.includes(entry.id)&&point(entry.id)?.answer==='';
-      const kind=pending||!record||record.outcome==='viewed'?'unanswered':record.outcome==='correct'?'correct':'incorrect';
-      const status=pending?'尚未補正解':
+      const kind=record?.ungraded?'ungraded':pending||!record||record.outcome==='viewed'?'unanswered':record.outcome==='correct'?'correct':'incorrect';
+      const status=pending?(round.mockExam?'待補正解':'尚未補正解'):record?.ungraded?'已作答・待自行核對':
         kind==='incorrect'&&record.outcome!=='incorrect'?paperResultLabels[kind]+'（'+outcomes[record.outcome]+'）':paperResultLabels[kind];
       return {...entry,pending,record,kind,status};
     });
@@ -10772,7 +10853,7 @@ const batchDialog=$id('study-batch');
   }
   function renderPaperResults(currentPaper,round){
     const rows=paperResultRows(round),counts={correct:0,incorrect:0,unanswered:0};
-    for(const row of rows)counts[row.kind]++;
+    for(const row of rows)if(Object.hasOwn(counts,row.kind))counts[row.kind]++;
     if(paperResultRound!==round){
       paperResultRound=round;
       const position=readPaperReviewPosition(round);
@@ -10781,10 +10862,12 @@ const batchDialog=$id('study-batch');
     }
     const retryCount=retryQuestionIds(round).length,earlier=previousRounds(round);
     const pending=rows.filter(row=>row.pending).length;
+    const ungraded=rows.filter(row=>row.kind==='ungraded'&&!row.pending).length;
     draw('試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(paperTitle(currentPaper))+'</p>'+
       '<dl id="paper-result-counts" class="paper-result-counts">'+Object.entries(counts).map(([key,count])=>
         '<div><dt>'+paperResultLabels[key]+'</dt><dd>'+count+'</dd></div>').join('')+'</dl>'+
-      (pending?'<p class="study-meta">未作答含 '+pending+' 題尚未補正解</p>':'')+
+      (pending?'<p class="study-meta">'+(round.mockExam?pending+' 題待補正解':'未作答含 '+pending+' 題尚未補正解')+'</p>':'')+
+      (ungraded?'<p class="study-meta">'+ungraded+' 題已作答，請在檢討時自行核對。</p>':'')+
       '<div class="study-actions">'+action('返回試卷','paper-return',!retryCount)+
       (retryCount?action('重練本卷錯題（'+retryCount+' 題）','retry',true):'')+'</div></div>'+
       paperResultListPanel()+
@@ -10804,7 +10887,7 @@ const batchDialog=$id('study-batch');
     }
     const q=point(row.id);
     const ownAnswer=row.record?.answer||(!row.record||row.record.outcome==='viewed'?'未作答':'此筆舊紀錄未保存答案');
-    const reference=row.pending?'尚未補正解':row.record?.reference||q.answer||'目前沒有可顯示的正解';
+    const reference=row.pending?(round.mockExam?'待補正解':'尚未補正解'):row.record?.reference||q.answer||'目前沒有可顯示的正解';
     draw(esc(paperReviewLabel(row)),'<div class="paper-review-layout">'+paperResultListPanel('paper-review-sidebar')+
       '<section class="study-surface paper-review-detail">'+
       '<p class="study-meta">'+esc(paperTitle(paper(round.paperId)))+' · '+esc(row.status)+'</p>'+
@@ -10963,7 +11046,15 @@ const batchDialog=$id('study-batch');
       event.target.form.querySelector('.study-error').textContent='';
       event.target.form.querySelector('[data-study-action=paper-duplicate]').hidden=true;
     }
-    if(event.target.name==='answer'&&event.target.form?.id==='study-answer-form'){
+    if(event.target.name==='answer'&&event.target.form?.id==='paper-exam-form'&&session?.mockExam){
+      const id=session.queue[session.index];
+      session.mockExam.answers[id]=event.target.value;
+      persist();
+      root.querySelector('.paper-exam-status').textContent='未作答 '+examUnanswered(session)+' 題';
+      const entry=root.querySelector('#paper-exam-grid [aria-current="step"] small');
+      if(entry)entry.textContent=examAnswerStatus(session,id);
+      root.querySelector('[data-study-action=paper-exam-clear]').disabled=!event.target.value;
+    }else if(event.target.name==='answer'&&event.target.form?.id==='study-answer-form'){
       session.answer=event.target.value;
       persist();
     }
@@ -11095,6 +11186,39 @@ const batchDialog=$id('study-batch');
       editingPaper=act==='paper-edit'?paperId:null;
       go('paper-editor');
       root.querySelector('[name=year]').focus();
+    }else if(act==='paper-exam-start'){
+      examMapOpen=false;
+      if(unfinishedOtherPractice()){go('session');return;}
+      const p=paper(paperId),items=paperItems(paperId);
+      if(p&&items.length)start(items.map(q=>q.id),'practice',{paperId,subject:p.subject,
+        paperReview:items.map(paperReviewItem),mockExam:{answers:{},marked:{}}},{shuffle:false});
+    }else if(act==='paper-exam-exit'&&session?.mockExam){
+      paperId=session.paperId;
+      const p=paper(paperId);
+      paperSubject=p?.subject||session.subject;
+      paperSubjectRef=p?paperRef(p):'';
+      go('paper');
+    }else if(act.startsWith('paper-exam-')&&session?.mockExam&&!roundComplete(session)){
+      const id=session.queue[session.index];
+      if(act==='paper-exam-submit'){
+        const round=session,pending=examUnanswered(round);
+        showConfirm('確認交卷',pending?'還有 '+pending+' 題未作答。可以返回檢查，或直接交卷。':'已完成所有題目。交卷後會顯示作答結果。',
+          ()=>submitMockExam(round),'確認交卷','btn-primary','返回檢查');
+        return;
+      }
+      if(act==='paper-exam-map')examMapOpen=!examMapOpen;
+      if(act==='paper-exam-jump'){
+        session.index=Number(button.dataset.index);
+        examMapOpen=false;
+      }
+      if(act==='paper-exam-mark')session.mockExam.marked[id]=!session.mockExam.marked[id];
+      if(act==='paper-exam-clear')delete session.mockExam.answers[id];
+      if(act!=='paper-exam-map')persist();
+      if(act==='paper-exam-jump')go('session');
+      else{
+        render();
+        root.querySelector('[data-study-action="'+act+'"]')?.focus({preventScroll:true});
+      }
     }else if(act==='paper-start'){
       if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
       if(session&&session.index<session.queue.length){go('session');return;}
@@ -11419,8 +11543,9 @@ const batchDialog=$id('study-batch');
     const next={...state.operations};
     const pending=[...state.pending];
     let clock=Object.values(next).reduce((max,op)=>Math.max(max,op.clock),0);
-    for(const op of changes){
-      const id=newPointId();
+    for(const {opId,...op} of changes){
+      const id=opId||newPointId();
+      if(Object.hasOwn(next,id))continue;
       next[id]={...op,clock:migration?0:++clock};
       pending.push(id);
     }
@@ -11463,14 +11588,17 @@ const batchDialog=$id('study-batch');
         let clock=Object.values(journal).reduce((max,op)=>Math.max(max,op.clock),0);
         const refs=new Map();
         learningJournal.project(journal,refs);
-        for(const op of learningJournal.changes(lastSaved,next,answer,move,refs))journal[newPointId()]={...op,clock:++clock};
+        for(const {opId,...op} of learningJournal.changes(lastSaved,next,answer,move,refs)){
+          const id=opId||newPointId();
+          if(!Object.hasOwn(journal,id))journal[id]={...op,clock:++clock};
+        }
         next={...learningJournal.project(journal),syncJournal:journal};
       }
       localStorage.setItem(key,JSON.stringify({data:next,session}));
     }else{
       const refs=new Map();
       projectAccount(account,refs);
-      const scoring=answer&&{...answer,roundId:session?.roundId};
+      const scoring=Array.isArray(answer)?answer:answer&&{...answer,roundId:session?.roundId};
       const changes=learningJournal.changes(lastSaved,next,scoring,move,refs);
       if(roundOperation)changes.push(roundOperation);
       if(changes.length)appendLearning(account,changes);
@@ -11500,7 +11628,7 @@ const batchDialog=$id('study-batch');
     const activeToday=screen==='session'&&session?.origin==='today';
     const before=activeToday?JSON.stringify(session):'';
     if(session?.origin==='today')syncTodaySession(true);
-    if(session&&session.origin!=='today'&&!roundComplete(session)&&!session.queue.every(id=>point(id))){
+    if(session&&session.origin!=='today'&&!session.mockExam&&!roundComplete(session)&&!session.queue.every(id=>point(id))){
       session=null;
       if(screen==='session'||screen==='results')screen='subject';
     }
@@ -11641,7 +11769,7 @@ const batchDialog=$id('study-batch');
       try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);}
       data=projectAccount(state);
       if(session?.origin==='today'&&Array.isArray(session.queue))syncTodaySession();
-      else if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.queue.every(id=>point(id))))session=null;
+      else if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.mockExam&&!session.queue.every(id=>point(id))))session=null;
       if(session)screen=session.index===session.queue.length?'results':'session';
       clearDeletedPaperPractice();
       listenLearning(state);
