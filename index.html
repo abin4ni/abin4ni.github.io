@@ -9188,7 +9188,7 @@ const learningJournal=(()=>{
     if(op.kind==='exam-draft'&&value?.patch){
       const patch=value.patch;
       return validPointId(op.target)&&value.paperResultId===op.target&&Number.isSafeInteger(value.updatedAt)&&objectValue(patch)&&
-        ((Number.isSafeInteger(patch.index)&&patch.index>=0)||
+        (patch.discarded===true||(Number.isSafeInteger(patch.index)&&patch.index>=0)||
           (validPointId(patch.id)&&(typeof patch.marked==='boolean'||text(patch.answer))));
     }
     if(op.kind==='exam-draft'||op.kind==='exam-submit'){
@@ -9235,7 +9235,7 @@ const learningJournal=(()=>{
   const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
   function project(journal,refs=new Map()){
     const papers=new Map(),paperQuestions=new Map(),paperSubjects=new Map();
-    const examDrafts=new Map(),examSubmissions=new Map();
+    const examDrafts=new Map(),examSubmissions=new Map(),examDiscarded=new Set();
     const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],dated=[],rounds=new Map(),answered=new Set();
     function legacyChapter(subject,name){
       const key=chapterKey(subject,name);
@@ -9252,6 +9252,7 @@ const learningJournal=(()=>{
     for(const [id,op] of ordered){
       const {kind,target,value}=op;
       if(kind==='exam-draft'){
+        if(value.patch?.discarded){examDiscarded.add(target);continue;}
         if(!value.patch){
           if(!examDrafts.has(target))examDrafts.set(target,structuredClone(value));
           continue;
@@ -9379,7 +9380,8 @@ const learningJournal=(()=>{
     const paperProgress=Object.fromEntries(keptPaperQuestions.filter(p=>baseline.has(p.id)).map(p=>[p.id,baseline.get(p.id)]));
     const paperLastGraded=Object.fromEntries(keptPaperQuestions.filter(p=>lastGraded.has(p.id)).map(p=>[p.id,lastGraded.get(p.id)]));
     for(const id of examSubmissions.keys())examDrafts.delete(id);
-    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    for(const id of examDiscarded)examDrafts.delete(id);
+    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examDiscarded:[...examDiscarded],examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -9489,7 +9491,7 @@ const studyRoom=(()=>{
   function withLocalReview(saved){
     const projection=saved.syncJournal?learningJournal.project(saved.syncJournal):null;
     const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
-    const restored={...saved,review:projection?.review??{},paperLastGraded:projection?.paperLastGraded??{},examDrafts:projection?.examDrafts??{},examSubmissions:projection?.examSubmissions??{},chapterRefs:projection?.chapterRefs??{},answered};
+    const restored={...saved,review:projection?.review??{},paperLastGraded:projection?.paperLastGraded??{},examDrafts:projection?.examDrafts??{},examDiscarded:projection?.examDiscarded??[],examSubmissions:projection?.examSubmissions??{},chapterRefs:projection?.chapterRefs??{},answered};
     // Old clients can export a raw paper alongside its delete operation.
     const deleted=new Set(Object.values(saved.syncJournal||{}).filter(op=>op.kind==='delete').map(op=>op.target));
     if(deleted.size){
@@ -9891,9 +9893,14 @@ const studyRoom=(()=>{
     const p=paper(paperId);
     if(!p){go('papers');return;}
     const items=paperItems(p.id);
-    const active=resumableToday()||unfinishedOtherPractice();
-    const paperDraft=active?(session?.mockExam&&session.paperId===p.id?session:null):savedMockExam(p.id);
-    const sameMock=paperDraft&&!paperDraft.paperPractice;
+    const active=resumableToday()||(unfinishedOtherPractice()&&!session.mockExam);
+    const paperDraft=savedMockExam(p.id);
+    const resume=paperDraft?'<p class="study-meta" id="paper-resume-summary">已答 '+
+      paperDraft.queue.filter(id=>point(id)&&paperDraft.mockExam.answers[id]?.trim()).length+'／'+paperDraft.queue.length+' 題 · 上次停在'+
+      esc(paperReviewLabel(paperDraft.paperReview[paperDraft.index]))+'</p>':'';
+    const actions=paperDraft?action('繼續作答','paper-exam-resume',true)+action('重新開始','paper-exam-restart'):
+      (active||items.length?action(active?'繼續練習':'開始作答','paper-start',Boolean(active)):'')+
+      (!active&&items.length?action('模擬考','paper-exam-start',true):'');
     const rule=paperDraft?paperDraft.scoring:p.scoring;
     const checkpoint=readPaperReview(p.id);
     const position=checkpoint?.position;
@@ -9905,9 +9912,7 @@ const studyRoom=(()=>{
       action('批次補官方答案','paper-official-answers')+action('刪除試卷','paper-delete')+'</div></details></div>'+
       (p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<p class="study-meta" id="paper-scoring-before-start">'+(paperDraft?'本次作答 · ':'')+paperScoringText(rule)+'</p>'+
-      '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(!sameMock&&(active||items.length)?action(paperDraft?'繼續整卷作答':active?'繼續練習':'開始作答','paper-start',Boolean(paperDraft||active)):'')+
-      (items.length&&((!active&&!paperDraft)||sameMock)?
-        action(sameMock?'繼續模擬考':'模擬考','paper-exam-start',true):'')+
+      resume+'<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+actions+
       '</div>'+mockExamHistory(p.id)+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
@@ -10581,7 +10586,7 @@ const batchDialog=$id('study-batch');
     }
     const previous=session;
     session={mode,queue,index:0,results:[],phase:'question',answer:'',...(extra?.paperId?{paperResultId:newPointId()}:{}),...extra};
-    const roundOperation=session.mockExam?.startedAt&&account?mockDraftOperation(session):
+    const roundOperation=session.mockExam?.startedAt?mockDraftOperation(session):
       account&&session.origin==='today'?createTodayRound():null;
     if(!persist(null,null,roundOperation)){
       session=previous;
@@ -10756,10 +10761,35 @@ const batchDialog=$id('study-batch');
     return '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3"'+constraint+'>'+esc(answer)+'</textarea></label>';
   }
   function savedMockExam(id){
+    if(session?.mockExam&&session.paperId===id&&!roundComplete(session)&&
+      !data.examSubmissions?.[session.paperResultId]&&!data.examDiscarded?.includes(session.paperResultId))return session;
     return Object.values(data.examDrafts||{}).filter(round=>round.paperId===id)
       .sort((a,b)=>b.mockExam.startedAt-a.mockExam.startedAt)[0];
   }
+  function parkPaperDraft(){
+    flushExamDraft();
+    if(session?.mockExam?.startedAt&&!roundComplete(session)&&!data.examDrafts?.[session.paperResultId])
+      return persist(null,null,mockDraftOperation(session));
+    return true;
+  }
+  function resumePaperDraft(round){
+    if(session!==round){if(!parkPaperDraft())return;session=structuredClone(round);persist();}
+    go('session');
+  }
+  function restartPaperDraft(id){
+    const round=savedMockExam(paperId);
+    if(!round||round.paperResultId!==id)return;
+    if(round.mockExam.deadline&&Date.now()>=round.mockExam.deadline){resumePaperDraft(round);return;}
+    flushExamDraft();
+    const previous=session;
+    if(session?.paperResultId===id)session=null;
+    if(!persist(null,null,mockDraftOperation(round,{discarded:true}))){session=previous;return;}
+    const p=paper(paperId);
+    if(p&&round.paperPractice)startPaperRound(p,null,true);
+    else go('paper-exam-setup');
+  }
   function startPaperRound(p,deadline=null,practice=false,startedAt=Date.now()){
+    if(!parkPaperDraft())return;
     const items=paperItems(p.id);
     if(!items.length)return;
     start(items.map(q=>q.id),'practice',{paperId:p.id,subject:p.subject,paperReview:items.map(paperReviewItem),
@@ -10797,7 +10827,7 @@ const batchDialog=$id('study-batch');
     if(!round.mockExam.startedAt)return persist();
     const operation=mockDraftOperation(round,patch);
     round.mockExam.updatedAt=Math.max(round.mockExam.updatedAt,operation.value.updatedAt);
-    if(!account||!defer)return persist(null,null,account?operation:null);
+    if(!defer)return persist(null,null,operation);
     if(!persist())return false;
     clearTimeout(examDraftTimer);
     pendingExamDraft=operation;
@@ -10809,12 +10839,12 @@ const batchDialog=$id('study-batch');
     examDraftTimer=null;
     const operation=pendingExamDraft;
     pendingExamDraft=null;
-    if(account&&operation&&session?.paperResultId===operation.target&&!roundComplete(session))persist(null,null,operation);
+    if(operation&&session?.paperResultId===operation.target&&!roundComplete(session))persist(null,null,operation);
   }
   function checkMockDeadline(){
     const round=session,deadline=round?.mockExam?.deadline;
     if(!deadline||roundComplete(round)||!paper(round.paperId)||Date.now()<deadline)return false;
-    if($id('confirm-backdrop').classList.contains('open')&&$id('confirm-title').textContent==='確認交卷')hideConfirm();
+    if($id('confirm-backdrop').classList.contains('open')&&($id('confirm-title').textContent==='確認交卷'||paperId===round.paperId&&$id('confirm-title').textContent==='重新開始作答'))hideConfirm();
     submitMockExam(round,'expired');
     return true;
   }
@@ -10934,7 +10964,7 @@ const batchDialog=$id('study-batch');
     return {earned:format(earned),deducted:format(-deducted),net:format(earned-deducted),maximum:format(maximum)};
   }
   function submitMockExam(round,reason='manual'){
-    if(session!==round||roundComplete(round))return;
+    if(session!==round||roundComplete(round)||data.examDiscarded?.includes(round.paperResultId))return;
     closePaperQuestionMap(false);
     flushExamDraft();
     const previous=data.examSubmissions?.[round.paperResultId]||readPaperReview(round.paperId)?.round;
@@ -11576,10 +11606,14 @@ const batchDialog=$id('study-batch');
       editingPaper=act==='paper-edit'?paperId:null;
       go('paper-editor');
       root.querySelector('[name=year]').focus();
-    }else if(act==='paper-exam-start'){
-      if(unfinishedOtherPractice()){go('session');return;}
+    }else if(act==='paper-exam-resume'||act==='paper-exam-restart'){
       const saved=savedMockExam(paperId);
-      if(saved){session=structuredClone(saved);persist();go('session');return;}
+      if(!saved)return;
+      if(act==='paper-exam-resume'||saved.mockExam.deadline&&Date.now()>=saved.mockExam.deadline){resumePaperDraft(saved);return;}
+      showConfirm('重新開始作答','這份試卷尚未交卷的答案和 △ 標記會被清除。已交卷的成績會保留。',
+        ()=>restartPaperDraft(saved.paperResultId),'重新開始','btn-primary','取消');
+    }else if(act==='paper-exam-start'){
+      if(unfinishedOtherPractice()&&!session.mockExam){go('session');return;}
       if(paperItems(paperId).length)go('paper-exam-setup');
     }else if(act==='paper-exam-exit'&&session?.mockExam){
       if(checkMockDeadline())return;
@@ -11614,9 +11648,7 @@ const batchDialog=$id('study-batch');
       (next||$id('study-heading')).focus({preventScroll:true});
     }else if(act==='paper-start'){
       if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
-      if(session&&session.index<session.queue.length){go('session');return;}
-      const saved=savedMockExam(paperId);
-      if(saved){session=structuredClone(saved);persist();go('session');return;}
+      if(unfinishedOtherPractice()&&!session.mockExam){go('session');return;}
       const p=paper(paperId);
       if(p)startPaperRound(p,null,true);
     }else if(act==='paper-batch')openBatch(button,false,paperId);
@@ -11699,7 +11731,7 @@ const batchDialog=$id('study-batch');
     const form=event.target;
     const values=new FormData(form);
     if(form.id==='paper-exam-config'){
-      if(unfinishedOtherPractice()||resumableToday())return;
+      if(unfinishedOtherPractice()&&!session.mockExam||resumableToday())return;
       const startedAt=Date.now(),timed=values.get('limit')==='timed',duration=values.get('duration');
       const minutes=Number(duration==='custom'?values.get('minutes'):duration);
       const deadline=timed?startedAt+minutes*60000:null;
@@ -12055,6 +12087,15 @@ const batchDialog=$id('study-batch');
         }
       }
       if(screen==='session')screen='results';
+    }else if(data.examDiscarded?.includes(round.paperResultId)&&!roundComplete(round)){
+      session=null;
+      if(screen==='session'){
+        paperId=round.paperId;
+        const p=paper(paperId);
+        paperSubject=p?.subject||round.subject;
+        paperSubjectRef=p?paperRef(p):'';
+        screen='paper';
+      }
     }else if(draft&&!roundComplete(round)&&!pendingExamDraft&&draft.mockExam.updatedAt>=round.mockExam.updatedAt&&
       [draft.index!==round.index,JSON.stringify(draft.mockExam.answers)!==JSON.stringify(round.mockExam.answers),
         JSON.stringify(draft.mockExam.marked)!==JSON.stringify(round.mockExam.marked)].some(Boolean)){
@@ -12079,7 +12120,7 @@ const batchDialog=$id('study-batch');
       if(screen==='session'||screen==='results')screen='subject';
     }
     const examChanged=reconcileMockExam(state);
-    if(examChanged&&['session','results','paper-review-detail'].includes(screen)){
+    if(examChanged&&['session','results','paper-review-detail','paper'].includes(screen)){
       render();
     }else if(activeToday&&before!==JSON.stringify(session)){
       if(roundComplete(session))screen='results';
