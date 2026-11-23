@@ -1,10 +1,10 @@
-// ── StudyOS Service Worker v10 ──────────────────────────────────
+// ── StudyOS Service Worker v11 ──────────────────────────────────
 // HTML 先向網路重新驗證，離線時才讀取頁面快取。介面發版時一併更新快取版本。
 //        同源靜態資源 → cache-first（加速載入）
 //        Firebase / Google → 直接穿透
 // 全部使用相對路徑，放在 GitHub Pages 子路徑（/repo-name/）也能正常運作
 
-const CACHE_NAME  = 'course-tracker-v10';
+const CACHE_NAME  = 'course-tracker-v11';
 const STATIC_EXTS = ['.js', '.css', '.png', '.jpg', '.svg', '.ico', '.woff2', '.json'];
 const PRECACHE    = ['./manifest.json', './icon-192.png', './icon-512.png'];
 const EXTERNAL    = ['firebase', 'google', 'gstatic', 'googleapis', 'firebaseio'];
