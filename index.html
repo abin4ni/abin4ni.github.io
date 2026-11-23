@@ -3536,7 +3536,7 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
 }
 @media(hover:hover){
   :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:not([aria-current=page],[aria-pressed=true]):hover{
-    color:var(--text);text-decoration:underline;text-underline-offset:.22em;
+    color:var(--text);background-color:var(--segment-press);text-decoration:none;
   }
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:active {
@@ -3870,7 +3870,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 #study-room:has(.paper-answer-actions){scroll-padding-block-end:5rem;}
 .paper-review-detail:has(#paper-explanation-form:not([hidden])) .paper-review-saved{display:none;}
 #paper-batch-filters{justify-content:flex-start;margin:var(--sp-2) 0;}
-#paper-batch-filters button[aria-pressed=true]{background:var(--accent-tint);color:var(--accent-h);outline:1px solid var(--accent);}
+
 .paper-batch-row{border-top:1px solid var(--border-lt);}
 .paper-batch-row summary{min-height:44px;cursor:pointer;padding:var(--sp-2);overflow-wrap:anywhere;}
 .paper-batch-stem{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3964,8 +3964,25 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-result-counts dd{margin:0;font-weight:700;font-size:1.25rem;font-variant-numeric:tabular-nums;}
 #paper-group-actions[hidden]{display:none;}
 .paper-result-filters{margin-block:var(--sp-3);max-width:100%;}
-.paper-result-filters button.btn{position:relative;background:transparent;color:var(--text-2);white-space:normal;}
-.paper-result-filters button[aria-pressed=true]{color:var(--accent-h);}
+.study-mode-options button:is(.btn,[aria-pressed]){
+  position:relative;z-index:1;border-radius:var(--r-pill);background:transparent;
+  color:var(--segment-text);white-space:nowrap;font-weight:650;
+}
+.study-mode-options button[aria-pressed=true]{color:var(--segment-selected);}
+@media(hover:hover){
+  .study-mode-options button[aria-pressed=false]:hover{background-color:var(--segment-press);color:var(--text);}
+}
+.study-mode-options button:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-2px;}
+.study-mode-options button:active{background-color:var(--segment-press);}
+.study-mode-options::before{border-radius:var(--r-pill);}
+:is(.btn,.study-mode-options button,.wide-tabs button,.bottom-nav button,.view-toggle button,.account-theme button):active:not(:disabled){
+  filter:brightness(.91);
+}
+@media(prefers-reduced-motion:reduce){
+  :is(.btn,.study-mode-options button,.wide-tabs button,.bottom-nav button,.view-toggle button,.account-theme button):active:not(:disabled){
+    transition:none!important;
+  }
+}
 .paper-review-count{font-variant-numeric:tabular-nums;}
 .paper-review-states{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px var(--sp-2);}
 .paper-review-uncertain{font-size:var(--ui-caption);color:var(--text);}
@@ -4045,7 +4062,16 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 #study-room .study-home-modes::before{border-radius:var(--r-pill);}
 #study-room .study-home-modes button{border-radius:var(--r-pill);}
-#study-room .study-home-modes button:active{background:var(--accent-tint);}
+#study-room .paper-archive-modes{
+  grid-template-columns:repeat(3,minmax(max-content,1fr));
+  width:min(100%,25rem);overflow-x:auto;scrollbar-width:thin;
+}
+.paper-archive-modes button{display:flex;align-items:center;justify-content:center;gap:.38em;white-space:nowrap;}
+.paper-mode-count{
+  display:inline-grid;place-items:center;min-inline-size:4ch;padding:1px .3em;
+  border-radius:var(--r-pill);background:var(--surface);font-size:.8em;font-variant-numeric:tabular-nums;
+}
+@media(max-width:480px){#study-room .paper-archive-modes button{padding-inline:8px;}}
 #study-room .study-subject-grid{gap:var(--sp-3);}
 #study-room .study-subject-grid .memo-card{
   min-width:0;min-height:5.25rem;padding:var(--sp-3);background:var(--surface);
@@ -4812,7 +4838,7 @@ onAuthStateChanged(auth,user=>{
   <p id="study-batch-error" class="study-error" role="alert"></p>
   <section id="study-batch-preview" hidden>
     <p id="study-batch-summary" role="status" tabindex="-1"></p>
-    <div class="study-actions" id="paper-batch-filters" role="group" aria-label="預覽分類" hidden></div>
+    <div class="study-mode-options" id="paper-batch-filters" role="group" aria-label="預覽分類" hidden></div>
     <ol id="study-batch-list"></ol>
     <p id="paper-batch-empty" class="study-empty" hidden>此分類沒有題目。</p>
     <div class="study-actions paper-import-footer"><button type="button" class="btn btn-sand" id="study-batch-back">返回修改原文</button><button type="button" class="btn btn-primary" id="study-batch-apply">匯入 0 題</button></div>
@@ -9158,15 +9184,30 @@ const pillMotion=(()=>{
     }else{
       const frame=group.getBoundingClientRect(),rect=selected.getBoundingClientRect();
       const sx=frame.width/group.offsetWidth||1,sy=frame.height/group.offsetHeight||1;
-      values=[(rect.left-frame.left)/sx-group.clientLeft,(rect.top-frame.top)/sy-group.clientTop,rect.width/sx,rect.height/sy];
+      values=[(rect.left-frame.left)/sx-group.clientLeft+group.scrollLeft,(rect.top-frame.top)/sy-group.clientTop+group.scrollTop,rect.width/sx,rect.height/sy];
       values=values.map(value=>Math.round(value*10)/10);
     }
     if(!values[2]||!values[3]||values.every((value,i)=>value===state.geometry?.[i]))return;
-    // CSS transitions retarget from the current rendered position on each selection.
-    group.toggleAttribute('data-pill-moving',animate&&!!state.geometry);
+    // CSS retargets from the position and width currently being rendered.
+    place(group,state,values,animate&&!!state.geometry);
+  }
+  function place(group,state,values,animate=false){
+    group.toggleAttribute('data-pill-moving',animate);
     group.setAttribute('data-pill-ready','');
     ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,values[i]+'px'));
     state.geometry=values;
+  }
+  function capture(root){
+    const previous=new Map();
+    for(const group of root.querySelectorAll('[data-pill-key][data-pill-ready]')){
+      if(!group.offsetWidth)continue;
+      const style=getComputedStyle(group,'::before'),matrix=new DOMMatrixReadOnly(style.transform);
+      previous.set(group.dataset.pillKey,{
+        geometry:[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],scroll:group.scrollLeft,
+        focused:group.contains(document.activeElement)
+      });
+    }
+    return previous;
   }
   window.addEventListener('resize',()=>{
     for(const group of mounted.keys()){
@@ -9181,23 +9222,41 @@ const pillMotion=(()=>{
     }
   });
   return {
-    mount(root){
-      for(const [group,{observer}] of mounted){
+    capture,
+    mount(root,previous){
+      for(const [group,{observer,options}] of mounted){
         if(group.isConnected)continue;
         observer.disconnect();
         resize.unobserve(group);
-        for(const option of group.children)resize.unobserve(option);
+        for(const option of options)resize.unobserve(option);
         mounted.delete(group);
       }
       for(const group of root.querySelectorAll(selector)){
         if(mounted.has(group))continue;
-        const observer=new MutationObserver(()=>update(group,true));
-        mounted.set(group,{observer,geometry:null});
-        observer.observe(group,{subtree:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
+        const options=new Set(group.children);
+        const observer=new MutationObserver(records=>{
+          if(records.some(record=>record.type==='childList'&&record.target===group)){
+            for(const option of options)resize.unobserve(option);
+            options.clear();
+            for(const option of group.children){options.add(option);resize.observe(option);}
+          }
+          update(group,records.some(record=>record.type==='attributes'));
+        });
+        const state={observer,options,geometry:null};
+        mounted.set(group,state);
+        observer.observe(group,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
         group.addEventListener('change',()=>update(group,true));
-        update(group,false);
+        const prior=previous?.get(group.dataset.pillKey);
+        if(prior&&group.offsetWidth){
+          group.scrollLeft=prior.scroll;
+          place(group,state,prior.geometry);
+          // Give the rebuilt pseudo-element a rendered start before retargeting.
+          void getComputedStyle(group,'::before').transform;
+          update(group,true);
+          if(prior.focused)group.querySelector('[aria-pressed=true]')?.focus({preventScroll:true});
+        }else update(group,false);
         resize.observe(group);
-        for(const option of group.children)resize.observe(option);
+        for(const option of options)resize.observe(option);
       }
     }
   };
@@ -9613,10 +9672,11 @@ const studyRoom=(()=>{
     return '<button type="button" class="btn '+(primary?'btn-primary':'btn-sand')+'" data-study-action="'+name+'" '+attrs+'>'+label+'</button>';
   }
   function draw(title,body,back=true){
+    const priorPills=pillMotion.capture(root);
     root.innerHTML='<div class="study-head"><h2 id="study-heading" tabindex="-1">'+title+'</h2>'+
       (back?action(back===true?'返回學習室':'返回',back===true?'home':back):'')+'</div><p class="study-local"><span id="study-sync-state" role="status">'+esc(syncText)+'</span> <button type="button" class="btn btn-sand" id="study-sync-retry" data-study-action="sync-retry" hidden>重試同步</button></p>'+body;
     showLearningSync(syncText,syncFailed);
-    pillMotion.mount(root);
+    pillMotion.mount(root,priorPills);
     if(session?.mockExam?.deadline&&!roundComplete(session))queueMicrotask(updateMockClock);
   }
   function go(next){
@@ -9629,7 +9689,8 @@ const studyRoom=(()=>{
     const card=returningHome&&[...root.querySelectorAll('#study-home-cards [data-subject]')]
       .find(button=>homeMode==='papers'?button.dataset.paperSubject===paperSubjectRef:button.dataset.subject===subject);
     root.scrollTop=0;
-    (card||$id('study-heading')).focus({preventScroll:true});
+    const retained=root.contains(document.activeElement)&&document.activeElement.closest('[data-pill-key]');
+    if(card||!retained)(card||$id('study-heading')).focus({preventScroll:true});
     if(card)card.scrollIntoView({block:'nearest'});
     else if(!isMobile())root.scrollIntoView({block:'nearest'});
   }
@@ -9734,9 +9795,14 @@ const studyRoom=(()=>{
         '<p class="study-empty">'+(all.length?'這個篩選範圍沒有待重練題目。':'目前沒有待重練題目。')+'</p>')+'</div>');
   }
   function paperModes(active){
-    return '<div class="study-mode-options study-home-modes" role="group" aria-label="考古題模式">'+
-      [['paper-list','歷屆試卷'],['paper-mix-subject','混合刷題'],['paper-wrong-book','錯題本 · '+wrongItems(paperSubjectRef).length+' 題']].map(([key,label])=>
-        '<button type="button" data-study-action="'+key+'" aria-pressed="'+(active===key)+'">'+label+'</button>').join('')+'</div>';
+    const count=wrongItems(paperSubjectRef).length;
+    return '<div class="study-mode-options study-home-modes paper-archive-modes" data-pill-key="paper:'+esc(paperSubjectRef)+'" role="group" aria-label="考古題模式">'+
+      [['paper-list','歷屆試卷'],['paper-mix-subject','混合刷題'],['paper-wrong-book','錯題本']].map(([key,label])=>{
+        const wrong=key==='paper-wrong-book';
+        return '<button type="button" data-study-action="'+key+'" aria-pressed="'+(active===key)+'"'+
+          (wrong?' aria-label="錯題本 '+count+' 題"':'')+'>'+label+
+          (wrong?'<span class="paper-mode-count" aria-hidden="true">'+count+'</span>':'')+'</button>';
+      }).join('')+'</div>';
   }
   function updatePaperList(){
     const list=$id('paper-archive-results'),query=normalizePaperSearch(paperSearch);
@@ -10446,6 +10512,7 @@ const batchDialog=$id('study-batch');
     }).join('');
     batchStage(true);
     checkBatch();
+    pillMotion.mount(batchDialog);
   }
   batchList.addEventListener('input',event=>{
     const element=event.target;
@@ -11418,7 +11485,7 @@ const batchDialog=$id('study-batch');
   window.addEventListener('pagehide',rememberPaperReview);
   function paperResultListPanel(rows,className=''){
     return '<section class="study-surface paper-result '+className+'" aria-labelledby="paper-result-title"><h3 id="paper-result-title">逐題檢討</h3>'+
-      '<div class="study-mode-options paper-result-filters" role="group" aria-label="篩選作答狀態">'+
+      '<div class="study-mode-options paper-result-filters" data-pill-key="review:'+esc(paperResultRound?.paperResultId||'legacy')+'" role="group" aria-label="篩選作答狀態">'+
         Object.entries(paperResultFilters).map(([key,label])=>'<button type="button" class="btn btn-sand" data-study-action="paper-review-filter" data-paper-result-filter="'+key+
           '" aria-pressed="'+(paperResultFilter===key)+'">'+(key==='uncertain'?paperUncertainty:label)+
           ' <span class="paper-review-count">'+rows.filter(row=>matchesPaperResult(row,key)).length+'</span></button>').join('')+'</div>'+
@@ -12421,7 +12488,11 @@ const batchDialog=$id('study-batch');
     }else if(screen==='papers'&&$id('paper-archive-results')){
       updatePaperList();
       const wrongButton=root.querySelector('[data-study-action=paper-wrong-book]');
-      if(wrongButton)wrongButton.textContent='錯題本 · '+wrongItems(paperSubjectRef).length+' 題';
+      if(wrongButton){
+        const count=wrongItems(paperSubjectRef).length;
+        wrongButton.setAttribute('aria-label','錯題本 '+count+' 題');
+        wrongButton.querySelector('.paper-mode-count').textContent=count;
+      }
     }
     else if(!['editor','chapters','new-subject','session','paper-editor','paper-question-editor','paper-subject-editor','paper-collect'].includes(screen)&&!batchDialog.open&&($id('paper-explanation-form')?.hidden??true)){
       const previousScreen=screen;
