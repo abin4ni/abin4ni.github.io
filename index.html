@@ -79,21 +79,24 @@ const studyTheme=(()=>{
   --primary-fill: #3b2418;
   --primary-hover: #523327;
   --primary-text: #fffaf2;
-  --accent-rgb: 142,197,255;
-  --accent: #245a8d;
+  --accent-rgb: 143,90,52;
+  --accent: #8f5a34;
   --accent-h: var(--text);
   --accent-2: var(--accent);
-  --accent-tint: #dcedff;
+  --accent-tint: #f1dcc4;
+  --selection-fill: #efd7ba;
+  --selection-edge: #8a5634;
+  --selection-indicator: var(--selection-edge);
   --nav-bg: var(--elevated);
-  --nav-sel: var(--accent-tint);
+  --nav-sel: var(--selection-fill);
   --segment-fill: var(--nav-sel);
-  --segment-border: rgba(36,90,141,.42);
+  --segment-border: var(--selection-edge);
   --segment-selected: var(--text);
   --segment-text: var(--text-2);
   --segment-press: var(--sunken-h);
-  --ui-focus: var(--accent);
+  --ui-focus: #51443c;
   --on-accent: var(--text);
-  --today-fill: #8ec5ff;
+  --today-fill: #dbc0a2;
   --review-mark: var(--accent);
   --note-bg: var(--card-2);
 
@@ -795,7 +798,7 @@ body{
   background:var(--card-2);transition:background .12s;cursor:pointer;
 }
 .week-slot-unsched:hover,.week-slot-unsched.drag-over{background:rgba(var(--accent-rgb),.1);}
-.week-slot-unsched.selected-slot{background:var(--accent-tint);}
+.week-slot-unsched.selected-slot{background:var(--selection-fill);}
 .week-slot-unsched.tap-target-ready{background:rgba(var(--accent-rgb),.05);}
 .week-hour-grid{display:grid;}
 .wt-label{
@@ -813,7 +816,7 @@ body{
 .week-slot.drag-over{background:rgba(var(--accent-rgb),.12);box-shadow:inset 0 0 0 2px rgba(var(--accent-rgb),.22);}
 .cal-cell.drag-over,.week-slot.drag-over,.week-slot-unsched.drag-over{cursor:copy;}
 .week-slot.today-slot{background:rgba(var(--accent-rgb),.025);}
-.week-slot.selected-slot{background:var(--accent-tint);}
+.week-slot.selected-slot{background:var(--selection-fill);}
 .week-slot.tap-target-ready{background:rgba(var(--accent-rgb),.05);}
 .week-ev{
   display:flex;align-items:center;gap:3px;
@@ -1739,7 +1742,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   .cal-lbl{padding-bottom:4px;}
   .cal-cell{min-width:0;min-height:58px;padding:4px 3px;box-shadow:none;border-radius:8px;}
   .cal-cell.empty-day:hover::after{display:none;}
-  .cal-cell.selected{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);}
+  .cal-cell.selected{border-color:var(--selection-edge);box-shadow:inset 0 0 0 1px var(--selection-edge);}
   .cal-cell .cal-tag{padding:1px 3px;gap:3px;min-width:0;line-height:1.35;}
   .cal-tag-name,.week-ev{min-width:0;text-overflow:ellipsis;}
   .cal-cell .cal-tag.is-done{opacity:.8!important;}
@@ -2156,7 +2159,7 @@ button:active:not(:disabled){filter:brightness(.91);}
 .cal-cell:nth-child(7n){border-inline-end:0;}
 .cal-cell:hover:not(.empty){background:var(--card-2);box-shadow:none;}
 .cal-cell:active:not(.empty){transform:none!important;}
-.cal-cell.selected,.cal-cell.selected:hover{background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent);border-radius:var(--r-sm);}
+.cal-cell.selected,.cal-cell.selected:hover{background:var(--selection-fill);box-shadow:inset 0 0 0 1px var(--selection-edge);border-radius:var(--r-sm);}
 .cal-cell.drag-over,.cal-cell.tap-target-ready:active{background:var(--nav-sel);box-shadow:inset 0 0 0 2px var(--accent);transform:none!important;}
 .cal-cell:focus-visible{outline-offset:-2px;border-radius:var(--r-sm);}
 .cal-cell.empty-day::after{display:none;}
@@ -2180,7 +2183,7 @@ button:active:not(:disabled){filter:brightness(.91);}
   width:100%;min-width:0;min-height:var(--ui-control);padding:2px 0;border:0;
   background:none;color:var(--text-2);font:inherit;cursor:pointer;border-radius:var(--r-sm);
 }
-.week-day-button[aria-pressed="true"]{background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent);}
+.week-day-button[aria-pressed="true"]{background:var(--selection-fill);box-shadow:inset 0 0 0 1px var(--selection-edge);}
 .week-day-button:focus-visible{outline-offset:-2px;}
 .wch-date{font-size:1rem;font-variant-numeric:tabular-nums;}
 .wch-day.today-col .wch-date{
@@ -2811,7 +2814,7 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 #panel-cal[data-cal-view=week] .view-toggle{--calendar-segment-shift:100%;}
 #panel-cal .view-toggle::before{
   content:"";position:absolute;inset-block:3px;left:3px;width:calc((100% - 6px)/2);
-  border-radius:var(--r-pill);background:var(--surface);box-shadow:var(--shadow-sm);pointer-events:none;
+  border-radius:var(--r-pill);background:var(--segment-fill);box-shadow:inset 0 0 0 1px var(--segment-border);pointer-events:none;
   transform:translateX(var(--calendar-segment-shift));transition:transform 230ms var(--ease-ios);
 }
 #panel-cal .cal-head .view-toggle .vt-btn{position:relative;z-index:1;background:transparent;box-shadow:none;}
@@ -3122,7 +3125,12 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   --accent: #a9b0be;
   --accent-h: var(--text);
   --accent-tint: #41444b;
+  --selection-fill: #493d2c;
+  --selection-edge: #e9b954;
+  --selection-indicator: #ffc93c;
+  --ui-focus: #f3ece2;
   --nav-bg: #303237;
+  --nav-sel: var(--accent-tint);
   --segment-border: #8d94a1;
   --on-accent: #26282c;
   --today-fill: #b3bac4;
@@ -3268,7 +3276,7 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 }
 :is(#account-panel,#calendar-more-panel,dialog:not(.wide-legacy,#studyos-intro),.modal,#confirm-dialog){border-color:var(--border);}
 [data-theme=dark] [role=listbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-[data-theme=dark] .week-slot-unsched.selected-slot{background:var(--accent-tint);}
+
 [data-theme=dark] .week-slot-unsched.drag-over{background:var(--nav-sel);}
 :root:not([data-theme=dark]) .cal-tag-time{opacity:1;color:var(--text-3);}
 /* Keep the iPhone header content out of the backdrop-filter layer. */
@@ -3526,12 +3534,17 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:is([aria-current=page],[aria-pressed=true]) {
   color: var(--segment-selected);
 }
+@media(hover:hover){
+  :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:not([aria-current=page],[aria-pressed=true]):hover{
+    color:var(--text);text-decoration:underline;text-underline-offset:.22em;
+  }
+}
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:active {
   background-color: var(--segment-press);
   color: var(--text);
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:focus-visible {
-  outline: 2px solid var(--ui-focus);
+  outline: 2px dashed var(--ui-focus);
   outline-offset: -2px;
 }
 :where(.btn-primary):not(:disabled) { color: var(--primary-text); }
@@ -3881,14 +3894,17 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-exam-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:var(--sp-2);margin-block:var(--sp-3);}
 @media(max-width:620px){.paper-exam-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}}
 .paper-exam-grid .btn{display:grid;align-content:center;gap:1px;min-height:44px;padding:3px 1px;white-space:normal;text-align:center;border-radius:var(--r-sm);overflow-wrap:anywhere;}
-.paper-exam-grid .btn[aria-current="step"]{outline:2px solid var(--accent);outline-offset:-2px;}
+
 .paper-exam-grid small{font-size:.625rem;font-weight:400;line-height:1.15;}
 .paper-exam-grid :is(.paper-map-number-affix,.paper-map-mark-label){
   position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;
 }
-.paper-exam-grid .btn[data-answered=true]{background:var(--accent-tint);}
+.paper-exam-grid .btn[data-answered=true]{background:var(--selection-fill);color:var(--text);}
+.paper-exam-grid .btn[aria-current="step"]{background:var(--selection-fill);color:var(--text);box-shadow:inset 0 0 0 2px var(--selection-edge);}
+:root:not([data-theme=dark]) .paper-exam-grid .btn[data-answered=true]:not([aria-current]){box-shadow:inset 0 0 0 1px var(--selection-edge);}
 .paper-exam-grid .btn[data-answered=false] small{color:var(--text-2);}
 .paper-exam-triangle{color:var(--review-mark);font-weight:700;}
+::selection{color:var(--text);background:var(--selection-fill);}
 #paper-exam-map-dialog{width:min(calc(100% - 24px),650px);overflow:hidden;}
 #paper-exam-map-dialog[open]{display:flex;flex-direction:column;}
 .paper-exam-map-legend{margin:var(--sp-2) 0 0;}
@@ -3918,10 +3934,16 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 #paper-exam-map-dialog[data-layout=sidebar] .paper-exam-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
 #paper-exam-map-close{min-height:44px;}
-:is(.paper-exam-tools .btn,[data-study-action=paper-practice-mark])[aria-pressed=true]{background:var(--accent-tint);color:var(--accent-h);}
+:is(.paper-exam-tools .btn,[data-study-action=paper-practice-mark])[aria-pressed=true]{
+  background:var(--selection-fill);color:var(--text);box-shadow:inset 0 0 0 1px var(--selection-edge);
+}
 .paper-exam-answer-actions{position:sticky;bottom:0;z-index:2;flex-wrap:wrap;margin-top:var(--sp-3);
   padding:var(--sp-2) 0;background:var(--surface);border-top:1px solid var(--border-lt);}
 .paper-exam-answer-actions .btn{min-height:44px;}
+@media(max-width:767px){
+  .paper-exam-answer-actions{gap:6px;}
+  .paper-exam-answer-actions .btn{min-width:44px;padding-inline:9px;}
+}
 .paper-exam-history{margin-block:var(--sp-4);border-block-start:1px solid var(--border-lt);padding-block-start:var(--sp-3);}
 .paper-exam-history ol{list-style:none;padding:0;margin:var(--sp-2) 0;}
 .paper-exam-history li+li{border-block-start:1px solid var(--border-lt);}
@@ -3984,9 +4006,17 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .past-answer-choices{border:0;padding:0;margin:12px 0;min-width:0;}
 .past-answer-choices label{display:flex;align-items:center;gap:.75rem;min-height:44px;overflow-wrap:anywhere;
   padding-inline:var(--sp-2);border-radius:var(--r-sm);}
-.past-answer-choices label:has(:checked){background:var(--nav-sel);color:var(--text);box-shadow:inset 0 0 0 1px var(--segment-border);}
-.past-answer-choices label:has(:focus-visible){outline:2px solid var(--ui-focus);outline-offset:2px;}
-.past-answer-choices input{accent-color:var(--accent);flex:none;}
+.past-answer-choices label:has(:checked){background:var(--selection-fill);color:var(--text);box-shadow:inset 0 0 0 1px var(--selection-edge);}
+@media(hover:hover){
+  .past-answer-choices label:not(:has(:checked)):hover,
+  .paper-exam-grid .btn[data-answered=false]:not([aria-current]):hover{background:var(--sunken-h);}
+}
+:is(.cal-cell,.week-day-button,.paper-exam-grid .btn,.paper-exam-tools .btn):focus-visible,
+.past-answer-choices label:has(:focus-visible){
+  outline:2px dashed var(--ui-focus);outline-offset:-3px;
+}
+
+.past-answer-choices input{accent-color:var(--selection-indicator);flex:none;}
 /* Shared workspace surfaces and responsive calendar detail. */
 #calendar-day-slot[hidden]{display:none;}
 #panel-r .day-heading{align-items:center;flex-wrap:wrap;min-width:0;}
@@ -9215,7 +9245,7 @@ const learningJournal=(()=>{
     }
     if(op.kind==='exam-draft'||op.kind==='exam-submit'){
       const m=value?.mockExam,finished=op.kind==='exam-submit';
-      return validPointId(op.target)&&value?.paperResultId===op.target&&validPointId(value.paperId)&&value.mode==='practice'&&
+      return validPointId(op.target)&&value?.paperResultId===op.target&&(validPointId(value.paperId)||value.paperId===''&&value.paperMix===true)&&value.mode==='practice'&&
         text(value.subject)&&validScoring(value.scoring)&&Number.isSafeInteger(m?.startedAt)&&Number.isSafeInteger(m.updatedAt)&&
         (m.deadline===null||Number.isSafeInteger(m.deadline)&&m.deadline>m.startedAt)&&
         Array.isArray(value.queue)&&value.queue.length>0&&value.queue.every(validPointId)&&
@@ -9691,13 +9721,13 @@ const studyRoom=(()=>{
     const years=[...new Set(papers.map(p=>p.year))].sort((a,b)=>Number(b)-Number(a));
     if(!schools.includes(wrongSchool))wrongSchool='';
     if(!years.includes(wrongYear))wrongYear='';
-    const items=all.filter(matchesWrongFilters),resume=resumableToday()||unfinishedOtherPractice();
+    const items=all.filter(matchesWrongFilters),resume=savedMixedPractice(true);
     const take=Math.min(items.length,TODAY_ROUND_LIMIT);
     draw(esc(paperSubject)+'・錯題本',paperModes('paper-wrong-book')+'<div class="study-surface"><div class="study-chapter-filter">'+
       '<label class="study-field"><span>學校</span><select id="paper-wrong-school">'+options(['',...schools],wrongSchool,'全部學校')+'</select></label>'+
       '<label class="study-field"><span>年度</span><select id="paper-wrong-year">'+options(['',...years],wrongYear,'全部年度')+'</select></label></div>'+
       '<p class="study-meta" role="status">符合篩選 '+items.length+' 題'+(take?' · 本輪 '+take+' 題':'')+'</p>'+
-      (resume||take?'<div class="study-actions">'+action(resume?'繼續目前練習':'開始重練','paper-wrong-start',true)+'</div>':'')+
+      (resume||take?'<div class="study-actions">'+action(resume?'繼續重練':'開始重練','paper-wrong-start',true)+'</div>':'')+
       (items.length?'<ul class="study-list">'+items.map(q=>'<li><div class="study-list-item"><p class="study-meta">'+
         esc(sourceLabel(q)+(!q.paperId&&q.number?' · 第 '+q.number+' 題':''))+'</p><h3>'+esc(q.question)+'</h3></div></li>').join('')+'</ul>':
         '<p class="study-empty">'+(all.length?'這個篩選範圍沒有待重練題目。':'目前沒有待重練題目。')+'</p>')+'</div>');
@@ -9750,7 +9780,7 @@ const studyRoom=(()=>{
     draw(esc(mixedArchive?paperSubject+'・考古題':'混合刷題'),(mixedArchive?paperModes('paper-mix-subject'):'')+
       '<div class="study-surface">'+(mixedArchive?'':'<label class="study-field">考科<select id="paper-mix-subject">'+
       subjectChoices(mixedSubject,'全部科目')+'</select></label>')+'<p class="study-meta">可作答 '+ready.length+' 題</p><div class="study-actions">'+
-      action(unfinishedOtherPractice()||resumableToday()?'繼續目前練習':'開始考古題練習','paper-mix-start',true)+
+      action(savedMixedPractice()?'繼續考古題練習':'開始考古題練習','paper-mix-start',true)+
       action('新增單題','paper-question-new')+'</div>'+pastQuestionList(items)+'</div>');
   }
   function sourceLabel(q){
@@ -10610,7 +10640,8 @@ const batchDialog=$id('study-batch');
       }
     }
     const previous=session;
-    session={mode,queue,index:0,results:[],phase:'question',answer:'',...(extra?.paperId?{paperResultId:newPointId()}:{}),...extra};
+    session={mode,queue,index:0,results:[],phase:'question',answer:'',...(extra?.paperId||extra?.mockExam?{paperResultId:newPointId()}:{}),...extra};
+    if(session.mockExam)session.paperReview=queue.map(id=>paperReviewItem(point(id)));
     const roundOperation=session.mockExam?.startedAt?mockDraftOperation(session):
       account&&session.origin==='today'?createTodayRound():null;
     if(!persist(null,null,roundOperation)){
@@ -10792,6 +10823,14 @@ const batchDialog=$id('study-batch');
     return Object.values(data.examDrafts||{}).filter(round=>round.paperId===id)
       .sort((a,b)=>b.mockExam.startedAt-a.mockExam.startedAt)[0];
   }
+  function savedMixedPractice(wrong=false){
+    const matches=round=>round?.paperMix&&!roundComplete(round)&&(wrong?
+      round.wrongBook?.subject===paperSubjectRef&&round.wrongBook.school===wrongSchool&&round.wrongBook.year===wrongYear:
+      !round.wrongBook&&round.mixedSubject===mixedSubject&&Boolean(round.mixedArchive)===mixedArchive);
+    if(matches(session))return session;
+    return Object.values(data.examDrafts||{}).filter(matches)
+      .sort((a,b)=>b.mockExam.startedAt-a.mockExam.startedAt)[0];
+  }
   function parkPaperDraft(){
     flushExamDraft();
     if(session?.mockExam?.startedAt&&!roundComplete(session)&&!data.examDrafts?.[session.paperResultId])
@@ -10818,16 +10857,39 @@ const batchDialog=$id('study-batch');
     if(!session||session.mockExam||roundComplete(session)){proceed();return;}
     const previous=session,owner=account;
     showConfirm(label,'開始後會取代目前練習的未送出進度。已送出的作答紀錄會保留。',
-      ()=>{if(session===previous&&account===owner&&paper(p.id))proceed();},'繼續','btn-primary','取消');
+      ()=>{if(session===previous&&account===owner&&(!p||paper(p.id)))proceed();},'繼續','btn-primary','取消');
   }
   function startPaperRound(p,deadline=null,practice=false,startedAt=Date.now()){
-    if(!parkPaperDraft())return;
-    const items=paperItems(p.id);
-    if(!items.length)return;
-    start(items.map(q=>q.id),'practice',{paperId:p.id,subject:p.subject,paperReview:items.map(paperReviewItem),
-      scoring:p.scoring?{...p.scoring}:null,
-      ...(practice?{paperPractice:true}:{}),
-      mockExam:{answers:{},marked:{},startedAt,deadline,updatedAt:startedAt}},{shuffle:false});
+    return startPaperAttempt(paperItems(p.id).map(q=>q.id),{
+      paperId:p.id,subject:p.subject,scoring:p.scoring?{...p.scoring}:null,paperPractice:practice
+    },{deadline,startedAt});
+  }
+  function startPaperAttempt(ids,details,{deadline=null,startedAt=Date.now(),shuffle=false,draft}={}){
+    if(!ids.length||!parkPaperDraft())return false;
+    const {answers={},marked={}}=draft||{};
+    return start(ids,'practice',{paperId:'',...details,
+      mockExam:{answers,marked,startedAt,deadline,updatedAt:startedAt}},{shuffle});
+  }
+  function resumeLegacyPaperPractice(round){
+    const submitted=new Set(round.results.map(result=>result.id));
+    const ids=round.queue.filter(id=>point(id)&&!submitted.has(id));
+    if(!ids.length){
+      session={...round,index:round.queue.length};
+      if(!persist()){session=round;return false;}
+      if(round.paperId)rememberCompletedPaper(session);
+      go('results');
+      return true;
+    }
+    const current=round.queue[round.index];
+    const answers={...(round.practiceAnswers||{})};
+    if(round.phase==='question'&&round.answer)answers[current]=round.answer;
+    const remainingAnswers=Object.fromEntries(ids.filter(id=>Object.hasOwn(answers,id)).map(id=>[id,answers[id]]));
+    const marked=Object.fromEntries(ids.filter(id=>round.practiceMarks?.[id]).map(id=>[id,true]));
+    const {paperId,subject,paperMix,wrongBook,mixedSubject,mixedArchive}=round;
+    return startPaperAttempt(ids,{paperId:paperId||'',subject:subject||roundSubject(),
+      ...(paperMix?{paperMix, ...(wrongBook?{wrongBook}:{}),mixedSubject:mixedSubject||'',mixedArchive:!!mixedArchive}:{paperRetry:true}),
+      paperPractice:true,index:Math.max(0,ids.indexOf(current)),
+      previousResults:[...previousRounds(round),round.results]},{draft:{answers:remainingAnswers,marked}});
   }
   function mockDraftOperation(round,patch){
     const target=round.paperResultId;
@@ -10950,9 +11012,9 @@ const batchDialog=$id('study-batch');
         answered?'已作答':'未作答';
       const number=entry.number?'<span class="paper-map-number-affix">第 </span>'+esc(entry.number)+
         '<span class="paper-map-number-affix"> 題</span>':'未編題號';
-      return action('<span>'+number+(marked?' <span class="paper-exam-triangle" aria-hidden="true">△</span>':'')+'</span>'+
+      return action('<span>'+number+(marked?' <span class="paper-exam-triangle" aria-hidden="true">▲</span>':'')+'</span>'+
         '<small>'+(i===round.index?'目前 · ':'')+(point(entry.id)?status:'題目已移除')+
-        (marked?'<span class="paper-map-mark-label"> · 已標記不確定</span>':'')+'</small>',
+        (marked?'<span class="paper-map-mark-label"> · △ 已標記不確定</span>':'')+'</small>',
         'paper-exam-jump',false,'data-index="'+i+'" data-answered="'+answered+'"'+(i===round.index?' aria-current="step"':''));
     }).join('');
     $id('paper-exam-map-summary').textContent=(interactive?'已處理 ':'已答 ')+answeredCount+'／'+entries.length+' 題';
@@ -10994,6 +11056,7 @@ const batchDialog=$id('study-batch');
     if(interactiveQuestionMap(session)){moveInteractiveQuestion(index);return;}
     if(checkMockDeadline())return;
     const previous=session.index;
+    if(!Number.isInteger(index)||index<0||index>=session.queue.length)return;
     session.index=index;
     if(!saveMockDraft({index})){session.index=previous;return;}
     if(!paperQuestionMapDocked())closePaperQuestionMap(false);
@@ -11021,14 +11084,16 @@ const batchDialog=$id('study-batch');
     const target=event.target.closest('[data-study-action=paper-exam-jump]');
     if(target&&(interactiveQuestionMap(session)||session?.mockExam&&!roundComplete(session)))jumpPaperQuestion(Number(target.dataset.index));
   });
+  const uncertaintyButton=marked=>'<span class="paper-exam-triangle" aria-hidden="true">'+(marked?'▲':'△')+'</span> '+(marked?'已標記':'不確定');
   function renderMockExam(){
     const {queue,index,mockExam}=session,id=queue[index],q=point(id);
     const marked=Boolean(mockExam.marked[id]),answer=mockExam.answers[id]||'';
     const label=paperReviewLabel(session.paperReview[index]),p=paper(session.paperId);
     const trigger='aria-haspopup="dialog" aria-controls="paper-exam-map-dialog" aria-expanded="'+examMapDialog.open+'"';
     const arrow='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
-    draw(session.paperPractice?'整卷作答':'模擬考','<section class="study-surface">'+
-      (p?'<p id="paper-attempt-info" class="study-meta">'+esc([p.subject,paperTitle(p),p.source].filter(Boolean).join(' · '))+'</p>':'')+
+    const heading=session.paperMix?'考古題練習':session.paperRetry?'本卷錯題練習':session.paperPractice?'整卷作答':'模擬考';
+    draw(heading,'<section class="study-surface">'+
+      (p||q&&session.paperMix?'<p id="paper-attempt-info" class="study-meta">'+esc(p?[p.subject,paperTitle(p),p.source].filter(Boolean).join(' · '):sourceLabel(q))+'</p>':'')+
       '<div class="paper-exam-header">'+
       action('第 '+(index+1)+'／'+queue.length+' 題'+
         (session.paperReview[index].number!==String(index+1)?
@@ -11039,7 +11104,7 @@ const batchDialog=$id('study-batch');
       (session.scoring?'<p class="study-meta">'+paperScoringText(session.scoring)+'</p>':'')+
       (mockExam.deadline?'<p id="paper-exam-warning" class="study-meta paper-exam-warning" role="status"></p>':'')+
       '<div class="study-actions paper-exam-tools">'+
-      (q?action('<span class="paper-exam-triangle" aria-hidden="true">△</span> 待回看','paper-exam-mark',false,'aria-pressed="'+marked+'"'):'')+'</div>'+
+      (q?action(uncertaintyButton(marked),'paper-exam-mark',false,'aria-pressed="'+marked+'"'):'')+'</div>'+
       '<form id="paper-exam-form">'+(q?questionContext(q,true)+'<h3 class="study-copy">'+esc(q.question)+'</h3>'+
         answerField(q,answer):'<p class="study-empty">這題已從試卷移除，可繼續作答其他題目。</p>')+
       '<div class="study-actions paper-answer-actions paper-exam-answer-actions">'+
@@ -11047,7 +11112,7 @@ const batchDialog=$id('study-batch');
       (index?action('上一題','paper-exam-jump',false,'data-index="'+(index-1)+'"'):'')+
       (q?action('清除答案','paper-exam-clear',false,answer?'':'disabled'):'')+
       action('交卷','paper-exam-submit',index===queue.length-1)+
-      (index+1<queue.length?action('下一題','paper-exam-jump',true,'data-index="'+(index+1)+'"'):'')+
+      action('下一題','paper-exam-jump',index+1<queue.length,index+1<queue.length?'data-index="'+(index+1)+'"':'disabled')+
       '</div></form></section>','paper-exam-exit');
     if(examMapDialog.open){
       examMapTrigger=$id(examMapTrigger?.id||'paper-exam-progress');
@@ -11115,6 +11180,10 @@ const batchDialog=$id('study-batch');
   }
   function play(){
     if(session?.mockExam){renderMockExam();return;}
+    if(session?.paperId||session?.paperMix){
+      if(!resumeLegacyPaperPractice(session))draw('考古題練習','<p class="study-empty">無法開啟本次作答，請返回後重試。</p>',session.paperId?'paper-return':'paper-mix-return');
+      return;
+    }
     const p=point(session?.queue[session.index]);
     if(!p){go('home');return;}
     const {mode,index,queue,phase,answer}=session;
@@ -11130,7 +11199,7 @@ const batchDialog=$id('study-batch');
       action(progress+' 題 <span aria-hidden="true">▾</span>','paper-exam-map',false,
         'id="paper-exam-progress" aria-haspopup="dialog" aria-controls="paper-exam-map-dialog" aria-expanded="'+examMapDialog.open+'"')+
       '<span class="study-meta">'+(p.number?'第 '+esc(p.number)+' 題 · ':'')+esc(p.subject)+'</span>'+
-      action('<span class="paper-exam-triangle" aria-hidden="true">△</span> 不確定','paper-practice-mark',false,
+      action(uncertaintyButton(Boolean(session.practiceMarks?.[p.id])),'paper-practice-mark',false,
         'aria-pressed="'+Boolean(session.practiceMarks?.[p.id])+'"')+'</div>':'<p class="study-meta">'+meta+'</p>';
     let body=(isPaperAnswer?'<form id="study-answer-form">':'')+progressBar+(session.wrongBook?'<p class="study-meta">'+esc(sourceLabel(p))+'</p>':'')+questionContext(p,!!session.paperId)+'<h3 class="study-copy">'+esc(p.question)+'</h3>'+(p.source?'<p class="study-meta">'+esc(p.source)+'</p>':'');
     if(phase==='question'){
@@ -11352,13 +11421,14 @@ const batchDialog=$id('study-batch');
       paperResultRound=round;
       const position=readPaperReviewPosition(round);
       paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:counts.incorrect?'incorrect':'all';
-      if(!readPaperReview(currentPaper.id))rememberCompletedPaper(round);
+      if(currentPaper&&!readPaperReview(currentPaper.id))rememberCompletedPaper(round);
     }
     const retryCount=retryQuestionIds(round).length,earlier=previousRounds(round);
     const pending=rows.filter(row=>row.pending).length;
     const ungraded=rows.filter(row=>row.kind==='ungraded'&&!row.pending).length;
     const m=round.mockExam;
-    draw('試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(paperTitle(currentPaper))+'</p>'+
+    const back=currentPaper?'paper-return':round.wrongBook?'paper-wrong-return':'paper-mix-return';
+    draw('試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(currentPaper?paperTitle(currentPaper):round.wrongBook?'錯題本':'混合刷題')+'</p>'+
       (m?'<p class="study-meta">'+esc(examDate(round))+'</p>':'')+
       (rows.some(row=>row.kind==='unknown')?'<p class="study-meta">部分題目缺少交卷當時的判分紀錄。</p>':'')+
       (m?.reason&&!round.paperPractice?'<p class="study-meta">作答用時 '+formatExamTime(m.finishedAt-m.startedAt)+' · '+(m.reason==='expired'?'時間到交卷':'手動交卷')+'</p>':'')+
@@ -11370,9 +11440,8 @@ const batchDialog=$id('study-batch');
         '<div><dt>'+paperResultLabels[key]+'</dt><dd>'+count+'</dd></div>').join('')+'</dl>'+
       (pending&&!round.scoring?'<p class="study-meta">'+(round.mockExam?pending+' 題待補正解，暫待判分。':'未作答含 '+pending+' 題尚未補正解')+'</p>':'')+
       (ungraded?'<p class="study-meta">'+ungraded+' 題已作答，請在檢討時自行核對。</p>':'')+
-      '<div class="study-actions">'+action('返回試卷','paper-return',!retryCount)+
-      (retryCount?action('重練本卷錯題（'+retryCount+' 題）','retry',true):'')+'</div>'+
-      (retryCount?'<p class="study-meta">重練使用考古題練習，逐題送出判分。</p>':'')+'</div>'+
+      '<div class="study-actions">'+action(currentPaper?'返回試卷':round.wrongBook?'返回錯題本':'返回混合刷題',back,!retryCount)+
+      (retryCount?action((currentPaper?'重練本卷錯題':'重練錯題')+'（'+retryCount+' 題）','retry',true):'')+'</div></div>'+
       paperResultListPanel(rows)+
       (earlier.length?'<details class="study-supplements study-previous-results"><summary>查看先前輪次結果</summary>'+
         earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,true)).join('')+'</details>':''),false);
@@ -11432,7 +11501,7 @@ const batchDialog=$id('study-batch');
   function results(){
     const round=paperResultRound||session;
     const currentPaper=roundComplete(round)&&paper(round.paperId);
-    if(currentPaper){renderPaperResults(currentPaper,round);return;}
+    if(roundComplete(round)&&(currentPaper||round.mockExam&&round.paperMix)){renderPaperResults(currentPaper,round);return;}
     const r=session?.results||[];
     const canReturnToday=session?.origin==='today'||Boolean(session?.returnMode);
     if(session?.mode==='cards'){
@@ -11475,6 +11544,14 @@ const batchDialog=$id('study-batch');
       if(account!==owner||(paperResultRound||session)!==previous||screen!=='results')return;
       const ids=retryQuestionIds(previous);
       if(!ids.length){render();return;}
+      if(previous.paperId||previous.paperMix){
+        const {paperId,subject,paperMix,wrongBook,mixedSubject,mixedArchive}=previous;
+        const scoring=paper(paperId)?.scoring;
+        startPaperAttempt(ids,{paperId:paperId||'',subject:subject||roundSubject(),paperPractice:true,
+          ...(paperMix?{paperMix,...(wrongBook?{wrongBook}:{}),mixedSubject:mixedSubject||'',mixedArchive:!!mixedArchive}:{paperRetry:true}),
+          scoring:scoring?{...scoring}:null,previousResults:[...previousRounds(previous),previous.results]});
+        return;
+      }
       start(ids,'practice',{
         ...(previous.paperId?{paperReview:paperReviewEntries(previous).filter(entry=>ids.includes(entry.id)).map(({marked,...entry})=>entry)}:{}),
         origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,wrongBook:previous.wrongBook,mixedSubject:previous.mixedSubject,mixedArchive:previous.mixedArchive,subject:previous.subject||roundSubject(),previousResults:[...previousRounds(previous),previous.results],
@@ -11570,26 +11647,31 @@ const batchDialog=$id('study-batch');
       event.target.form.querySelector('.study-error').textContent='';
       event.target.form.querySelector('[data-study-action=paper-duplicate]').hidden=true;
     }
-    if(event.target.name==='answer'&&event.target.form?.id==='paper-exam-form'&&session?.mockExam){
-      if(checkMockDeadline())return;
-      const id=session.queue[session.index],answers=session.mockExam.answers,previous=answers[id];
-      const answer=event.target.value;
-      answers[id]=answer;
-      if(!saveMockDraft({id,answer},event.target.type!=='radio')){
-        if(previous===undefined)delete answers[id];
-        else answers[id]=previous;
-        if(event.target.type==='radio'){
-          for(const option of event.target.form.querySelectorAll('[name="answer"]'))option.checked=option.value===previous;
-        }else event.target.value=previous||'';
-        return;
-      }
-      root.querySelector('.paper-exam-status').textContent='未作答 '+examUnanswered(session)+' 題';
-      root.querySelector('[data-study-action=paper-exam-clear]').disabled=!event.target.value;
-    }else if(event.target.name==='answer'&&event.target.form?.id==='study-answer-form'){
+    if(event.target.name==='answer'&&event.target.form?.id==='study-answer-form'){
       session.answer=event.target.value;
       persist();
     }
   });
+  function savePaperAnswer(input){
+    if(input.name!=='answer'||input.form?.id!=='paper-exam-form'||!session?.mockExam||checkMockDeadline())return;
+    const id=session.queue[session.index],answers=session.mockExam.answers,previous=answers[id];
+    const answer=input.value,radio=input.type==='radio';
+    if(answer===(previous||''))return;
+    if(answer)answers[id]=answer;
+    else delete answers[id];
+    if(!saveMockDraft({id,answer},!radio)){
+      if(previous===undefined)delete answers[id];
+      else answers[id]=previous;
+      if(radio){
+        for(const option of input.form.querySelectorAll('[name="answer"]'))option.checked=option.value===previous;
+      }else input.value=previous||'';
+      return;
+    }
+    root.querySelector('.paper-exam-status').textContent='未作答 '+examUnanswered(session)+' 題';
+    root.querySelector('[data-study-action=paper-exam-clear]').disabled=!answer;
+    if(examMapDialog.open)updatePaperQuestionMap();
+  }
+  root.addEventListener('input',event=>savePaperAnswer(event.target));
   root.addEventListener('click',event=>{
     const button=event.target.closest('[data-study-action]');
     if(!button)return;
@@ -11629,18 +11711,21 @@ const batchDialog=$id('study-batch');
         wrongYear=source.year;
       }
       go('paper-wrong-book');
-    }else if(act==='paper-wrong-start'){
-      if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
-      if(unfinishedOtherPractice()){go('session');return;}
-      const ids=wrongItems(paperSubjectRef).filter(matchesWrongFilters).slice(0,TODAY_ROUND_LIMIT).map(q=>q.id);
-      if(ids.length)start(ids,'practice',{paperMix:true,subject:paperSubject,
-        wrongBook:{subject:paperSubjectRef,school:wrongSchool,year:wrongYear}},{shuffle:false});
-    }else if(act==='paper-mix-start'){
-      if(resumableToday()){startWeakBrief(todayLessonSubjectNames(),'today');return;}
-      if(unfinishedOtherPractice()){go('session');return;}
-      const ready=mixedItems().filter(canPracticePaper);
-      if(ready.length)start([...new Set(ready.map(q=>q.id))],'practice',{paperMix:true,mixedSubject,mixedArchive});
-      else toast('這個範圍還沒有可作答的題目。','warn');
+    }else if(act==='paper-wrong-start'||act==='paper-mix-start'){
+      const wrong=act==='paper-wrong-start',saved=savedMixedPractice(wrong);
+      if(saved){confirmPaperMode('繼續作答',null,()=>resumePaperDraft(saved));return;}
+      confirmPaperMode(wrong?'開始重練':'開始考古題練習',null,()=>{
+        if(wrong){
+          const ids=wrongItems(paperSubjectRef).filter(matchesWrongFilters).slice(0,TODAY_ROUND_LIMIT).map(q=>q.id);
+          startPaperAttempt(ids,{paperMix:true,paperPractice:true,subject:paperSubject,
+            wrongBook:{subject:paperSubjectRef,school:wrongSchool,year:wrongYear}});
+        }else{
+          const ids=[...new Set(mixedItems().filter(canPracticePaper).map(q=>q.id))];
+          if(ids.length)startPaperAttempt(ids,{paperMix:true,paperPractice:true,
+            subject:pastSubjects().find(item=>item.key===mixedSubject)?.name||'混合刷題',mixedSubject,mixedArchive},{shuffle:true});
+          else toast('這個範圍還沒有可作答的題目。','warn');
+        }
+      });
     }else if(act==='paper-question-new'||act==='paper-question'||act==='paper-question-edit'){
       if(act!=='paper-question-edit'){
         questionBack=screen;
@@ -11739,6 +11824,14 @@ const batchDialog=$id('study-batch');
     }else if(act==='paper-exam-exit'&&session?.mockExam){
       if(checkMockDeadline())return;
       flushExamDraft();
+      if(session.paperMix){
+        const source=session.wrongBook;
+        if(source){
+          paperSubjectRef=source.subject;paperSubject=session.subject;wrongSchool=source.school;wrongYear=source.year;
+        }else{mixedSubject=session.mixedSubject;mixedArchive=session.mixedArchive;}
+        go(source?'paper-wrong-book':'paper-mix');
+        return;
+      }
       paperId=session.paperId;
       const p=paper(paperId);
       paperSubject=p?.subject||session.subject;
@@ -11751,12 +11844,15 @@ const batchDialog=$id('study-batch');
       marks[id]=!marks[id];
       if(!persist())marks[id]=!marks[id];
       button.setAttribute('aria-pressed',String(marks[id]));
+      button.innerHTML=uncertaintyButton(marks[id]);
+      if(examMapDialog.open)updatePaperQuestionMap();
     }else if(act.startsWith('paper-exam-')&&session?.mockExam&&!roundComplete(session)){
       if(checkMockDeadline())return;
       const id=session.queue[session.index];
       if(act==='paper-exam-submit'){
         const round=session,pending=examUnanswered(round);
-        showConfirm('確認交卷',pending?'還有 '+pending+' 題未作答。可以返回檢查，或直接交卷。':'已完成所有題目。交卷後會顯示作答結果。',
+        const answered=round.queue.filter(id=>point(id)&&round.mockExam.answers[id]?.trim()).length;
+        showConfirm('確認交卷','已答 '+answered+' 題 · 未作答 '+pending+' 題。 交卷後會顯示作答結果。',
           ()=>submitMockExam(round),'確認交卷','btn-primary','返回檢查');
         return;
       }
@@ -12384,7 +12480,7 @@ const batchDialog=$id('study-batch');
         const stored=JSON.parse(localStorage.getItem(key));
         if(!localStorage.getItem(key+'-claim')&&valid(stored?.data)){
           data=withLocalReview(stored.data);
-          if(stored.session?.mockExam&&data.papers?.some(p=>p.id===stored.session.paperId)){
+          if(stored.session?.mockExam&&(stored.session.paperMix||data.papers?.some(p=>p.id===stored.session.paperId))){
             session=stored.session;
             screen=roundComplete(session)?'results':'session';
           }
