@@ -3922,6 +3922,15 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-exam-tools .btn[aria-pressed=true]{background:var(--accent-tint);color:var(--accent-h);}
 .paper-exam-answer-actions{flex-wrap:wrap;}
 .paper-exam-answer-actions .btn{min-height:44px;}
+.paper-exam-history{margin-block:var(--sp-4);border-block-start:1px solid var(--border-lt);padding-block-start:var(--sp-3);}
+.paper-exam-history ol{list-style:none;padding:0;margin:var(--sp-2) 0;}
+.paper-exam-history li+li{border-block-start:1px solid var(--border-lt);}
+.paper-exam-history button{display:grid;gap:4px;width:100%;min-height:44px;padding:var(--sp-3);text-align:start;
+  background:transparent;color:var(--text);border:0;border-radius:var(--r-sm);cursor:pointer;}
+.paper-exam-history button:is(:hover,:focus-visible){background:var(--accent-tint);}
+.paper-exam-history button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.paper-exam-history button .study-meta{display:flex;flex-wrap:wrap;gap:4px var(--sp-3);margin:0;}
+.paper-exam-history-change{color:var(--accent-h);}
 .paper-result + .paper-result{margin-block-start:var(--sp-4);}
 .paper-result-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-block:var(--sp-3);}
 .paper-result-counts div{display:grid;gap:3px;text-align:center;background:var(--card-2);border-radius:var(--r-sm);padding:8px 2px;}
@@ -9188,7 +9197,9 @@ const learningJournal=(()=>{
         (m.deadline===null||Number.isSafeInteger(m.deadline)&&m.deadline>m.startedAt)&&
         Array.isArray(value.queue)&&value.queue.length>0&&value.queue.every(validPointId)&&
         new Set(value.queue).size===value.queue.length&&Array.isArray(value.paperReview)&&
-        value.queue.length===value.paperReview.length&&value.paperReview.every((row,i)=>row?.id===value.queue[i]&&text(row.number)&&typeof row.pending==='boolean')&&
+        value.queue.length===value.paperReview.length&&value.paperReview.every((row,i)=>row?.id===value.queue[i]&&text(row.number)&&typeof row.pending==='boolean'&&
+          (row.snapshot===undefined||objectValue(row.snapshot)&&text(row.snapshot.question)&&text(row.snapshot.group)&&
+            text(row.snapshot.answer)&&strings(row.snapshot.options)&&strings(row.snapshot.accepted)&&typeof row.snapshot.gradable==='boolean'))&&
         Number.isSafeInteger(value.index)&&value.index>=0&&
         Array.isArray(value.results)&&(!finished?value.results.length===0:value.results.every(r=>
           r&&value.queue.includes(r.id)&&outcomes.has(r.outcome)&&text(r.answer)&&text(r.reference))&&
@@ -9869,7 +9880,7 @@ const studyRoom=(()=>{
       '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(!sameMock&&(active||ready.length)?action(active?'繼續練習':'開始作答','paper-start',!!active):'')+
       (items.length&&(!active||sameMock)?
         action(sameMock?'繼續模擬考':'模擬考','paper-exam-start',true):'')+
-      '</div>'+pastQuestionList(items)+'</div>','paper-list');
+      '</div>'+mockExamHistory(p.id)+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
     const ids=data.points.filter(p=>p.subject===filters.subject);
@@ -10698,10 +10709,13 @@ const batchDialog=$id('study-batch');
     if(session.origin==='today')syncTodaySession(true);
     go('session');
   }
+  function eligibleShortAnswers(p){
+    return p.accepted.length?[p.answer,...p.accepted].map(v=>v.trim()).filter(v=>v&&!v.includes('\n')&&v.length<=120):[];
+  }
   function grade(answer,p){
     if(p.options?.length)return answer===p.answer?'correct':'incorrect';
-    if(!p.accepted.length||answer.includes('\n')||answer.length>120)return null;
-    const eligible=[p.answer,...p.accepted].map(v=>v.trim()).filter(v=>v&&!v.includes('\n')&&v.length<=120);
+    if(answer.includes('\n')||answer.length>120)return null;
+    const eligible=eligibleShortAnswers(p);
     if(!eligible.length)return null;
     return eligible.some(v=>v===answer||(p.subject==='英文'&&/^[A-Za-z]+$/.test(answer)&&
       /^[A-Za-z]+$/.test(v)&&/[a-z]/.test(v)&&v.toLowerCase()===answer.toLowerCase()))?'correct':'incorrect';
@@ -10847,10 +10861,15 @@ const batchDialog=$id('study-batch');
           changes.push({id:q.id,outcome,opId});
         }
       }
-      return {...entry,pending};
+      const snapshot=q?{
+        question:q.question,group:q.group||'',answer:q.answer,options:q.options||[],accepted:q.accepted,
+        gradable:!pending&&Boolean(q.options?.length||eligibleShortAnswers(q).length)
+      }:undefined;
+      return {...entry,pending,...(snapshot?{snapshot}:{})};
     });
     const mockExam=m.startedAt?{startedAt:m.startedAt,updatedAt:m.updatedAt,deadline:m.deadline,
-      finishedAt:Math.max(m.startedAt,finishReason==='expired'?m.deadline:current),reason:finishReason}:m;
+      finishedAt:Math.max(m.startedAt,finishReason==='expired'?m.deadline:current),reason:finishReason,gradingVersion:1}:
+      {...m,finishedAt:current,gradingVersion:1};
     session={...round,index:round.queue.length,results,paperReview,mockExam};
     const operation=m.startedAt?{kind:'exam-submit',target:round.paperResultId,opId:round.paperResultId,value:structuredClone(session)}:null;
     if(!persist(operation?null:changes,null,operation)){
@@ -10898,6 +10917,7 @@ const batchDialog=$id('study-batch');
   function paperReviewItem(q){return {id:q.id,number:q.number,pending:!canPracticePaper(q)};}
   function paperReviewEntries(round){
     if(round.paperReview)return round.paperReview;
+    if(round.mockExam)return round.queue.map(id=>({id,number:point(id)?.number||'',pending:false}));
     const ids=new Set(round.queue);
     const available=paperItems(round.paperId).filter(q=>ids.has(q.id)||!round.previousResults?.length&&!canPracticePaper(q));
     const entries=available.map(paperReviewItem);
@@ -10909,7 +10929,10 @@ const batchDialog=$id('study-batch');
     const records=new Map(round.results.map(record=>[record.id,record]));
     return paperReviewEntries(round).map(entry=>{
       const record=records.get(entry.id);
-      const pending=entry.pending||record?.reference===''||!record&&round.queue.includes(entry.id)&&point(entry.id)?.answer==='';
+      const pending=entry.pending||record?.reference===''||
+        !round.mockExam&&!record&&round.queue.includes(entry.id)&&point(entry.id)?.answer==='';
+      if(round.mockExam&&(record&&!Object.hasOwn(outcomes,record.outcome)||!record&&!round.paperReview))
+        return {...entry,record,pending,kind:'unknown',status:'當時的作答或判分未記錄'};
       const kind=record?.ungraded?'ungraded':pending||!record||record.outcome==='viewed'?'unanswered':record.outcome==='correct'?'correct':'incorrect';
       const status=pending?(round.mockExam?'待補正解':'尚未補正解'):record?.ungraded?'已作答・待自行核對':
         kind==='incorrect'&&record.outcome!=='incorrect'?paperResultLabels[kind]+'（'+outcomes[record.outcome]+'）':paperResultLabels[kind];
@@ -10929,9 +10952,64 @@ const batchDialog=$id('study-batch');
   function savePaperReviewPosition(round,position){
     try{localStorage.setItem(paperReviewPositionKey(round),JSON.stringify(position));}catch{}
   }
+  function localPaperReview(id){
+    try{return JSON.parse(localStorage.getItem(paperReviewStorage(id)));}catch{return null;}
+  }
+  function legacyMockExams(id){
+    try{
+      const saved=JSON.parse(localStorage.getItem(paperReviewStorage(id)+':legacy-exams'));
+      return Array.isArray(saved)?saved:[];
+    }catch{return [];}
+  }
+  function mockExamRounds(id){
+    const rounds=new Map();
+    for(const round of [...legacyMockExams(id),localPaperReview(id),session,...Object.values(data.examSubmissions||{})]){
+      if(round?.mockExam&&round.paperId===id&&roundComplete(round)&&Array.isArray(round.results))
+        rounds.set(round.paperResultId||'legacy',round);
+    }
+    return [...rounds.values()].sort((a,b)=>(b.mockExam.finishedAt??0)-(a.mockExam.finishedAt??0));
+  }
+  function examScore(round){
+    const rows=paperResultRows(round),correct=rows.filter(row=>row.kind==='correct').length;
+    const unknown=rows.some(row=>row.kind==='unknown');
+    const hasBasis=rows.every(row=>row.snapshot);
+    return {correct,unknown,unanswered:rows.filter(row=>row.kind==='unanswered').length,
+      gradable:hasBasis?rows.filter(row=>row.snapshot.gradable).length:null};
+  }
+  function comparableMockExams(a,b){
+    if(!a||!b||!a.mockExam.gradingVersion||a.mockExam.gradingVersion!==b.mockExam.gradingVersion||
+      a.subject!==b.subject||!a.paperReview||!b.paperReview||a.paperReview.length!==b.paperReview.length)return false;
+    const previous=new Map(b.paperReview.map(row=>[row.id,row.snapshot]));
+    const basis=({question,group,answer,options,accepted,gradable})=>JSON.stringify([question,group,answer,options,accepted,gradable]);
+    return a.paperReview.every(row=>row.snapshot&&previous.get(row.id)&&basis(row.snapshot)===basis(previous.get(row.id)));
+  }
+  function examDate(round){
+    const time=round.mockExam.finishedAt;
+    return Number.isFinite(time)?new Intl.DateTimeFormat('zh-TW',{
+      dateStyle:'medium',timeStyle:'medium',hour12:false
+    }).format(time):'交卷日期未記錄';
+  }
+  function mockExamHistory(id){
+    const entries=mockExamRounds(id).map(round=>({round,score:examScore(round)}));
+    const [latest,previous]=entries;
+    const comparison=latest&&previous&&!latest.score.unknown&&!previous.score.unknown&&comparableMockExams(latest.round,previous.round)?
+      latest.score.correct-previous.score.correct:null;
+    return '<section id="paper-exam-history" class="paper-exam-history" aria-labelledby="paper-exam-history-title">'+
+      '<h3 id="paper-exam-history-title">模擬考紀錄</h3>'+
+      (entries.length?'<ol>'+entries.map(({round,score},i)=>{
+        const m=round.mockExam;
+        const duration=Number.isFinite(m.startedAt)&&Number.isFinite(m.finishedAt)?formatExamTime(m.finishedAt-m.startedAt):'未記錄';
+        const diff=i===0&&comparison!==null?'<span class="paper-exam-history-change">'+
+          (comparison===0?'與上次答對題數相同':'比上次'+(comparison>0?'多':'少')+'答對 '+Math.abs(comparison)+' 題')+'</span>':'';
+        return '<li><button type="button" data-study-action="paper-exam-history-open" data-round="'+esc(round.paperResultId||'legacy')+'">'+
+          '<strong>'+esc(examDate(round))+'</strong><span class="study-meta">'+
+          '<span>答對 '+(score.unknown?'未記錄':score.correct+'／'+(score.gradable??'未記錄'))+'</span>'+
+          '<span>未作答 '+(score.unknown?'未記錄':score.unanswered)+'</span><span>作答用時 '+duration+'</span>'+
+          '<span>'+(m.deadline?'限時':'不限時')+'</span></span>'+diff+'</button></li>';
+      }).join('')+'</ol>':'<p class="study-meta">目前沒有已交卷的模擬考。</p>')+'</section>';
+  }
   function readPaperReview(id){
-    let local;
-    try{local=JSON.parse(localStorage.getItem(paperReviewStorage(id)));}catch{}
+    const local=localPaperReview(id);
     const remote=Object.values(data.examSubmissions||{}).filter(round=>round.paperId===id)
       .sort((a,b)=>b.mockExam.finishedAt-a.mockExam.finishedAt)[0];
     const round=remote&&(!local||remote.paperResultId===local.paperResultId||
@@ -10940,10 +11018,20 @@ const batchDialog=$id('study-batch');
       {round,position:readPaperReviewPosition(round)}:null;
   }
   function rememberCompletedPaper(round){
-    try{localStorage.setItem(paperReviewStorage(round.paperId),JSON.stringify(round));}catch{}
+    try{
+      const source=paperReviewStorage(round.paperId),previous=localPaperReview(round.paperId);
+      if(previous?.mockExam&&!previous.mockExam.startedAt&&roundComplete(previous)&&previous.paperResultId!==round.paperResultId){
+        const legacy=legacyMockExams(round.paperId);
+        if(!legacy.some(row=>row.paperResultId===previous.paperResultId)){
+          legacy.push(previous);
+          localStorage.setItem(source+':legacy-exams',JSON.stringify(legacy));
+        }
+      }
+      localStorage.setItem(source,JSON.stringify(round));
+    }catch{}
   }
   function availableReviewQuestion(round,id){
-    return point(id)?.paperId===round.paperId&&paperResultRows(round).find(row=>row.id===id);
+    return (round.mockExam||point(id)?.paperId===round.paperId)&&paperResultRows(round).find(row=>row.id===id);
   }
   function reviewScrollPositions(){
     return [root,root.closest('.app-shell'),document.scrollingElement,$id('paper-result-list')]
@@ -11014,6 +11102,8 @@ const batchDialog=$id('study-batch');
     const ungraded=rows.filter(row=>row.kind==='ungraded'&&!row.pending).length;
     const m=round.mockExam;
     draw('試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(paperTitle(currentPaper))+'</p>'+
+      (m?'<p class="study-meta">'+esc(examDate(round))+'</p>':'')+
+      (rows.some(row=>row.kind==='unknown')?'<p class="study-meta">部分題目缺少交卷當時的判分紀錄。</p>':'')+
       (m?.reason?'<p class="study-meta">作答用時 '+formatExamTime(m.finishedAt-m.startedAt)+' · '+(m.reason==='expired'?'時間到交卷':'手動交卷')+'</p>':'')+
       '<dl id="paper-result-counts" class="paper-result-counts">'+Object.entries(counts).map(([key,count])=>
         '<div><dt>'+paperResultLabels[key]+'</dt><dd>'+count+'</dd></div>').join('')+'</dl>'+
@@ -11036,18 +11126,21 @@ const batchDialog=$id('study-batch');
       restoreReviewScroll(scroll);
       return;
     }
-    const q=point(row.id);
-    const ownAnswer=row.record?.answer||(!row.record||row.record.outcome==='viewed'?'未作答':'此筆舊紀錄未保存答案');
-    const reference=row.pending?(round.mockExam?'待補正解':'尚未補正解'):row.record?.reference||q.answer||'目前沒有可顯示的正解';
+    const current=point(row.id),live=current?.paperId===round.paperId?current:null;
+    const q=round.mockExam?(row.snapshot||live):live;
+    const ownAnswer=row.record?.answer||(row.kind==='unanswered'?'未作答':'此筆舊紀錄未保存答案');
+    const reference=row.pending?(round.mockExam?'待補正解':'尚未補正解'):
+      row.record?.reference||row.snapshot?.answer||(round.mockExam?'交卷當時的正解未記錄':live?.answer||'目前沒有可顯示的正解');
     draw(esc(paperReviewLabel(row)),'<div class="paper-review-layout">'+paperResultListPanel('paper-review-sidebar')+
       '<section class="study-surface paper-review-detail">'+
       '<p class="study-meta">'+esc(paperTitle(paper(round.paperId)))+' · '+esc(row.status)+'</p>'+
       '<div class="paper-review-answers"><div><h3>我的答案</h3><p class="study-copy">'+esc(ownAnswer)+'</p></div>'+
       '<div><h3>正解</h3><p class="study-copy">'+esc(reference)+'</p></div></div>'+
-      paperQuestionTools(q)+
-      '<div class="paper-review-saved"><h3>詳解</h3><p class="study-copy" id="paper-review-explanation">'+esc(q.explanation||'尚無詳解')+'</p></div>'+
-      '<details class="study-supplements paper-review-original"><summary>查看完整題目與選項</summary>'+
-      questionContext(q)+'<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+choiceList(q)+'</details></section></div>','paper-review-back');
+      (live?paperQuestionTools(live):'')+
+      '<div class="paper-review-saved"><h3>詳解</h3><p class="study-copy" id="paper-review-explanation">'+esc(live?.explanation||'尚無詳解')+'</p></div>'+
+      (q?'<details class="study-supplements paper-review-original"><summary>查看完整題目與選項</summary>'+
+      questionContext(q)+'<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+choiceList(q)+'</details>':
+      '<p class="study-meta">原題已移除，這筆交卷未保存題目內容。</p>')+'</section></div>','paper-review-back');
     renderPaperResultList(paperResultRows(round));
   }
   function retryQuestionIds(round=session){
@@ -11284,13 +11377,16 @@ const batchDialog=$id('study-batch');
         questionId=button.dataset.question||null;
       }
       go(act==='paper-question'?'paper-question':'paper-question-editor');
-    }else if(act==='paper-review-resume'){
-      const checkpoint=readPaperReview(paperId);
+    }else if(act==='paper-review-resume'||act==='paper-exam-history-open'){
+      const history=act==='paper-exam-history-open';
+      const selectedRound=history&&mockExamRounds(paperId).find(round=>(round.paperResultId||'legacy')===button.dataset.round);
+      const checkpoint=history?(selectedRound&&{round:selectedRound,position:readPaperReviewPosition(selectedRound)}):readPaperReview(paperId);
       if(!checkpoint)return;
       paperResultRound=checkpoint.round;
       const position=checkpoint.position;
-      paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:'all';
-      const selected=position?.id&&availableReviewQuestion(paperResultRound,position.id);
+      paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:
+        history&&paperResultRows(checkpoint.round).some(row=>row.kind==='incorrect')?'incorrect':'all';
+      const selected=!history&&position?.id&&availableReviewQuestion(paperResultRound,position.id);
       paperReviewReturn=selected?{id:selected.id,scroll:position.scroll}:null;
       go(selected?'paper-review-detail':'results');
       restoreReviewScroll(position?.scroll,!!selected);
