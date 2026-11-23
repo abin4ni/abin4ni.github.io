@@ -3845,6 +3845,17 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-year{margin-block:var(--sp-5);}
 .paper-year .study-paper-list{margin-block-start:var(--sp-2);}
 .paper-year .memo-card-name{overflow-wrap:anywhere;}
+.paper-year .study-paper-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));}
+.study-paper-card{
+  display:flex;flex-direction:column;min-width:0;
+  background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-sm);
+}
+#study-room .study-paper-card .memo-card{
+  flex:1;justify-content:flex-start;box-shadow:none;border:0;border-radius:inherit;
+}
+.study-paper-card:has(.paper-card-resume) .memo-card{border-radius:var(--r-sm) var(--r-sm) 0 0;}
+.paper-card-progress{margin:0;}
+.paper-card-resume{align-self:flex-end;margin:0 var(--sp-3) var(--sp-3);}
 .past-question-link{border:0;background:none;color:var(--text);font:inherit;text-align:start;width:100%;min-height:44px;white-space:pre-wrap;overflow-wrap:anywhere;cursor:pointer;}
 .past-question-link:hover,.past-question-link:focus-visible{color:var(--accent-h);}
 .past-options{padding-inline-start:1.5rem;overflow-wrap:anywhere;}
@@ -9872,9 +9883,19 @@ const studyRoom=(()=>{
     const counts=new Map();
     for(const item of data.paperQuestions||[])counts.set(item.paperId,(counts.get(item.paperId)||0)+1);
     list.innerHTML=[...groups].map(([year,items])=>'<section class="paper-year"><h3>'+esc(year)+' 年度</h3><div class="study-subject-grid study-paper-list">'+
-      items.map(p=>'<button type="button" class="memo-card" data-study-action="paper-open" data-paper="'+esc(p.id)+'">'+
-        '<span class="memo-card-name">'+esc(paperSchool(p))+'</span><span class="study-meta">'+
-        (paperSubjectRef?'':esc(p.subject)+' · ')+(counts.get(p.id)||0)+' 題</span></button>').join('')+'</div></section>').join('');
+      items.map(p=>paperArchiveCard(p,counts.get(p.id)||0)).join('')+'</div></section>').join('');
+  }
+  function paperArchiveCard(p,count){
+    const draft=count?savedMockExam(p.id,isFullPaperAttempt):null;
+    const result=count&&!draft?completedPaperRounds(p.id).find(isFullPaperAttempt):null;
+    const score=result?.points?.net;
+    const hasScore=(typeof score==='string'&&score.trim()!=='')||Number.isFinite(score);
+    const progress=!count?'尚未匯入題目':draft?'作答中 · '+paperDraftProgress(draft):
+      result?'已交卷 · '+(hasScore?'最近一次 '+score+' 分':'未記錄分數'):'尚未作答';
+    return '<article class="study-paper-card"><button type="button" class="memo-card" data-study-action="paper-open" data-paper="'+esc(p.id)+'">'+
+      '<span class="memo-card-name">'+esc(paperSchool(p))+'</span><span class="study-meta">'+
+      (paperSubjectRef?'':esc(p.subject)+' · ')+count+' 題</span><span class="study-meta paper-card-progress">'+esc(progress)+'</span></button>'+
+      (draft?' <button type="button" class="btn btn-sand paper-card-resume" data-study-action="paper-card-resume" data-paper="'+esc(p.id)+'" aria-label="繼續作答 '+esc(paperTitle(p))+'">繼續作答</button>':'')+'</article>';
   }
   function paperList(){
     draw(esc(paperSubjectRef?paperSubject+'・考古題':'歷屆試卷'),
@@ -10061,9 +10082,8 @@ const studyRoom=(()=>{
     const items=paperItems(p.id);
     const practiceDraft=session?.paperId===p.id&&interactiveQuestionMap(session);
     const paperDraft=savedMockExam(p.id);
-    const resume=paperDraft?'<p class="study-meta" id="paper-resume-summary">已答 '+
-      paperDraft.queue.filter(id=>point(id)&&paperDraft.mockExam.answers[id]?.trim()).length+'／'+paperDraft.queue.length+' 題 · 上次停在'+
-      esc(paperReviewLabel(paperDraft.paperReview[paperDraft.index]))+'</p>':'';
+    const resume=paperDraft?'<p class="study-meta" id="paper-resume-summary">'+paperDraftProgress(paperDraft)+' · 上次停在'+
+      esc(paperReviewLabel(paperReviewEntries(paperDraft)[paperDraft.index]))+'</p>':'';
     const actions=(paperDraft?action(paperDraft.paperPractice?'繼續整卷作答':'繼續模擬考','paper-exam-resume',true)+
       action('重新開始','paper-exam-restart'):items.length?
       action('開始整卷作答','paper-start',true)+action('模擬考','paper-exam-start'):'')+
@@ -10931,10 +10951,17 @@ const batchDialog=$id('study-batch');
         (option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>';
     return '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3"'+constraint+'>'+esc(answer)+'</textarea></label>';
   }
-  function savedMockExam(id){
-    if(session?.mockExam&&session.paperId===id&&!roundComplete(session)&&
+  function isFullPaperAttempt(round){
+    return Boolean(round.mockExam&&!round.paperMix&&!round.paperRetry&&!round.reviewRetry);
+  }
+  function paperDraftProgress(round){
+    const answered=round.queue.filter(id=>point(id)&&round.mockExam.answers[id]?.trim()).length;
+    return '已答 '+answered+'／'+round.queue.length+' 題';
+  }
+  function savedMockExam(id,accept=()=>true){
+    if(session?.mockExam&&session.paperId===id&&!roundComplete(session)&&accept(session)&&
       !data.examSubmissions?.[session.paperResultId]&&!data.examDiscarded?.includes(session.paperResultId))return session;
-    return Object.values(data.examDrafts||{}).filter(round=>round.paperId===id)
+    return Object.values(data.examDrafts||{}).filter(round=>round.paperId===id&&accept(round))
       .sort((a,b)=>b.mockExam.startedAt-a.mockExam.startedAt)[0];
   }
   function savedMixedPractice(wrong=false){
@@ -11291,6 +11318,7 @@ const batchDialog=$id('study-batch');
     }
     rememberCompletedPaper(session);
     if(screen==='session'||screen==='paper'&&paperId===round.paperId)go('results');
+    else if(screen==='papers')updatePaperList();
   }
   function play(){
     if(session?.mockExam){renderMockExam();return;}
@@ -11971,7 +11999,17 @@ const batchDialog=$id('study-batch');
       wrongSchool='';wrongYear='';
       paperSearch='';go('papers');
     }else if(act==='paper-list')go('papers');
-    else if(['paper-open','paper-return','paper-duplicate'].includes(act)){
+    else if(act==='paper-card-resume'){
+      const id=button.dataset.paper,p=paper(id);
+      const draft=p&&savedMockExam(id,isFullPaperAttempt);
+      if(!draft){updatePaperList();return;}
+      confirmPaperMode('繼續作答',p,()=>{
+        const latest=savedMockExam(id,isFullPaperAttempt);
+        if(!latest){updatePaperList();return;}
+        paperId=id;
+        resumePaperDraft(latest);
+      });
+    }else if(['paper-open','paper-return','paper-duplicate'].includes(act)){
       paperId=button.dataset.paper||(screen==='results'?(paperResultRound||session)?.paperId:paperId)||paperId;
       if(screen==='results'&&paper(paperId)){paperSubject=paper(paperId).subject;paperSubjectRef=paperRef(paper(paperId));}
       if(screen==='results'){rememberPaperReview();paperResultRound=null;paperReviewReturn=null;}
