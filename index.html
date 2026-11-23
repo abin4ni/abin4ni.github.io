@@ -4176,9 +4176,39 @@ async function smartSignIn(){
 
 const learningOperationsPath='users/{uid}/data/learning/operations';
 const learningOperations=uid=>collection(db,learningOperationsPath.replace('{uid}',()=>uid));
+// The journal keeps its original shape. Firestore accepts arrays inside maps, but
+// rejects an array directly inside another array (including on old pending writes).
+function mapLearningPreviousResults(op,convert){
+  if(!['exam-draft','exam-submit'].includes(op?.kind)||!Array.isArray(op.value?.previousResults))return op;
+  return {...op,value:{...op.value,previousResults:op.value.previousResults.map(convert)}};
+}
+const encodeLearningWrite=op=>mapLearningPreviousResults(op,round=>Array.isArray(round)?{results:round}:round);
+const decodeLearningRead=op=>mapLearningPreviousResults(op,round=>Array.isArray(round?.results)?round.results:round);
+
+const diagnosticLearningFields=new Set([
+  'kind','target','value','clock','day','paperId','paperResultId','queue','results','previousResults','paperReview',
+  'mockExam','patch','answers','marked','options','accepted','snapshot','reviewRetry','points','question','answer',
+  'reference','outcome','subject','chapter','chapterRef','explanation','group','source','sourcePage','reviewNote'
+]);
+function inspectLearningWrite(value,fieldPath='',inArray=false){
+  if(value===undefined)return {fieldPath,valueType:'undefined'};
+  if(Array.isArray(value)&&inArray)return {fieldPath,valueType:'array',parentType:'array'};
+  if(!value||typeof value!=='object')return;
+  const array=Array.isArray(value);
+  for(const [key,item] of Object.entries(value)){
+    const part=diagnosticLearningFields.has(key)?key:'*';
+    const path=array?fieldPath+'['+key+']':fieldPath?fieldPath+'.'+part:part;
+    const issue=inspectLearningWrite(item,path,array);
+    if(issue)return issue;
+  }
+}
+function learningWriteError(error,phase,operationIndex,payload){
+  const details={phase,...(operationIndex===undefined?{}:{operationIndex}),...(payload?inspectLearningWrite(payload):null)};
+  return Object.assign(new Error('Learning write failed'),{code:error?.code||error?.name,learningWrite:details});
+}
 window._fb={
   learningInfo:Object.freeze({
-    build:'learning-sync-diagnostics-2',
+    build:'learning-sync-diagnostics-3',
     project:firebaseConfig.projectId,
     database:'(default)',
     path:learningOperationsPath,
@@ -4202,20 +4232,36 @@ window._fb={
   },
   listenLearning:(uid,receive,failed)=>onSnapshot(learningOperations(uid),
     {includeMetadataChanges:true},snapshot=>{
-      receive(snapshot.docs.filter(row=>!row.metadata.hasPendingWrites).map(row=>[row.id,row.data()]),!snapshot.metadata.fromCache);
+      receive(snapshot.docs.filter(row=>!row.metadata.hasPendingWrites).map(row=>[row.id,decodeLearningRead(row.data())]),!snapshot.metadata.fromCache);
     },failed),
-  writeLearning:(uid,ops)=>{
+  writeLearning:async(uid,ops)=>{
     const batch=writeBatch(db);
-    for(const [id,op] of ops)batch.set(doc(learningOperations(uid),id),op);
-    return batch.commit();
+    for(const [index,[id,op]] of ops.entries()){
+      const payload=encodeLearningWrite(op);
+      try{batch.set(doc(learningOperations(uid),id),payload);}
+      catch(error){throw learningWriteError(error,'batch.set',index,payload);}
+    }
+    try{await batch.commit();}
+    catch(error){throw learningWriteError(error,'batch.commit');}
   },
-  submitLearningExam:(uid,id,op)=>runTransaction(db,async transaction=>{
-    const ref=doc(learningOperations(uid),id);
-    const recorded=await transaction.get(ref);
-    if(recorded.exists())return recorded.data();
-    transaction.set(ref,op);
-    return op;
-  }),
+  submitLearningExam:async(uid,id,op)=>{
+    try{
+      return await runTransaction(db,async transaction=>{
+        const ref=doc(learningOperations(uid),id);
+        let recorded;
+        try{recorded=await transaction.get(ref);}
+        catch(error){throw learningWriteError(error,'transaction.get',0);}
+        if(recorded.exists())return decodeLearningRead(recorded.data());
+        const payload=encodeLearningWrite(op);
+        try{transaction.set(ref,payload);}
+        catch(error){throw learningWriteError(error,'transaction.set',0,payload);}
+        return op;
+      });
+    }catch(error){
+      if(error.learningWrite)throw error;
+      throw learningWriteError(error,'transaction.commit');
+    }
+  },
   stopListen:()=>{if(_unsubscribe){_unsubscribe();_unsubscribe=null;}},
 };
 window._fbReady=true;
@@ -12302,10 +12348,17 @@ const batchDialog=$id('study-batch');
     showLearningSync('學習資料同步失敗 · '+stage+'（'+code+'）',true);
   }
   function recordLearningFailure(state,stage,error,attemptedWrites){
-    const code=error?.code||error?.name||'unknown';
+    const candidate=error?.code||error?.name;
+    const code=typeof candidate==='string'&&/^[a-z][a-z0-9/-]{0,49}$/i.test(candidate)?candidate:'unknown';
     state.failure={stage,code};
+    const details=error?.learningWrite;
     console.error('[StudyOS] 學習資料同步失敗',{
-      ...window._fb?.learningInfo,stage,code,message:error?.message||String(error),...(attemptedWrites?{attemptedWrites}:{}),
+      ...window._fb?.learningInfo,stage,code,...details,
+      ...(attemptedWrites?{
+        operationCount:attemptedWrites.length,
+        operationKinds:[...new Set(attemptedWrites)],
+        ...(details?.operationIndex===undefined?{}:{operationKind:attemptedWrites[details.operationIndex]})
+      }:{}),
     });
     showLearningFailure(state);
   }
@@ -12522,8 +12575,9 @@ const batchDialog=$id('study-batch');
         const firstExam=state.pending.findIndex(id=>state.operations[id]?.kind==='exam-submit');
         const ids=firstExam===0?state.pending.slice(0,1):state.pending.slice(0,firstExam<0?200:Math.min(firstExam,200));
         const operations=ids.map(id=>[id,state.operations[id]]);
-        attemptedWrites=operations.map(([id,op])=>({kind:op.kind,path:'users/{uid}/data/learning/operations/'+id}));
+        attemptedWrites=operations.map(([,op])=>op.kind);
         const exam=operations[0][1].kind==='exam-submit';
+        if(exam)stage='交卷寫入';
         const accepted=exam?await window._fb.submitLearningExam(state.uid,...operations[0]):
           await window._fb.writeLearning(state.uid,operations);
         if(account!==state)return;
@@ -12543,7 +12597,7 @@ const batchDialog=$id('study-batch');
       else if(state.failure)showLearningFailure(state);
       else if(state.ready)showLearningSync(state.pending.length?'學習資料待同步':'學習資料已同步');
     }catch(error){
-      if(account===state)recordLearningFailure(state,stage,error,stage==='批次寫入'?attemptedWrites:undefined);
+      if(account===state)recordLearningFailure(state,stage,error,['批次寫入','交卷寫入'].includes(stage)?attemptedWrites:undefined);
     }finally{state.sending=false;}
   }
   function listenLearning(state){
