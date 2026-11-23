@@ -3872,6 +3872,11 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-exam-tools{justify-content:flex-start;}
 .paper-exam-durations:not([hidden]){display:flex;flex-wrap:wrap;gap:var(--sp-3);}
 .paper-exam-warning:empty{display:none;}
+.paper-exam-header{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);}
+#paper-exam-progress{display:flex;align-items:center;flex-wrap:wrap;gap:4px var(--sp-2);
+  text-align:start;white-space:normal;color:var(--text);}
+#paper-exam-progress .paper-exam-origin{color:var(--text-2);font-weight:400;}
+#paper-exam-progress svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;}
 #paper-exam-clock{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}
 .paper-exam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.25rem,1fr));gap:var(--sp-2);margin-block:var(--sp-3);}
 .paper-exam-grid .btn{display:grid;gap:2px;min-height:52px;padding:var(--sp-2);white-space:normal;text-align:center;}
@@ -3880,7 +3885,17 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-exam-grid .btn[data-answered=true]{background:var(--accent-tint);}
 .paper-exam-grid .btn[data-answered=false] small{color:var(--text-2);}
 .paper-exam-triangle{color:var(--review-mark);font-weight:700;}
-#paper-exam-map-dialog{width:min(calc(100% - 24px),650px);}
+#paper-exam-map-dialog{width:min(calc(100% - 24px),650px);overflow:hidden;}
+#paper-exam-map-dialog[open]{display:flex;flex-direction:column;}
+.paper-exam-map-legend{margin:var(--sp-2) 0 0;}
+.paper-exam-map-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:2px;}
+@media (max-width:767px) and (pointer:coarse), (orientation:landscape) and (max-height:480px) and (pointer:coarse){
+  html:not([data-ipad]) #paper-exam-map-dialog{
+    inset:auto 0 0;width:100%;max-width:none;margin:0;max-height:min(78dvh,calc(100dvh - 24px));
+    padding-bottom:calc(var(--sp-4) + env(safe-area-inset-bottom,0px));
+    border-radius:var(--r-xl) var(--r-xl) 0 0;
+  }
+}
 #paper-exam-map-dialog .paper-exam-grid{margin-block-end:0;}
 #paper-exam-map-close{min-height:44px;}
 .paper-exam-tools .btn[aria-pressed=true]{background:var(--accent-tint);color:var(--accent-h);}
@@ -4703,7 +4718,8 @@ onAuthStateChanged(auth,user=>{
 <dialog id="paper-exam-map-dialog" class="local-dialog" aria-labelledby="paper-exam-map-title">
   <div class="paper-overview"><h2 id="paper-exam-map-title">題號表</h2>
     <button type="button" class="btn btn-sand" id="paper-exam-map-close" aria-label="關閉題號表">關閉</button></div>
-  <div id="paper-exam-grid" class="paper-exam-grid" role="group" aria-label="試卷題號"></div>
+  <p class="study-meta paper-exam-map-legend">外框為目前這題 · 每格標示已作答或未作答 · <span class="paper-exam-triangle" aria-hidden="true">△</span> 不確定</p>
+  <div class="paper-exam-map-scroll"><div id="paper-exam-grid" class="paper-exam-grid" role="group" aria-label="試卷題號"></div></div>
 </dialog>
 <dialog id="paper-answer-key" class="local-dialog" aria-labelledby="paper-answer-key-title">
   <div class="makeup-head"><h2 id="paper-answer-key-title">批次補官方答案</h2><button type="button" class="btn popup-close" id="paper-answer-key-close" aria-label="關閉批次補官方答案"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
@@ -10836,7 +10852,7 @@ const batchDialog=$id('study-batch');
     grid.innerHTML=round.paperReview.map((entry,i)=>{
       const answered=Boolean(round.mockExam.answers[entry.id]?.trim()),marked=Boolean(round.mockExam.marked[entry.id]);
       return action('<span>'+esc(paperReviewLabel(entry))+(marked?' <span class="paper-exam-triangle" aria-hidden="true">△</span>':'')+'</span>'+
-        '<small>'+(point(entry.id)?(answered?'已作答':'未作答'):'題目已移除')+(marked?' · 已標記':'')+'</small>',
+        '<small>'+(i===round.index?'目前這題 · ':'')+(point(entry.id)?(answered?'已作答':'未作答'):'題目已移除')+(marked?' · 已標記不確定':'')+'</small>',
         'paper-exam-jump',false,'data-index="'+i+'" data-answered="'+answered+'"'+(i===round.index?' aria-current="step"':''));
     }).join('');
     if(focused!==null)grid.children[Number(focused)]?.focus({preventScroll:true});
@@ -10844,13 +10860,13 @@ const batchDialog=$id('study-batch');
   function closePaperQuestionMap(restoreFocus=true){
     if(!examMapDialog.open)return;
     examMapDialog.close();
-    examMapTrigger?.setAttribute('aria-expanded','false');
+    for(const trigger of root.querySelectorAll('[data-study-action=paper-exam-map]'))trigger.setAttribute('aria-expanded','false');
     if(restoreFocus)examMapTrigger?.focus({preventScroll:true});
     examMapTrigger=null;
   }
   function openPaperQuestionMap(button){
     examMapTrigger=button;
-    button.setAttribute('aria-expanded','true');
+    for(const trigger of root.querySelectorAll('[data-study-action=paper-exam-map]'))trigger.setAttribute('aria-expanded','true');
     updatePaperQuestionMap();
     showAppDialog(examMapDialog,closePaperQuestionMap);
     const current=$id('paper-exam-grid').querySelector('[aria-current="step"]');
@@ -10875,9 +10891,15 @@ const batchDialog=$id('study-batch');
     const {queue,index,mockExam}=session,id=queue[index],q=point(id);
     const marked=Boolean(mockExam.marked[id]),answer=mockExam.answers[id]||'';
     const label=paperReviewLabel(session.paperReview[index]);
-    draw(session.paperPractice?'整卷作答':'模擬考','<section class="study-surface"><p class="study-meta">'+esc(label)+' · '+(index+1)+'／'+queue.length+
-      ' · <span class="paper-exam-status">未作答 '+examUnanswered(session)+' 題</span>'+
-      (mockExam.deadline?' · <span id="paper-exam-clock" role="timer"></span>':'')+'</p>'+
+    const trigger='aria-haspopup="dialog" aria-controls="paper-exam-map-dialog" aria-expanded="'+examMapDialog.open+'"';
+    const arrow='<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
+    draw(session.paperPractice?'整卷作答':'模擬考','<section class="study-surface"><div class="paper-exam-header">'+
+      action('第 '+(index+1)+'／'+queue.length+' 題'+
+        (session.paperReview[index].number!==String(index+1)?
+          '<span class="paper-exam-origin">'+(session.paperReview[index].number?'原卷':'')+esc(label)+'</span>':'')+arrow,
+        'paper-exam-map',false,'id="paper-exam-progress" '+trigger)+
+      '<span class="study-meta paper-exam-status">未作答 '+examUnanswered(session)+' 題</span>'+
+      (mockExam.deadline?'<span id="paper-exam-clock" class="study-meta" role="timer"></span>':'')+'</div>'+
       (session.scoring?'<p class="study-meta">'+paperScoringText(session.scoring)+'</p>':'')+
       (mockExam.deadline?'<p id="paper-exam-warning" class="study-meta paper-exam-warning" role="status"></p>':'')+
       '<div class="study-actions paper-exam-tools">'+
@@ -10885,14 +10907,14 @@ const batchDialog=$id('study-batch');
       '<form id="paper-exam-form">'+(q?questionContext(q,true)+'<h3 class="study-copy">'+esc(q.question)+'</h3>'+
         answerField(q,answer):'<p class="study-empty">這題已從試卷移除，可繼續作答其他題目。</p>')+
       '<div class="study-actions paper-answer-actions paper-exam-answer-actions">'+
-      action('題號表','paper-exam-map',false,'aria-haspopup="dialog" aria-controls="paper-exam-map-dialog" aria-expanded="'+examMapDialog.open+'"')+
+      action('題號表','paper-exam-map',false,'id="paper-exam-map-footer" '+trigger)+
       (index?action('上一題','paper-exam-jump',false,'data-index="'+(index-1)+'"'):'')+
       (q?action('清除答案','paper-exam-clear',false,answer?'':'disabled'):'')+
       action('交卷','paper-exam-submit',index===queue.length-1)+
       (index+1<queue.length?action('下一題','paper-exam-jump',true,'data-index="'+(index+1)+'"'):'')+
       '</div></form></section>','paper-exam-exit');
     if(examMapDialog.open){
-      examMapTrigger=root.querySelector('[data-study-action=paper-exam-map]');
+      examMapTrigger=$id(examMapTrigger?.id||'paper-exam-progress');
       updatePaperQuestionMap();
     }
   }
