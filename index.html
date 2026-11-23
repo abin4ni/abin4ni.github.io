@@ -3912,6 +3912,9 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     background:var(--surface);border-top:1px solid var(--border-lt);}
 }
 .paper-exam-tools{justify-content:flex-start;}
+.paper-exam-durations:not([hidden]){display:flex;flex-wrap:wrap;gap:var(--sp-3);}
+.paper-exam-warning:empty{display:none;}
+#paper-exam-clock{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:700;}
 .paper-exam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.25rem,1fr));gap:var(--sp-2);margin-block:var(--sp-3);}
 .paper-exam-grid .btn{display:grid;gap:2px;min-height:52px;padding:var(--sp-2);white-space:normal;text-align:center;}
 .paper-exam-grid .btn[aria-current="step"]{outline:2px solid var(--accent);outline-offset:-2px;}
@@ -4048,7 +4051,7 @@ import{
   signInWithPopup,signInWithRedirect,getRedirectResult,
   signOut,onAuthStateChanged
 }from'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import{getFirestore,collection,doc,setDoc,onSnapshot,serverTimestamp,writeBatch}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import{getFirestore,collection,doc,setDoc,onSnapshot,serverTimestamp,writeBatch,runTransaction}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig={
   apiKey:"AIzaSyASGEfoKCQuxhACu_9CEQICKEHSKe2N3MA",
@@ -4128,6 +4131,13 @@ window._fb={
     for(const [id,op] of ops)batch.set(doc(learningOperations(uid),id),op);
     return batch.commit();
   },
+  submitLearningExam:(uid,id,op)=>runTransaction(db,async transaction=>{
+    const ref=doc(learningOperations(uid),id);
+    const recorded=await transaction.get(ref);
+    if(recorded.exists())return recorded.data();
+    transaction.set(ref,op);
+    return op;
+  }),
   stopListen:()=>{if(_unsubscribe){_unsubscribe();_unsubscribe=null;}},
 };
 window._fbReady=true;
@@ -9137,7 +9147,7 @@ pillMotion.mount(document);
 
 const TODAY_ROUND_LIMIT=5;
 const learningJournal=(()=>{
-  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer','paper','paper-question','paper-subject']);
+  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer','paper','paper-question','paper-subject','exam-draft','exam-submit']);
   const outcomes=new Set(['correct','incorrect','partial','missed','viewed']);
   const fields=['subject','chapter','question','answer','explanation','accepted','options','source','sourceQuestionId'];
   const text=v=>typeof v==='string';
@@ -9165,6 +9175,28 @@ const learningJournal=(()=>{
   function valid(op){
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
     const value=op.value;
+    if(op.kind==='exam-draft'&&value?.patch){
+      const patch=value.patch;
+      return validPointId(op.target)&&value.paperResultId===op.target&&Number.isSafeInteger(value.updatedAt)&&objectValue(patch)&&
+        ((Number.isSafeInteger(patch.index)&&patch.index>=0)||
+          (validPointId(patch.id)&&(typeof patch.marked==='boolean'||text(patch.answer))));
+    }
+    if(op.kind==='exam-draft'||op.kind==='exam-submit'){
+      const m=value?.mockExam,finished=op.kind==='exam-submit';
+      return validPointId(op.target)&&value?.paperResultId===op.target&&validPointId(value.paperId)&&value.mode==='practice'&&
+        text(value.subject)&&Number.isSafeInteger(m?.startedAt)&&Number.isSafeInteger(m.updatedAt)&&
+        (m.deadline===null||Number.isSafeInteger(m.deadline)&&m.deadline>m.startedAt)&&
+        Array.isArray(value.queue)&&value.queue.length>0&&value.queue.every(validPointId)&&
+        new Set(value.queue).size===value.queue.length&&Array.isArray(value.paperReview)&&
+        value.queue.length===value.paperReview.length&&value.paperReview.every((row,i)=>row?.id===value.queue[i]&&text(row.number)&&typeof row.pending==='boolean')&&
+        Number.isSafeInteger(value.index)&&value.index>=0&&
+        Array.isArray(value.results)&&(!finished?value.results.length===0:value.results.every(r=>
+          r&&value.queue.includes(r.id)&&outcomes.has(r.outcome)&&text(r.answer)&&text(r.reference))&&
+          new Set(value.results.map(r=>r.id)).size===value.results.length)&&
+        (finished?value.index===value.queue.length&&Number.isSafeInteger(m.finishedAt)&&m.finishedAt>=m.startedAt&&
+          (m.reason==='manual'&&(m.deadline===null||m.finishedAt<m.deadline)||m.reason==='expired'&&m.finishedAt===m.deadline):
+          value.index<value.queue.length&&objectValue(m.answers)&&strings(Object.values(m.answers))&&objectValue(m.marked));
+    }
     if(op.kind==='paper-subject')return validPointId(op.target)&&value&&text(value.name)&&!!value.name.trim();
     if(op.kind==='paper')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject.trim()&&
       (value.subjectRef===undefined||text(value.subjectRef))&&(value.school===undefined||text(value.school)&&!!value.school.trim())&&text(value.year)&&/^\d{1,4}$/.test(value.year)&&Number(value.year)>0&&text(value.name)&&!!value.name.trim()&&text(value.source);
@@ -9191,6 +9223,7 @@ const learningJournal=(()=>{
   const chapterKey=(subject,name)=>JSON.stringify([subject,name]);
   function project(journal,refs=new Map()){
     const papers=new Map(),paperQuestions=new Map(),paperSubjects=new Map();
+    const examDrafts=new Map(),examSubmissions=new Map();
     const points=new Map(),deleted=new Set(),catalog=new Map(),instances=new Map(),aliases=new Map(),baseline=new Map(),answers=[],dated=[],rounds=new Map(),answered=new Set();
     function legacyChapter(subject,name){
       const key=chapterKey(subject,name);
@@ -9206,7 +9239,30 @@ const learningJournal=(()=>{
       .sort(([a,x],[b,y])=>x.clock-y.clock||(a<b?-1:a>b?1:0));
     for(const [id,op] of ordered){
       const {kind,target,value}=op;
-      if(kind==='paper')papers.set(target,{...value,id:target});
+      if(kind==='exam-draft'){
+        if(!value.patch){
+          if(!examDrafts.has(target))examDrafts.set(target,structuredClone(value));
+          continue;
+        }
+        const draft=examDrafts.get(target);
+        if(!draft)continue;
+        const {patch,updatedAt}=value,m=draft.mockExam;
+        if(m.deadline!==null&&updatedAt>=m.deadline)continue;
+        if(Number.isSafeInteger(patch.index)&&patch.index<draft.queue.length)draft.index=patch.index;
+        if(draft.queue.includes(patch.id)){
+          if(text(patch.answer)){
+            if(patch.answer)m.answers[patch.id]=patch.answer;
+            else delete m.answers[patch.id];
+          }
+          if(typeof patch.marked==='boolean')m.marked[patch.id]=patch.marked;
+        }
+        m.updatedAt=Math.max(m.updatedAt,updatedAt);
+      }else if(kind==='exam-submit'){
+        // Only the document whose ID is this round ID can contribute grades.
+        if(id!==target)continue;
+        examSubmissions.set(target,value);
+        for(const result of value.results)if(result.outcome!=='viewed')answers.push({kind:'answer',target:result.id,value:result.outcome});
+      }else if(kind==='paper')papers.set(target,{...value,id:target});
       else if(kind==='paper-question')paperQuestions.set(target,{...value,id:target});
       else if(kind==='paper-subject')paperSubjects.set(target,{...value,id:target});
       else if(kind==='point'){
@@ -9310,7 +9366,8 @@ const learningJournal=(()=>{
     });
     const paperProgress=Object.fromEntries(keptPaperQuestions.filter(p=>baseline.has(p.id)).map(p=>[p.id,baseline.get(p.id)]));
     const paperLastGraded=Object.fromEntries(keptPaperQuestions.filter(p=>lastGraded.has(p.id)).map(p=>[p.id,lastGraded.get(p.id)]));
-    return {version:1,points:kept,progress,review,paperLastGraded,papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    for(const id of examSubmissions.keys())examDrafts.delete(id);
+    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -9420,7 +9477,7 @@ const studyRoom=(()=>{
   function withLocalReview(saved){
     const projection=saved.syncJournal?learningJournal.project(saved.syncJournal):null;
     const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
-    const restored={...saved,review:projection?.review??{},paperLastGraded:projection?.paperLastGraded??{},chapterRefs:projection?.chapterRefs??{},answered};
+    const restored={...saved,review:projection?.review??{},paperLastGraded:projection?.paperLastGraded??{},examDrafts:projection?.examDrafts??{},examSubmissions:projection?.examSubmissions??{},chapterRefs:projection?.chapterRefs??{},answered};
     // Old clients can export a raw paper alongside its delete operation.
     const deleted=new Set(Object.values(saved.syncJournal||{}).filter(op=>op.kind==='delete').map(op=>op.target));
     if(deleted.size){
@@ -9460,6 +9517,7 @@ const studyRoom=(()=>{
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
   let paperSearch='',mixedArchive=false;
   let paperResultRound=null,paperResultFilter='all',paperReviewReturn=null,examMapOpen=false;
+  let examTimer=null,examDraftTimer=null,pendingExamDraft=null;
   const paper=id=>data.papers?.find(p=>p.id===id);
   const point=id=>{
     const knowledge=data.points.find(p=>p.id===id);
@@ -9489,6 +9547,7 @@ const studyRoom=(()=>{
       (back?action(back===true?'返回學習室':'返回',back===true?'home':back):'')+'</div><p class="study-local"><span id="study-sync-state" role="status">'+esc(syncText)+'</span> <button type="button" class="btn btn-sand" id="study-sync-retry" data-study-action="sync-retry" hidden>重試同步</button></p>'+body;
     showLearningSync(syncText,syncFailed);
     pillMotion.mount(root);
+    if(session?.mockExam?.deadline&&!roundComplete(session))queueMicrotask(updateMockClock);
   }
   function go(next){
     const returningHome=next==='home'&&screen!=='home';
@@ -9797,7 +9856,7 @@ const studyRoom=(()=>{
     const items=paperItems(p.id);
     const active=resumableToday()||unfinishedOtherPractice();
     const ready=items.filter(canPracticePaper);
-    const sameMock=active&&session?.mockExam&&session.paperId===p.id;
+    const sameMock=active&&session?.mockExam&&session.paperId===p.id||(!active&&Boolean(savedMockExam(p.id)));
     const checkpoint=readPaperReview(p.id);
     const position=checkpoint?.position;
     const selected=position?.id&&availableReviewQuestion(checkpoint.round,position.id);
@@ -9809,7 +9868,7 @@ const studyRoom=(()=>{
       (p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
       '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+(!sameMock&&(active||ready.length)?action(active?'繼續練習':'開始作答','paper-start',!!active):'')+
       (items.length&&(!active||sameMock)?
-        action(active?'繼續模擬考':'模擬考','paper-exam-start',!active):'')+
+        action(sameMock?'繼續模擬考':'模擬考','paper-exam-start',true):'')+
       '</div>'+pastQuestionList(items)+'</div>','paper-list');
   }
   function subjectPage(){
@@ -10483,7 +10542,8 @@ const batchDialog=$id('study-batch');
     }
     const previous=session;
     session={mode,queue,index:0,results:[],phase:'question',answer:'',...(extra?.paperId?{paperResultId:newPointId()}:{}),...extra};
-    const roundOperation=account&&session.origin==='today'?createTodayRound():null;
+    const roundOperation=session.mockExam?.startedAt&&account?mockDraftOperation(session):
+      account&&session.origin==='today'?createTodayRound():null;
     if(!persist(null,null,roundOperation)){
       session=previous;
       return false;
@@ -10653,6 +10713,84 @@ const batchDialog=$id('study-batch');
         (option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>';
     return '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3"'+constraint+'>'+esc(answer)+'</textarea></label>';
   }
+  function savedMockExam(id){
+    return Object.values(data.examDrafts||{}).filter(round=>round.paperId===id)
+      .sort((a,b)=>b.mockExam.startedAt-a.mockExam.startedAt)[0];
+  }
+  function mockDraftOperation(round,patch){
+    const target=round.paperResultId;
+    return {kind:'exam-draft',target,value:patch?{paperResultId:target,updatedAt:Date.now(),patch}:structuredClone(round)};
+  }
+  function formatExamTime(ms,pad=false){
+    const seconds=Math.max(0,Math.ceil(ms/1000));
+    return (pad?String(Math.floor(seconds/60)).padStart(2,'0'):Math.floor(seconds/60))+':'+String(seconds%60).padStart(2,'0');
+  }
+  function renderMockExamSetup(){
+    const p=paper(paperId);
+    if(!p){go('papers');return;}
+    draw('模擬考','<form id="paper-exam-config" class="study-surface"><p class="study-meta">'+esc(paperTitle(p))+'</p>'+
+      '<fieldset class="study-modes"><legend>作答時間</legend>'+
+      '<label><input type="radio" name="limit" value="unlimited" checked> 不限時</label> '+
+      '<label><input type="radio" name="limit" value="timed"> 限時</label></fieldset>'+
+      '<fieldset id="paper-exam-durations" class="study-modes paper-exam-durations" hidden disabled><legend>時間限制</legend>'+
+      [30,60,90,'custom'].map(value=>'<label><input type="radio" name="duration" value="'+value+'"'+
+        (value===30?' checked':'')+'> '+(value==='custom'?'自訂':value+' 分鐘')+'</label>').join('')+
+      '<label class="study-field" id="paper-exam-custom" hidden><span>自訂分鐘數</span>'+
+      '<input type="number" name="minutes" min="1" step="1" inputmode="numeric" disabled required></label></fieldset>'+
+      '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">開始</button></div></form>','paper-return');
+  }
+  function saveMockDraft(patch,defer=false){
+    const round=session;
+    if(!round?.mockExam||roundComplete(round))return;
+    if(!defer)flushExamDraft();
+    if(!round.mockExam.startedAt)return persist();
+    const operation=mockDraftOperation(round,patch);
+    round.mockExam.updatedAt=Math.max(round.mockExam.updatedAt,operation.value.updatedAt);
+    if(!account||!defer)return persist(null,null,account?operation:null);
+    if(!persist())return false;
+    clearTimeout(examDraftTimer);
+    pendingExamDraft=operation;
+    examDraftTimer=setTimeout(flushExamDraft,350);
+    return true;
+  }
+  function flushExamDraft(){
+    clearTimeout(examDraftTimer);
+    examDraftTimer=null;
+    const operation=pendingExamDraft;
+    pendingExamDraft=null;
+    if(account&&operation&&session?.paperResultId===operation.target&&!roundComplete(session))persist(null,null,operation);
+  }
+  function checkMockDeadline(){
+    const round=session,deadline=round?.mockExam?.deadline;
+    if(!deadline||roundComplete(round)||!paper(round.paperId)||Date.now()<deadline)return false;
+    if($id('confirm-backdrop').classList.contains('open')&&$id('confirm-title').textContent==='確認交卷')hideConfirm();
+    submitMockExam(round,'expired');
+    return true;
+  }
+  function updateMockClock(){
+    clearTimeout(examTimer);
+    examTimer=null;
+    const round=session,deadline=round?.mockExam?.deadline;
+    if(!deadline||roundComplete(round))return;
+    if(checkMockDeadline()){
+      if(session===round){
+        const form=$id('paper-exam-form');
+        if(form)for(const input of form.elements)input.disabled=true;
+        const clock=$id('paper-exam-clock');
+        if(clock)clock.textContent='時間到 · 等待儲存';
+        examTimer=setTimeout(updateMockClock,5000);
+      }
+      return;
+    }
+    const remaining=deadline-Date.now(),clock=$id('paper-exam-clock'),warning=$id('paper-exam-warning');
+    if(clock)clock.textContent='剩餘 '+formatExamTime(remaining,true);
+    if(warning&&remaining<=300000&&!round.mockExam.warned){
+      round.mockExam.warned=true;
+      warning.textContent='剩餘 5 分鐘內';
+      persist();
+    }
+    examTimer=setTimeout(updateMockClock,Math.min(1000,remaining));
+  }
   function examUnanswered(round){
     return round.queue.filter(id=>point(id)&&!round.mockExam.answers[id]?.trim()).length;
   }
@@ -10670,7 +10808,9 @@ const batchDialog=$id('study-batch');
         'data-index="'+i+'"'+(i===index?' aria-current="step"':''))
     ).join('')+'</div>';
     draw('模擬考','<section class="study-surface"><p class="study-meta">'+esc(label)+' · '+(index+1)+'／'+queue.length+
-      ' · <span class="paper-exam-status">未作答 '+examUnanswered(session)+' 題</span></p>'+
+      ' · <span class="paper-exam-status">未作答 '+examUnanswered(session)+' 題</span>'+
+      (mockExam.deadline?' · <span id="paper-exam-clock" role="timer"></span>':'')+'</p>'+
+      (mockExam.deadline?'<p id="paper-exam-warning" class="study-meta paper-exam-warning" role="status"></p>':'')+
       '<div class="study-actions paper-exam-tools">'+
       action(examMapOpen?'收起題號表':'開啟題號表','paper-exam-map',false,'aria-expanded="'+examMapOpen+'"'+(examMapOpen?' aria-controls="paper-exam-grid"':''))+
       (q?action(marked?'已標記待回看':'標記待回看','paper-exam-mark',false,'aria-pressed="'+marked+'"'):'')+'</div>'+grid+
@@ -10683,15 +10823,18 @@ const batchDialog=$id('study-batch');
       (index+1<queue.length?action('下一題','paper-exam-jump',true,'data-index="'+(index+1)+'"'):'')+
       '</div></form></section>','paper-exam-exit');
   }
-  function submitMockExam(round){
+  function submitMockExam(round,reason='manual'){
     if(session!==round||roundComplete(round))return;
-    const previous=readPaperReview(round.paperId)?.round;
+    flushExamDraft();
+    const previous=data.examSubmissions?.[round.paperResultId]||readPaperReview(round.paperId)?.round;
     if(previous?.paperResultId===round.paperResultId){
       session=previous;
       go('results');
       return;
     }
     const results=[],changes=[];
+    const current=Date.now(),m=round.mockExam;
+    const finishReason=m.deadline&&(reason==='expired'||current>=m.deadline)?'expired':'manual';
     const paperReview=round.paperReview.map((entry,index)=>{
       const q=point(entry.id),answer=round.mockExam.answers[entry.id]?.trim();
       const pending=Boolean(q&&!canPracticePaper(q));
@@ -10706,13 +10849,16 @@ const batchDialog=$id('study-batch');
       }
       return {...entry,pending};
     });
-    session={...round,index:round.queue.length,results,paperReview};
-    if(!persist(changes)){
+    const mockExam=m.startedAt?{startedAt:m.startedAt,updatedAt:m.updatedAt,deadline:m.deadline,
+      finishedAt:Math.max(m.startedAt,finishReason==='expired'?m.deadline:current),reason:finishReason}:m;
+    session={...round,index:round.queue.length,results,paperReview,mockExam};
+    const operation=m.startedAt?{kind:'exam-submit',target:round.paperResultId,opId:round.paperResultId,value:structuredClone(session)}:null;
+    if(!persist(operation?null:changes,null,operation)){
       session=round;
       return;
     }
     rememberCompletedPaper(session);
-    go('results');
+    if(screen==='session'||screen==='paper'&&paperId===round.paperId)go('results');
   }
   function play(){
     if(session?.mockExam){renderMockExam();return;}
@@ -10784,11 +10930,14 @@ const batchDialog=$id('study-batch');
     try{localStorage.setItem(paperReviewPositionKey(round),JSON.stringify(position));}catch{}
   }
   function readPaperReview(id){
-    try{
-      const round=JSON.parse(localStorage.getItem(paperReviewStorage(id)));
-      if(round?.paperId===id&&roundComplete(round)&&Array.isArray(round.results))return {round,position:readPaperReviewPosition(round)};
-    }catch{}
-    return null;
+    let local;
+    try{local=JSON.parse(localStorage.getItem(paperReviewStorage(id)));}catch{}
+    const remote=Object.values(data.examSubmissions||{}).filter(round=>round.paperId===id)
+      .sort((a,b)=>b.mockExam.finishedAt-a.mockExam.finishedAt)[0];
+    const round=remote&&(!local||remote.paperResultId===local.paperResultId||
+      remote.mockExam.finishedAt>(local.mockExam?.finishedAt??Infinity))?remote:local;
+    return round?.paperId===id&&roundComplete(round)&&Array.isArray(round.results)?
+      {round,position:readPaperReviewPosition(round)}:null;
   }
   function rememberCompletedPaper(round){
     try{localStorage.setItem(paperReviewStorage(round.paperId),JSON.stringify(round));}catch{}
@@ -10863,7 +11012,9 @@ const batchDialog=$id('study-batch');
     const retryCount=retryQuestionIds(round).length,earlier=previousRounds(round);
     const pending=rows.filter(row=>row.pending).length;
     const ungraded=rows.filter(row=>row.kind==='ungraded'&&!row.pending).length;
+    const m=round.mockExam;
     draw('試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(paperTitle(currentPaper))+'</p>'+
+      (m?.reason?'<p class="study-meta">作答用時 '+formatExamTime(m.finishedAt-m.startedAt)+' · '+(m.reason==='expired'?'時間到交卷':'手動交卷')+'</p>':'')+
       '<dl id="paper-result-counts" class="paper-result-counts">'+Object.entries(counts).map(([key,count])=>
         '<div><dt>'+paperResultLabels[key]+'</dt><dd>'+count+'</dd></div>').join('')+'</dl>'+
       (pending?'<p class="study-meta">'+(round.mockExam?pending+' 題待補正解':'未作答含 '+pending+' 題尚未補正解')+'</p>':'')+
@@ -10980,6 +11131,7 @@ const batchDialog=$id('study-batch');
     if(screen==='home')subjectCards(false);
     else if(screen==='papers')paperList();
     else if(screen==='paper')paperPage();
+    else if(screen==='paper-exam-setup')renderMockExamSetup();
     else if(screen==='paper-editor')paperEditor();
     else if(screen==='paper-mix')mixedPage();
     else if(screen==='paper-wrong-book')wrongBookPage();
@@ -11011,6 +11163,13 @@ const batchDialog=$id('study-batch');
   });
   root.addEventListener('change',event=>{
     const id=event.target.id;
+    if(event.target.form?.id==='paper-exam-config'){
+      const fields=event.target.form.elements,timed=fields.limit.value==='timed',custom=timed&&fields.duration.value==='custom';
+      const limits=$id('paper-exam-durations');
+      limits.hidden=limits.disabled=!timed;
+      $id('paper-exam-custom').hidden=fields.minutes.disabled=!custom;
+      return;
+    }
     if(id==='paper-wrong-school'||id==='paper-wrong-year'){
       if(id==='paper-wrong-school')wrongSchool=event.target.value;
       else wrongYear=event.target.value;
@@ -11047,9 +11206,18 @@ const batchDialog=$id('study-batch');
       event.target.form.querySelector('[data-study-action=paper-duplicate]').hidden=true;
     }
     if(event.target.name==='answer'&&event.target.form?.id==='paper-exam-form'&&session?.mockExam){
-      const id=session.queue[session.index];
-      session.mockExam.answers[id]=event.target.value;
-      persist();
+      if(checkMockDeadline())return;
+      const id=session.queue[session.index],answers=session.mockExam.answers,previous=answers[id];
+      const answer=event.target.value;
+      answers[id]=answer;
+      if(!saveMockDraft({id,answer},event.target.type!=='radio')){
+        if(previous===undefined)delete answers[id];
+        else answers[id]=previous;
+        if(event.target.type==='radio'){
+          for(const option of event.target.form.querySelectorAll('[name="answer"]'))option.checked=option.value===previous;
+        }else event.target.value=previous||'';
+        return;
+      }
       root.querySelector('.paper-exam-status').textContent='未作答 '+examUnanswered(session)+' 題';
       const entry=root.querySelector('#paper-exam-grid [aria-current="step"] small');
       if(entry)entry.textContent=examAnswerStatus(session,id);
@@ -11189,16 +11357,19 @@ const batchDialog=$id('study-batch');
     }else if(act==='paper-exam-start'){
       examMapOpen=false;
       if(unfinishedOtherPractice()){go('session');return;}
-      const p=paper(paperId),items=paperItems(paperId);
-      if(p&&items.length)start(items.map(q=>q.id),'practice',{paperId,subject:p.subject,
-        paperReview:items.map(paperReviewItem),mockExam:{answers:{},marked:{}}},{shuffle:false});
+      const saved=savedMockExam(paperId);
+      if(saved){session=structuredClone(saved);persist();go('session');return;}
+      if(paperItems(paperId).length)go('paper-exam-setup');
     }else if(act==='paper-exam-exit'&&session?.mockExam){
+      if(checkMockDeadline())return;
+      flushExamDraft();
       paperId=session.paperId;
       const p=paper(paperId);
       paperSubject=p?.subject||session.subject;
       paperSubjectRef=p?paperRef(p):'';
       go('paper');
     }else if(act.startsWith('paper-exam-')&&session?.mockExam&&!roundComplete(session)){
+      if(checkMockDeadline())return;
       const id=session.queue[session.index];
       if(act==='paper-exam-submit'){
         const round=session,pending=examUnanswered(round);
@@ -11208,12 +11379,20 @@ const batchDialog=$id('study-batch');
       }
       if(act==='paper-exam-map')examMapOpen=!examMapOpen;
       if(act==='paper-exam-jump'){
+        const previous=session.index;
         session.index=Number(button.dataset.index);
+        if(!saveMockDraft({index:session.index})){session.index=previous;return;}
         examMapOpen=false;
       }
-      if(act==='paper-exam-mark')session.mockExam.marked[id]=!session.mockExam.marked[id];
-      if(act==='paper-exam-clear')delete session.mockExam.answers[id];
-      if(act!=='paper-exam-map')persist();
+      if(act==='paper-exam-mark'){
+        const marked=session.mockExam.marked[id]=!session.mockExam.marked[id];
+        if(!saveMockDraft({id,marked}))session.mockExam.marked[id]=!marked;
+      }
+      if(act==='paper-exam-clear'){
+        const previous=session.mockExam.answers[id];
+        delete session.mockExam.answers[id];
+        if(!saveMockDraft({id,answer:''}))session.mockExam.answers[id]=previous;
+      }
       if(act==='paper-exam-jump')go('session');
       else{
         render();
@@ -11303,7 +11482,19 @@ const batchDialog=$id('study-batch');
     event.preventDefault();
     const form=event.target;
     const values=new FormData(form);
-    if(form.id==='paper-explanation-form'){
+    if(form.id==='paper-exam-config'){
+      if(unfinishedOtherPractice()||resumableToday())return;
+      const startedAt=Date.now(),timed=values.get('limit')==='timed',duration=values.get('duration');
+      const minutes=Number(duration==='custom'?values.get('minutes'):duration);
+      const deadline=timed?startedAt+minutes*60000:null;
+      if(timed&&(!Number.isSafeInteger(minutes)||minutes<1||!Number.isSafeInteger(deadline))){
+        form.querySelector('.study-error').textContent='請輸入大於 0 的整數分鐘。';
+        return;
+      }
+      const p=paper(paperId),items=paperItems(paperId);
+      if(p&&items.length)start(items.map(q=>q.id),'practice',{paperId,subject:p.subject,paperReview:items.map(paperReviewItem),
+        mockExam:{answers:{},marked:{},startedAt,deadline,updatedAt:startedAt}},{shuffle:false});
+    }else if(form.id==='paper-explanation-form'){
       const q=data.paperQuestions?.find(q=>q.id===form.dataset.question);
       if(!q){form.querySelector('.study-error').textContent='找不到這道題目。';return;}
       const explanation=values.get('explanation').trim();
@@ -11512,6 +11703,9 @@ const batchDialog=$id('study-batch');
   function refreshLearningOutbox(state){
     const cached=JSON.parse(localStorage.getItem(state.key)||'null');
     const operations={...cached?.operations,...state.operations};
+    for(const [id,op] of Object.entries(cached?.operations||{})){
+      if(op.kind==='exam-submit'&&localStorage.getItem(state.key+':ack:'+id))operations[id]=op;
+    }
     const pending=new Set([...cached?.pending||[],...state.pending]);
     const prefix=state.key+':outbox:';
     for(const storedKey of Object.keys(localStorage)){
@@ -11519,6 +11713,7 @@ const batchDialog=$id('study-batch');
       const batch=JSON.parse(localStorage.getItem(storedKey)||'{}');
       for(const [id,op] of Object.entries(batch)){
         if(!learningJournal.valid(op))continue;
+        if(op.kind==='exam-submit'&&operations[id]&&localStorage.getItem(state.key+':ack:'+id))continue;
         operations[id]=op;
         pending.add(id);
       }
@@ -11576,7 +11771,7 @@ const batchDialog=$id('study-batch');
   function saveLearning(next,answer,move,roundOperation){
     if(!account){
       const removedPaper=(lastSaved.papers?.length||0)>(next.papers?.length||0);
-      if(next.syncJournal||answer||move||removedPaper){
+      if(next.syncJournal||answer||move||removedPaper||roundOperation){
         const journal={...next.syncJournal};
         if(!next.syncJournal){
           let initialClock=0;
@@ -11588,7 +11783,9 @@ const batchDialog=$id('study-batch');
         let clock=Object.values(journal).reduce((max,op)=>Math.max(max,op.clock),0);
         const refs=new Map();
         learningJournal.project(journal,refs);
-        for(const {opId,...op} of learningJournal.changes(lastSaved,next,answer,move,refs)){
+        const changes=learningJournal.changes(lastSaved,next,answer,move,refs);
+        if(roundOperation)changes.push(roundOperation);
+        for(const {opId,...op} of changes){
           const id=opId||newPointId();
           if(!Object.hasOwn(journal,id))journal[id]={...op,clock:++clock};
         }
@@ -11618,6 +11815,31 @@ const batchDialog=$id('study-batch');
     if((lostSession&&screen==='session')||((lostReview||lostSession)&&screen==='results')||
       (lostReview&&screen==='paper-review-detail'))screen='papers';
   }
+  function reconcileMockExam(state){
+    const round=session;
+    if(!round?.mockExam?.startedAt)return false;
+    const result=data.examSubmissions?.[round.paperResultId];
+    const draft=data.examDrafts?.[round.paperResultId];
+    if(result&&JSON.stringify(round)!==JSON.stringify(result)){
+      session=structuredClone(result);
+      rememberCompletedPaper(session);
+      if(paperResultRound?.paperResultId===session.paperResultId){
+        paperResultRound=session;
+        if(screen==='paper-review-detail'&&!availableReviewQuestion(session,paperReviewReturn?.id)){
+          paperReviewReturn=null;
+          screen='results';
+        }
+      }
+      if(screen==='session')screen='results';
+    }else if(draft&&!roundComplete(round)&&!pendingExamDraft&&draft.mockExam.updatedAt>=round.mockExam.updatedAt&&
+      [draft.index!==round.index,JSON.stringify(draft.mockExam.answers)!==JSON.stringify(round.mockExam.answers),
+        JSON.stringify(draft.mockExam.marked)!==JSON.stringify(round.mockExam.marked)].some(Boolean)){
+      session=structuredClone(draft);
+      session.mockExam.warned=round.mockExam.warned;
+    }else return false;
+    storeAccount(state);
+    return true;
+  }
   function applyLearning(state){
     const next=projectAccount(state);
     if(JSON.stringify(next)===JSON.stringify(data))return;
@@ -11632,7 +11854,10 @@ const batchDialog=$id('study-batch');
       session=null;
       if(screen==='session'||screen==='results')screen='subject';
     }
-    if(activeToday&&before!==JSON.stringify(session)){
+    const examChanged=reconcileMockExam(state);
+    if(examChanged&&['session','results','paper-review-detail'].includes(screen)){
+      render();
+    }else if(activeToday&&before!==JSON.stringify(session)){
       if(roundComplete(session))screen='results';
       render();
     }else if(screen==='papers'&&$id('paper-archive-results')){
@@ -11665,15 +11890,24 @@ const batchDialog=$id('study-batch');
     try{
       while(account===state&&state.ready&&!state.failure&&navigator.onLine&&state.pending.length){
         stage='批次寫入';
-        const ids=state.pending.slice(0,200);
+        const firstExam=state.pending.findIndex(id=>state.operations[id]?.kind==='exam-submit');
+        const ids=firstExam===0?state.pending.slice(0,1):state.pending.slice(0,firstExam<0?200:Math.min(firstExam,200));
         const operations=ids.map(id=>[id,state.operations[id]]);
         attemptedWrites=operations.map(([id,op])=>({kind:op.kind,path:'users/{uid}/data/learning/operations/'+id}));
-        await window._fb.writeLearning(state.uid,operations);
+        const exam=operations[0][1].kind==='exam-submit';
+        const accepted=exam?await window._fb.submitLearningExam(state.uid,...operations[0]):
+          await window._fb.writeLearning(state.uid,operations);
         if(account!==state)return;
+        if(exam){
+          if(accepted?.kind!=='exam-submit'||accepted.target!==ids[0]||!learningJournal.valid(accepted))throw Error('模擬考交卷紀錄無效');
+          state.operations[ids[0]]=accepted;
+        }
         stage='儲存本機同步確認';
         for(const id of ids)localStorage.setItem(state.key+':ack:'+id,'1');
+        if(exam)storeAccount(state);
         refreshLearningOutbox(state);
         storeAccount(state);
+        if(exam)applyLearning(state);
       }
       if(account!==state)return;
       if(!navigator.onLine)showLearningOffline(state);
@@ -11698,8 +11932,13 @@ const batchDialog=$id('study-batch');
       try{
         refreshLearningOutbox(state);
         const next={...state.operations};
-        for(const [id,op] of remote)if(/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op))next[id]=op;
+        const submitted=[];
+        for(const [id,op] of remote)if(/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op)){
+          next[id]=op;
+          if(op.kind==='exam-submit'&&state.pending.includes(id))submitted.push(id);
+        }
         storeAccount(state,next);
+        for(const id of submitted)localStorage.setItem(state.key+':ack:'+id,'1');
         state.operations=next;
         if(state.guest){
           const {restored,changes}=guestLearningChanges(state);
@@ -11731,6 +11970,8 @@ const batchDialog=$id('study-batch');
   }
   function switchLearning(uid){
     if(account?.uid===uid||(!account&&!uid))return;
+    flushExamDraft();
+    clearTimeout(examTimer);
     account?.stop?.();
     account=null;
     closeBatch();
@@ -11747,7 +11988,13 @@ const batchDialog=$id('study-batch');
       showLearningSync('學習資料僅存於此瀏覽器');
       try{
         const stored=JSON.parse(localStorage.getItem(key));
-        if(!localStorage.getItem(key+'-claim')&&valid(stored?.data))data=withLocalReview(stored.data);
+        if(!localStorage.getItem(key+'-claim')&&valid(stored?.data)){
+          data=withLocalReview(stored.data);
+          if(stored.session?.mockExam&&data.papers?.some(p=>p.id===stored.session.paperId)){
+            session=stored.session;
+            screen=roundComplete(session)?'results':'session';
+          }
+        }
       }catch{}
     }else{
       const state={uid,key:key+':'+uid,operations:{},pending:[],ready:false,sending:false,guest:null,failure:null};
@@ -11772,6 +12019,7 @@ const batchDialog=$id('study-batch');
       else if(session&&!roundComplete(session)&&(!Array.isArray(session.queue)||!session.mockExam&&!session.queue.every(id=>point(id))))session=null;
       if(session)screen=session.index===session.queue.length?'results':'session';
       clearDeletedPaperPractice();
+      reconcileMockExam(state);
       listenLearning(state);
     }
     lastSaved=structuredClone(data);
@@ -11786,6 +12034,12 @@ const batchDialog=$id('study-batch');
       applyLearning(state);
       flushLearning();
     }catch{showLearningSync('無法讀取待同步資料',true);}
+  });
+  window.addEventListener('pageshow',updateMockClock);
+  window.addEventListener('pagehide',flushExamDraft);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)flushExamDraft();
+    else updateMockClock();
   });
   window.addEventListener('online',()=>{
     if(account)retryLearning(account);
