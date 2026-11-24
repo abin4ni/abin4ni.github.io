@@ -2930,8 +2930,6 @@ body:has(#lesson-time-dialog[open]) #phone-course-dialog[data-calendar-schedule]
 #panel-r .day-lesson-time{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-2);white-space:nowrap;}
 #panel-r .day-lesson-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;}
 #panel-r .day-lesson-actions .act-btn{font-weight:500;color:var(--text-2);}
-.day-chapter-actions{display:contents;}
-#panel-r .day-lesson-actions .day-chapter-actions button{min-height:44px;white-space:normal;overflow-wrap:anywhere;}
 #day-edit-study-link{display:grid;gap:8px;}
 #day-edit-study-link legend{padding:0;font-weight:600;}
 #panel-r .day-completed{border-top:1px solid var(--border-lt);}
@@ -3540,6 +3538,7 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button {
   color: var(--segment-text);
+  text-decoration:none;
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:is([aria-current=page],[aria-pressed=true]) {
   color: var(--segment-selected);
@@ -3548,6 +3547,7 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:not([aria-current=page],[aria-pressed=true]):hover{
     color:var(--text);background-color:var(--segment-press);text-decoration:none;
   }
+  .wide-tabs button[aria-current=page]:hover{color:var(--text);text-decoration:none;}
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:active {
   background-color: var(--segment-press);
@@ -3730,11 +3730,14 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
 /* Today, the calendar side panel and date details share this lesson row. */
 #panel-r .day-card.day-lesson {
   display:grid;
+  position:relative;
+  isolation:isolate;
   gap:0;
   padding-block:var(--sp-1);
+  border-radius:var(--r-sm);
 }
 #panel-r .day-lesson .day-card-head {
-  grid-template-columns:44px 8px minmax(0,1fr) auto;
+  grid-template-columns:44px 8px minmax(0,1fr) 44px;
   align-items:start;
   gap:4px;
   margin-bottom:0;
@@ -3744,26 +3747,44 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   margin-block-start:.95rem;
 }
 #panel-r .day-lesson-details {
-  display:flex;
-  flex-wrap:wrap;
-  align-items:baseline;
-  gap:2px var(--sp-2);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 44px;
+  gap:4px;
   min-width:0;
   min-height:44px;
-  padding:.55rem 0;
+  padding:0;
   border:0;
-  border-radius:var(--r-sm);
   background:transparent;
   color:inherit;
   font:inherit;
   text-align:start;
   cursor:pointer;
 }
-#panel-r .day-lesson-details .day-name {
-  flex:1 1 auto;
-  min-width:0;
+/* Keep the stretched hit area anchored to the row while the button is pressed. */
+#panel-r .day-lesson-details:active:not(:disabled) {filter:none;}
+#panel-r .day-lesson-details::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  border-radius:inherit;
 }
-#panel-r .day-lesson-details .day-lesson-time {
+#panel-r .day-lesson-details:focus-visible {outline:none;}
+#panel-r .day-lesson-details:focus-visible::before {
+  outline:2px dashed var(--ui-focus);
+  outline-offset:-2px;
+}
+#panel-r .day-lesson :is(.day-lesson-copy,.day-lesson-pencil) {position:relative;z-index:2;}
+#panel-r .day-lesson-copy {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:2px var(--sp-2);
+  min-width:0;
+  padding-block:.55rem;
+}
+#panel-r .day-lesson-copy .day-name {flex:1 1 auto;min-width:0;}
+#panel-r .day-lesson-copy .day-lesson-time {
   flex:0 1 auto;
   color:var(--text-2);
   font-size:var(--ui-label);
@@ -3779,8 +3800,7 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   white-space:nowrap;
   text-overflow:ellipsis;
 }
-#panel-r .day-lesson-tools { display:flex; gap:0; }
-#panel-r .day-lesson-tools .btn {
+#panel-r .day-lesson :is(.day-lesson-pencil,.day-lesson-remove) {
   display:grid;
   place-items:center;
   width:44px;
@@ -3790,7 +3810,7 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   background:transparent;
   color:var(--text-2);
 }
-#panel-r .day-lesson-tools svg {
+#panel-r .day-lesson :is(.day-lesson-pencil,.day-lesson-remove) svg {
   width:17px;
   height:17px;
   fill:none;
@@ -3799,13 +3819,17 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   stroke-linecap:round;
   stroke-linejoin:round;
 }
-#panel-r .day-lesson-tools [data-delete-day-lesson] { color:var(--danger-c); }
+#panel-r .day-lesson .day-lesson-remove {color:var(--danger-c);}
+#panel-r .day-lesson :is(.done-check,.day-lesson-remove,[data-day-practice]) {position:relative;z-index:2;}
+#panel-r .day-lesson-actions[hidden] {display:none;}
+#panel-r .day-lesson-actions .act-btn {min-height:44px;min-width:44px;}
+#panel-r .day-lesson-chapter {margin-inline-end:auto;align-self:center;overflow-wrap:anywhere;}
+#panel-r :is(.day-lesson-remove,.day-lesson-actions .act-btn):focus-visible {outline-offset:-2px;}
+#panel-r .day-lesson:has(.day-lesson-details:active) {background-color:var(--segment-press);}
 @media (hover:hover) {
-  #panel-r .day-lesson-tools .btn:hover { background:var(--surface); }
-  #panel-r .day-lesson-details:hover .day-name-text { text-decoration:underline; text-underline-offset:.15em; }
+  #panel-r .day-lesson:has(.day-lesson-details:hover) {background-color:var(--segment-press);}
+  #panel-r .day-lesson-remove:hover {background-color:var(--segment-press);}
 }
-#panel-r .day-lesson-actions .act-btn { min-height:44px; min-width:44px; }
-#panel-r :is(.day-lesson-tools .btn,.day-lesson-details,.day-lesson-actions .act-btn):focus-visible { outline-offset:-2px; }
 
 /* Today reserves the filled treatment for its review action. */
 :is(#wide-today,#panel-r[data-mobile-day=today]) #day-schedule-open {
@@ -8420,12 +8444,12 @@ function finishDayEdit(restoreFocus=true){
     makeupList.scrollTop=draft.listScroll;
     if(restoreFocus)focusMakeupAction(draft.id,'move');
   }else if(restoreFocus){
-    const entry=[...$id('day-events').querySelectorAll('['+draft.source+']')]
-      .find(button=>button.getAttribute(draft.source)===draft.id);
+    const entry=[...$id('day-events').querySelectorAll('[data-day-edit]')]
+      .find(button=>button.dataset.dayEdit===draft.id);
     (entry?.getClientRects().length?entry:$id('day-schedule-open')).focus({preventScroll:true});
   }
 }
-function openDayEdit(date,id,makeup=false,source='data-day-edit'){
+function openDayEdit(date,id,makeup=false){
   const wide=!makeup&&wideDay.open;
   const scroller=makeup?makeupDialog:wide?wideDay:$id('panel-r');
   const lesson=S.calendar[date]?.find(item=>item.id===id);
@@ -8433,7 +8457,7 @@ function openDayEdit(date,id,makeup=false,source='data-day-edit'){
   const times=lessonTimes(lesson);
   dayEditContent.value=lessonContentText(lesson);
   const originalContent=dayEditContent.value;
-  dayEditDraft={date,id,wide,makeup,source,scroller,scroll:scroller.scrollTop,listScroll:makeupList.scrollTop,pageScroll:document.scrollingElement.scrollTop,originalTimes:times,times,originalContent};
+  dayEditDraft={date,id,wide,makeup,scroller,scroll:scroller.scrollTop,listScroll:makeupList.scrollTop,pageScroll:document.scrollingElement.scrollTop,originalTimes:times,times,originalContent};
   const subject=course(lesson.courseId);
   const suggested=subject?.studySubject||(subject&&studyRoom.examLibrary(subject.name)?.subject)||'';
   const selection={subject:lesson.chapterLink?.subject||suggested,chapterId:lesson.chapterLink?.chapterId||''};
@@ -8456,7 +8480,7 @@ function openDayEdit(date,id,makeup=false,source='data-day-edit'){
     wideDay.setAttribute('aria-labelledby','day-edit-title');
     wideDay.scrollTop=0;
   }else showAppDialog(dayEditDialog,()=>finishDayEdit());
-  (source==='data-day-chapter-edit'?dayEditStudySubject:$id('day-edit-close')).focus({preventScroll:true});
+  $id('day-edit-close').focus({preventScroll:true});
 }
 function reportMissingDayEditLesson(){
   finishDayEdit();
@@ -8579,11 +8603,8 @@ document.getElementById('day-events').addEventListener('click',event=>{
     if(lesson?.chapterLink)studyRoom.openLessonChapter(lesson.chapterLink);
     return;
   }
-  const edit=event.target.closest('[data-day-edit],[data-day-chapter-edit],[data-day-lesson-open]');
-  if(edit){
-    const source=['data-day-edit','data-day-chapter-edit','data-day-lesson-open'].find(name=>edit.hasAttribute(name));
-    openDayEdit(dayPanelDate(),edit.getAttribute(source),false,source);
-  }
+  const edit=event.target.closest('[data-day-edit]');
+  if(edit)openDayEdit(dayPanelDate(),edit.dataset.dayEdit);
 });
 
 function compareDayLessons(a,b){
@@ -8605,23 +8626,25 @@ function scheduledLessonNumbers(subjects,calendar=S.calendar){
   return numbers;
 }
 function lessonChapterActions(lesson){
-  const linked=lesson.chapterLink&&studyRoom.lessonChapter(lesson.chapterLink);
-  const label=linked?.name?'章節：'+linked.name:linked?.waiting?'章節載入中':lesson.chapterLink?'章節無法使用，重新選擇':'對應章節';
-  return `<button type="button" class="act-btn" data-day-chapter-edit="${esc(lesson.id)}">${esc(label)}</button>
+  if(!lesson.chapterLink)return '';
+  const linked=studyRoom.lessonChapter(lesson.chapterLink);
+  const label=linked?.name?'章節：'+linked.name:linked?.waiting?'章節載入中':'章節無法使用，請在編輯課堂重新選擇';
+  return `<span class="study-meta day-lesson-chapter">${esc(label)}</span>
     ${isTodayPage()&&linked?.count?`<button type="button" class="act-btn" data-day-practice="${esc(lesson.id)}">練習本章</button>`:''}`;
 }
 function refreshLessonChapterActions(){
   const lessons=new Map((S.calendar[dayPanelDate()]||[]).map(lesson=>[lesson.id,lesson]));
   for(const slot of $id('day-events').querySelectorAll('[data-lesson-chapter]')){
     const lesson=lessons.get(slot.dataset.lessonChapter);
-    const wanted=lesson&&lessonChapterActions(lesson);
-    if(wanted&&slot.chapterMarkup!==wanted){
-      const active=document.activeElement;
-      const hadFocus=slot.contains(active);
-      slot.innerHTML=wanted;
-      slot.chapterMarkup=wanted;
-      if(hadFocus)(active.hasAttribute('data-day-practice')?slot.querySelector('[data-day-practice]')||slot.firstElementChild:slot.firstElementChild).focus({preventScroll:true});
-    }
+    if(!lesson)continue;
+    const wanted=lessonChapterActions(lesson);
+    if(slot.chapterMarkup===wanted)continue;
+    slot.chapterMarkup=wanted;
+    if(slot.innerHTML===wanted)continue;
+    const hadFocus=slot.contains(document.activeElement);
+    slot.innerHTML=wanted;
+    slot.hidden=!wanted;
+    if(hadFocus)(slot.querySelector('[data-day-practice]')||slot.closest('.day-lesson').querySelector('[data-day-edit]')).focus({preventScroll:true});
   }
 }
 function renderDayLesson(ev,subject,lessonNumber){
@@ -8630,25 +8653,24 @@ function renderDayLesson(ev,subject,lessonNumber){
   const number='第 '+lessonNumber+' 堂';
   const time=lessonTimeLabel(ev);
   const summary=esc(lessonContentText(ev).replace(/\s+/g,' ').trim());
+  const chapterActions=lessonChapterActions(ev);
   return `<div class="day-card day-lesson ${ev.done?'is-done':''} ${ev.time?'':'is-untimed'}">
     <div class="day-card-head">
       <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}，${number}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
       <span class="dot" style="background:${subject.color}"></span>
-      <button type="button" class="day-lesson-details" data-day-lesson-open="${id}" aria-haspopup="dialog" aria-label="編輯課堂，${name}，${number}${time?'，'+esc(time):''}">
-        <span class="day-name${ev.done?' is-done':''}">
-          <span class="day-name-text">${name}</span><span class="day-lesson-number">${number}</span>
+      <button type="button" class="day-lesson-details" data-day-edit="${id}" aria-haspopup="dialog" aria-label="編輯課堂，${name}，${number}${time?'，'+esc(time):''}">
+        <span class="day-lesson-copy">
+          <span class="day-name${ev.done?' is-done':''}">
+            <span class="day-name-text">${name}</span><span class="day-lesson-number">${number}</span>
+          </span>
+          ${time?`<span class="day-lesson-time">${esc(time)}</span>`:''}
+          ${summary?`<span class="day-lesson-content-summary">${summary}</span>`:''}
         </span>
-        ${time?`<span class="day-lesson-time">${esc(time)}</span>`:''}
-        ${summary?`<span class="day-lesson-content-summary">${summary}</span>`:''}
+        <span class="day-lesson-pencil" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4"/></svg></span>
       </button>
-      <div class="day-lesson-tools" role="group" aria-label="${name}課堂操作">
-        <button type="button" class="btn" data-day-edit="${id}" aria-haspopup="dialog" aria-label="編輯課堂，${name}，${number}" title="編輯課堂"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4"/></svg></button>
-        <button type="button" class="btn" data-delete-day-lesson="${id}" aria-haspopup="dialog" aria-label="刪除課堂，${name}，${number}" title="刪除課堂"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
-      </div>
+      <button type="button" class="btn day-lesson-remove" data-delete-day-lesson="${id}" aria-haspopup="dialog" aria-label="刪除課堂，${name}，${number}" title="刪除課堂"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
-    <div class="day-lesson-actions">
-      <span class="day-chapter-actions" data-lesson-chapter="${id}">${lessonChapterActions(ev)}</span>
-    </div>
+    <div class="day-lesson-actions" data-lesson-chapter="${id}" ${chapterActions?'':'hidden'}>${chapterActions}</div>
   </div>`;
 }
 
