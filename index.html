@@ -2919,6 +2919,13 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 .schedule-conflicts summary{min-height:44px;align-content:center;cursor:pointer;}
 .schedule-conflicts ul{padding-inline-start:20px;margin-block:4px 8px;}
 .schedule-conflicts li{margin-block:4px;}
+.schedule-conflict-choice{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;}
+.schedule-conflict-choice[hidden]{display:none;}
+:is(#day-edit-form,.schedule-conflicts,#repeat-preview-options) .schedule-conflict-choice input{flex:none;width:18px;height:18px;min-height:0;accent-color:var(--accent);}
+#repeat-preview-options{flex-shrink:0;}
+body:has(#lesson-time-dialog[open]) #repeat-preview-content .popup-close{visibility:hidden;}
+#repeat-preview-options[hidden]{display:none;}
+#repeat-preview-options .schedule-conflict-choice{min-height:44px;}
 #day-repeat-details>summary{min-height:44px;align-content:center;cursor:pointer;}
 #day-repeat-slot :is(.fold-head,[for=rep-start],#rep-start,#rep-course){display:none;}
 #phone-course-dialog .schedule-secondary{margin-top:10px;}
@@ -3028,7 +3035,12 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 #repeat-preview-content .day-schedule-actions{justify-content:flex-end;flex-shrink:0;}
 #repeat-preview-content #repeat-preview-body{max-height:min(55dvh,560px);}
 #repeat-preview-dates .rp-lessons{display:grid;gap:4px;list-style:none;margin:0;padding:6px 0;}
-#repeat-preview-dates .rp-lessons > li{display:flex;justify-content:space-between;gap:4px 12px;padding:4px 8px;border:0;background:var(--card-2);border-radius:var(--r-xs);}
+#repeat-preview-dates .rp-lessons > li{display:grid;gap:4px;padding:8px;border:0;background:var(--card-2);border-radius:var(--r-xs);}
+.rp-lesson-fields{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;}
+.rp-lesson-fields label,.rp-lesson-fields button{min-width:0;flex:1 1 125px;}
+.rp-lesson-fields input,.rp-lesson-fields button{width:100%;min-height:44px;}
+.rp-lesson-fields input{min-width:0;}
+.rp-lesson-status{margin:0;color:var(--text-2);}
 /* 課堂列、＋／× 按鈕、手機品牌名稱（只改樣式） */
 #panel-r .day-lesson .day-name{gap:0 8px;}
 #panel-r .day-lesson-number{font-size:.8125rem;line-height:1.4;white-space:nowrap;}
@@ -4784,6 +4796,7 @@ onAuthStateChanged(auth,user=>{
         <label id="day-edit-time-label" for="day-edit-time-trigger">時間</label>
         <button type="button" id="day-edit-time-trigger" class="schedule-time-trigger" aria-labelledby="day-edit-time-label day-edit-time-trigger" aria-haspopup="dialog" aria-controls="lesson-time-dialog">未定時間</button>
       </div>
+      <div id="day-edit-conflicts" class="schedule-conflicts" aria-live="polite"></div>
       <label class="day-edit-field study-field" for="day-edit-content">
         <span>上課內容（選填）</span>
         <textarea id="day-edit-content" rows="4"></textarea>
@@ -4922,6 +4935,10 @@ onAuthStateChanged(auth,user=>{
     <details id="repeat-preview-conflicts" class="schedule-conflicts" hidden><summary></summary><ul></ul></details>
     <ul id="repeat-preview-dates"></ul>
     <div id="repeat-preview-skipped" class="rp-skipped" hidden></div>
+  </div>
+  <div id="repeat-preview-options" hidden>
+    <label class="schedule-conflict-choice"><input type="checkbox" id="repeat-preview-only-free">只排無衝突的課堂</label>
+    <label class="schedule-conflict-choice" id="repeat-preview-allow-label"><input type="checkbox" id="repeat-preview-allow">仍要排入有衝突的課堂</label>
   </div>
   <div class="day-schedule-actions dialog-actions">
     <button type="button" class="btn btn-sand" id="repeat-preview-cancel">返回調整</button>
@@ -5469,6 +5486,7 @@ window.onFirebaseLogin=function(user){
     try{localStorage.setItem(LS,JSON.stringify(statePayload()));}catch(e){}
     render();
     if(typeof recheckRepeatPreview==='function')recheckRepeatPreview();
+    if(dayEditDraft)renderDayEditConflicts();
     _syncPaused=false;
     setSyncStatus('synced');
   },()=>{
@@ -6104,35 +6122,54 @@ function completeScheduleRange({time,endTime}){
   const clock=/^(?:[01]\d|2[0-3]):[0-5]\d$/;
   return clock.test(time)&&clock.test(endTime)&&time<endTime;
 }
-function scheduleConflicts(date,times){
+function scheduleConflicts(date,times,{exclude=times,calendar=S.calendar,numbers}={}){
   if(!date||!completeScheduleRange(times))return [];
-  return (S.calendar[date]||[]).filter(lesson=>completeScheduleRange(lesson)&&
-    times.time<lesson.endTime&&lesson.time<times.endTime).map(lesson=>({
-      name:course(lesson.courseId)?.name||'課堂',time:lessonTimeLabel(lesson),
-    }));
+  const overlaps=(calendar[date]||[]).filter(lesson=>lesson!==exclude&&completeScheduleRange(lesson)&&
+    times.time<lesson.endTime&&lesson.time<times.endTime);
+  if(!overlaps.length)return [];
+  numbers??=scheduledLessonNumbers(S.courses,calendar);
+  return overlaps.map(lesson=>({
+    id:lesson.id,slot:lesson.slot,name:course(lesson.courseId)?.name||'課堂',
+    number:numbers.get(lesson),time:lessonTimeLabel(lesson)
+  }));
 }
 function conflictLessonsHTML(lessons){
-  return '<ul>'+lessons.map(lesson=>'<li>'+esc(lesson.name)+' · '+esc(lesson.time)+'</li>').join('')+'</ul>';
+  return '<ul>'+lessons.map(lesson=>'<li>'+esc(lesson.name)+(lesson.number!==undefined?' · 第 '+esc(lesson.number)+' 堂':'')+
+    ' · '+esc(lesson.time)+(lesson.slot?'（本次預排）':'')+'</li>').join('')+'</ul>';
+}
+function renderConflictChoice(id,date,times,lessons,choice,courseId){
+  const container=$id(id);
+  const key=lessons.length?JSON.stringify([date,lessonTimeLabel(times),lessons,courseId]):'';
+  if(container.dataset.conflictKey!==key){
+    container.dataset.conflictKey=key;
+    container.innerHTML=key?'<strong>時段重疊</strong>'+conflictLessonsHTML(lessons)+
+      '<label class="schedule-conflict-choice"><input type="checkbox">'+choice+'</label>':'';
+  }
+  return container.querySelector('input');
+}
+function requireConflictChoice(checkbox){
+  if(!checkbox||checkbox.checked)return true;
+  checkbox.focus();
+  return false;
+}
+function renderSingleScheduleConflict(){
+  const times=readScheduleTimes('day'),date=$id('day-schedule-date').value;
+  const courseId=$id('day-schedule-course').value;
+  const lessons=courseId?scheduleConflicts(date,times):[];
+  return renderConflictChoice('day-schedule-conflicts',date,times,lessons,'仍要排入',courseId);
 }
 function renderScheduleConflicts(){
-  const times=readScheduleTimes('day'),date=$id('day-schedule-date').value;
-  const lessons=$id('day-schedule-course').value?scheduleConflicts(date,times):[];
-  const container=$id('day-schedule-conflicts');
-  const html=lessons.length?'<strong>時段重疊</strong>'+conflictLessonsHTML(lessons):'';
-  if(container.innerHTML!==html)container.innerHTML=html;
+  renderSingleScheduleConflict();
   const plan=readRepeatPlan(repeatForm);
-  const batch=completeScheduleRange(plan)?calculateRepeatBatch(plan):null;
-  renderRepeatConflicts('day-repeat-conflicts',plan,batch);
+  const batch=completeScheduleRange(plan)?projectRepeatBatch(plan):null;
+  renderRepeatConflicts('day-repeat-conflicts',batch);
 }
-function renderRepeatConflicts(id,plan,batch){
-  const details=$id(id),days=[];
-  if(completeScheduleRange(plan)){
-    for(const {date,count} of batch?.dates||[]){
-      const lessons=scheduleConflicts(date,plan);
-      if(count>1)lessons.push({name:'本次預計安排 '+count+' 堂 '+batch.name,time:lessonTimeLabel(plan)});
-      if(lessons.length)days.push({date,lessons});
-    }
-  }
+function renderRepeatConflicts(id,batch){
+  const details=$id(id);
+  const days=(batch?.dates||[]).flatMap(({date,lessons})=>{
+    const matches=new Map(lessons.flatMap(lesson=>lesson.conflicts).map(lesson=>[lesson.id,lesson]));
+    return matches.size?[{date,lessons:[...matches.values()]}]:[];
+  });
   details.hidden=!days.length;
   const summary=details.querySelector('summary'),list=details.querySelector('ul');
   const title=days.length?'有 '+days.length+' 天時段重疊':'';
@@ -6207,6 +6244,7 @@ const repeatForm=document.getElementById('repeat-schedule-form');
 const repeatDialog=document.getElementById('repeat-preview');
 const repeatConfirm=document.getElementById('repeat-preview-confirm');
 const repeatContent=document.getElementById('repeat-preview-content');
+let pausedRepeatPreview=null;
 let repeatHost=null;
 let repeatHostLabel=null;
 function readRepeatPlan(form){
@@ -6309,26 +6347,47 @@ function calculateRepeatBatch({courseId,days,perDay,start,end},skips=[]){
     !added ? (skippedMatches?'符合條件的日期都已跳過。':'這段期間沒有符合所選星期的上課日。') : '';
   return {name:selectedCourse.name,available,dates,added,remaining:available-added,reason,skipped:[...skipSet].sort()};
 }
-function projectRepeatBatch(plan,skips){
+function projectRepeatBatch(plan,skips,changes=new Map(),onlyFree=false){
   const batch=calculateRepeatBatch(plan,skips);
   if(!batch.added)return batch;
 
-  // Match addEvent's ID sequence for ties with existing untimed lessons.
-  let nextId=S.eid;
-  const calendar={...S.calendar};
-  const projected=batch.dates.map(({date,count})=>{
-    const lessons=Array.from({length:count},()=>({id:'e'+nextId++,courseId:plan.courseId,time:plan.time||'',
-      ...(plan.endTime?{endTime:plan.endTime}:{})}));
-    calendar[date]=[...(calendar[date]||[]),...lessons];
-    return {date,count,lessons};
-  });
-  const numbers=scheduledLessonNumbers([course(plan.courseId)],calendar);
-  return {...batch,dates:projected.map(({date,count,lessons})=>({
-    date,count,lessons:lessons.map(lesson=>({number:numbers.get(lesson),...lessonTimes(lesson)}))
-  }))};
+  const projected=batch.dates.flatMap(({date,count})=>Array.from({length:count},(_,index)=>{
+    const slot=date+'/'+index;
+    const change=changes.get(slot);
+    return {slot,date:change?.date||date,courseId:plan.courseId,...lessonTimes(change?.times||plan)};
+  }));
+  projected.sort((a,b)=>a.date.localeCompare(b.date)||a.slot.localeCompare(b.slot,'en',{numeric:true}));
+  function projectNumbers(lessons){
+    const calendar={...S.calendar};
+    let nextId=S.eid;
+    for(const lesson of lessons){
+      lesson.id='e'+nextId++;
+      calendar[lesson.date]=[...(calendar[lesson.date]||[]),lesson];
+    }
+    return {calendar,numbers:scheduledLessonNumbers(S.courses,calendar)};
+  }
+  const {calendar,numbers}=projectNumbers(projected);
+  const rows=projected.map(lesson=>({lesson,conflicts:scheduleConflicts(lesson.date,lesson,{calendar,numbers})}));
+  const included=rows.filter(row=>!onlyFree||!row.conflicts.length).map(row=>row.lesson);
+  const includedNumbers=onlyFree?projectNumbers(included).numbers:numbers;
+  const dates=new Map();
+  // Day skips are based on the original slots and must not omit an individually moved lesson.
+  const movedFrom=new Set(projected.filter(lesson=>!lesson.slot.startsWith(lesson.date+'/')).map(lesson=>lesson.slot.split('/')[0]));
+  for(const {lesson,conflicts} of rows){
+    const date=lesson.date;
+    if(!dates.has(date))dates.set(date,{date,count:0,lessons:[],canSkip:!movedFrom.has(date)});
+    const group=dates.get(date);
+    if(!lesson.slot.startsWith(date+'/'))group.canSkip=false;
+    const skip=onlyFree&&conflicts.length>0;
+    if(!skip)group.count++;
+    group.lessons.push({slot:lesson.slot,number:includedNumbers.get(lesson),...lessonTimes(lesson),conflicts,skip});
+  }
+  return {...batch,dates:[...dates.values()],added:included.length,remaining:batch.available-included.length,
+    conflictCount:rows.filter(row=>row.conflicts.length).length,
+    reason:onlyFree&&!included.length?'目前每堂都有時段重疊，可調整預覽中的日期或時間。':batch.reason};
 }
 function repeatBatchSummary(batch){
-  return '本次安排 '+batch.added+' 堂'+(batch.remaining>=1?' · '+remainingCourseText(batch.remaining):'')+(batch.skipped?.length?'（已跳過 '+batch.skipped.length+' 天）':'');
+  return '本次安排 '+batch.added+' 堂 · '+(batch.remaining>=1?remainingCourseText(batch.remaining):'沒有待排課堂')+(batch.skipped?.length?'（已跳過 '+batch.skipped.length+' 天）':'');
 }
 // Daily load (information only). Counts every lesson already in S.calendar for that date —
 // all courses, done or not, timed or not — and ignores the calendar course filter.
@@ -6367,18 +6426,30 @@ function repeatExamHint(date){
   return '<span class="rp-exam">當天有考試'+(exams.length===1?' · '+esc(exams[0].name):'（'+exams.length+' 科）')+'</span>';
 }
 function renderRepeatPreview(batch,notice='',{keepScroll=false}={}){
-  renderRepeatConflicts('repeat-preview-conflicts',readRepeatPlan(repeatForm),batch);
+  renderRepeatConflicts('repeat-preview-conflicts',batch);
+  const onlyFree=$id('repeat-preview-only-free'),allow=$id('repeat-preview-allow');
+  $id('repeat-preview-options').hidden=!batch.conflictCount;
+  onlyFree.checked=!!repeatPreview?.onlyFree;
+  $id('repeat-preview-allow-label').hidden=onlyFree.checked;
+  allow.checked=!!repeatPreview?.allow;
+  const plan=readRepeatPlan(repeatForm);
+  const min=Number.isFinite(plan.start)?new Date(plan.start).toISOString().slice(0,10):'';
+  const max=Number.isFinite(plan.end)?new Date(plan.end).toISOString().slice(0,10):'';
   document.getElementById('repeat-preview-notice').textContent=notice;
   document.getElementById('repeat-preview-course').textContent=batch.name||'';
   document.getElementById('repeat-preview-summary').textContent=batch.error||
     '預計安排 '+batch.added+' 堂 · 截止時剩 '+batch.remaining+' 堂未排'+(batch.reason?'。'+batch.reason:'');
-  document.getElementById('repeat-preview-dates').innerHTML=(batch.dates||[]).map(({date,count,lessons})=>
+  document.getElementById('repeat-preview-dates').innerHTML=(batch.dates||[]).map(({date,count,lessons,canSkip})=>
     '<li><div class="rp-head"><time datetime="'+date+'">'+date+'</time><span>週'+WDAYS[new Date(date+'T00:00:00Z').getUTCDay()]+'</span></div>'+
     '<ol class="rp-lessons">'+lessons.map(lesson=>{
       const time=lessonTimeLabel(lesson);
-      return '<li><span>第 '+lesson.number+' 堂</span>'+(time?'<span>'+esc(time)+'</span>':'')+'</li>';
+      const status=lesson.skip?'略過這堂':('第 '+esc(lesson.number)+' 堂');
+      const conflict=lesson.conflicts.length?'<div class="schedule-conflicts"><strong>時段重疊</strong>'+conflictLessonsHTML(lesson.conflicts)+'</div>':'';
+      return '<li><p class="rp-lesson-status">'+status+'</p><div class="rp-lesson-fields">'+
+        '<label><span class="sr-only">調整這堂日期</span><input type="date" value="'+date+'" min="'+min+'" max="'+max+'" data-rp-date="'+lesson.slot+'"></label>'+
+        '<button type="button" class="schedule-time-trigger" aria-haspopup="dialog" data-rp-time="'+lesson.slot+'" aria-label="調整這堂時間 '+esc(time)+'">'+(esc(time)||'設定時間')+'</button></div>'+conflict+'</li>';
     }).join('')+'</ol>'+repeatLoadHtml(date,count)+
-    '<div class="rp-tools">'+repeatExamHint(date)+'<button type="button" class="rp-skip" data-rp-skip="'+date+'" aria-label="跳過 '+date+'">跳過這天</button></div></li>'
+    '<div class="rp-tools">'+repeatExamHint(date)+(canSkip?'<button type="button" class="rp-skip" data-rp-skip="'+date+'" aria-label="跳過 '+date+'">跳過這天</button>':'')+'</div></li>'
   ).join('');
   const skipped=batch.skipped||[];
   const skipBox=document.getElementById('repeat-preview-skipped');
@@ -6387,17 +6458,19 @@ function renderRepeatPreview(batch,notice='',{keepScroll=false}={}){
     '<li><span class="rp-skipped-date"><time datetime="'+date+'">'+date+'</time>'+repeatExamHint(date)+'</span><button type="button" class="rp-restore" data-rp-restore="'+date+'" aria-label="恢復 '+date+'">恢復</button></li>'
   ).join('')+'</ul>';
   if(!keepScroll)document.getElementById('repeat-preview-body').scrollTop=0;
-  repeatConfirm.disabled=!batch.added;
+  repeatConfirm.disabled=!batch.added||!!(batch.conflictCount&&!repeatPreview?.onlyFree&&!repeatPreview?.allow);
 }
 function openRepeatPreview(event){
   event.preventDefault();
   const plan=readRepeatPlan(repeatForm);
   const key=JSON.stringify(plan);
   if(key===lastRepeatBatch?.key||repeatPreview)return;
-  const batch=projectRepeatBatch(plan);
+  const previous=pausedRepeatPreview?.key===key?pausedRepeatPreview:null;
+  const skips=previous?.skips||[],changes=previous?.changes||new Map(),onlyFree=!!previous?.onlyFree;
+  const batch=projectRepeatBatch(plan,skips,changes,onlyFree);
   if(batch.error){showRepeatScheduleError(batch.error);return;}
   showRepeatScheduleError('');
-  repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips:[]};
+  repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,changes,onlyFree,allow:false};
   renderRepeatPreview(batch);
   repeatHost=repeatForm.closest('dialog[open]')||repeatDialog;
   if(repeatHost===repeatDialog)showAppDialog(repeatDialog,closeRepeatPreview);
@@ -6413,6 +6486,7 @@ function openRepeatPreview(event){
 function closeRepeatPreview(restoreFocus=true){
   const host=repeatHost;
   if(!host)return;
+  pausedRepeatPreview=repeatPreview?.key===lastRepeatBatch?.key?null:repeatPreview;
   repeatPreview=null;
   repeatHost=null;
   if(host===repeatDialog)repeatDialog.close();
@@ -6447,10 +6521,10 @@ function confirmRepeatSchedule(event){
     return;
   }
   const skips=repeatPreview.skips||[];
-  const batch=projectRepeatBatch(plan,skips);
+  const batch=projectRepeatBatch(plan,skips,repeatPreview.changes,repeatPreview.onlyFree);
   const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
   if(batchChanged||repeatLoadKey(batch)!==repeatPreview.loadKey){
-    repeatPreview={key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,pointerConfirmAfter:performance.now()+400};
+    repeatPreview={...repeatPreview,batch,loadKey:repeatLoadKey(batch),allow:false,pointerConfirmAfter:performance.now()+400};
     renderRepeatPreview(batch,!batchChanged?'預覽日期的原有課堂數已更新，請重新確認。':batch.added?'排課結果已更新，請重新確認。':'排課結果已更新。');
     document.getElementById('repeat-preview-body').focus();
     return;
@@ -6461,25 +6535,26 @@ function confirmRepeatSchedule(event){
   const lessons=new Map();
   const commit=()=>{
     const nextNumber=lessonNumberAllocator(plan.courseId);
-    for(const {date,lessons:planned} of batch.dates){
+    for(const {date,lessons:planned,count} of batch.dates){
+      if(!count)continue;
       const originals=new Map();
-      for(const {time,endTime} of planned){
+      for(const {time,endTime,skip} of planned){
+        if(skip)continue;
         const lesson=addEvent(date,plan.courseId,time,endTime,nextNumber);
         originals.set(lesson.id,{...lesson});
       }
       lessons.set(date,originals);
     }
   };
-  if(unified&&!persistCalendarSchedule(commit)){
+  if(!persistCalendarSchedule(commit)){
     renderRepeatPreview(batch,'無法儲存排課，請重試。');
     repeatConfirm.focus();
     return;
   }
-  if(!unified){commit();saveState();}
   lastRepeatBatch={key,message:repeatBatchSummary(batch),courseId:plan.courseId,lessons,count:batch.added};
   closeRepeatPreview(false);
   if(unified){
-    finishCalendarSchedule(batch.dates[0].date);
+    finishCalendarSchedule(batch.dates.find(day=>day.count).date);
     toast(calendarScheduleMessage(lastRepeatBatch.message,plan.courseId),'success',5500,{label:'復原',run:undoRepeatSchedule});
   }else render();
   updateRepeatScheduleForm(repeatForm);
@@ -6489,6 +6564,7 @@ function confirmRepeatSchedule(event){
 function updateRepeatConditions(){
   const wasPreviewing=!!repeatPreview;
   if(wasPreviewing)closeRepeatPreview();
+  if(pausedRepeatPreview?.key!==JSON.stringify(readRepeatPlan(repeatForm)))pausedRepeatPreview=null;
   updateRepeatScheduleForm(repeatForm);
   showRepeatScheduleError(wasPreviewing?'排課條件已變更，請重新預覽。':'');
 }
@@ -6496,20 +6572,66 @@ function changeRepeatSkip(date,skip){
   if(!repeatPreview||!repeatHost?.open)return;
   const plan=readRepeatPlan(repeatForm);
   if(JSON.stringify(plan)!==repeatPreview.key)return;
-  if(skip&&!repeatPreview.batch.dates.some(d=>d.date===date))return;
+  if(skip&&!repeatPreview.batch.dates.some(d=>d.date===date&&d.canSkip))return;
   const set=new Set(repeatPreview.skips||[]);
   skip?set.add(date):set.delete(date);
   const skips=[...set].sort();
-  const batch=projectRepeatBatch(plan,skips);
+  const batch=projectRepeatBatch(plan,skips,repeatPreview.changes,repeatPreview.onlyFree);
   if(batch.error)return;
-  repeatPreview={...repeatPreview,batch,skips,loadKey:repeatLoadKey(batch),pointerConfirmAfter:performance.now()+400,pointerSkipAfter:performance.now()+350};
+  repeatPreview={...repeatPreview,batch,skips,loadKey:repeatLoadKey(batch),allow:false,pointerConfirmAfter:performance.now()+400,pointerSkipAfter:performance.now()+350};
   renderRepeatPreview(batch,'',{keepScroll:true});
   const next=skip
     ?document.querySelector('[data-rp-restore="'+date+'"]')
     :(document.querySelector('[data-rp-skip="'+date+'"]')||document.getElementById('repeat-preview-body'));
   next?.focus({preventScroll:false});
 }
+function updateRepeatConflictOptions(notice=''){
+  if(!repeatPreview)return;
+  const plan=readRepeatPlan(repeatForm);
+  if(JSON.stringify(plan)!==repeatPreview.key)return;
+  const {skips,changes,onlyFree}=repeatPreview;
+  const batch=projectRepeatBatch(plan,skips,changes,onlyFree);
+  repeatPreview={...repeatPreview,batch,loadKey:repeatLoadKey(batch),allow:false,pointerConfirmAfter:performance.now()+400};
+  renderRepeatPreview(batch,notice,{keepScroll:true});
+}
+document.getElementById('repeat-preview-only-free').addEventListener('change',event=>{
+  if(!repeatPreview)return;
+  repeatPreview.onlyFree=event.target.checked;
+  updateRepeatConflictOptions();
+});
+document.getElementById('repeat-preview-allow').addEventListener('change',event=>{
+  if(!repeatPreview)return;
+  repeatPreview.allow=event.target.checked;
+  repeatConfirm.disabled=!repeatPreview.batch.added||!repeatPreview.allow;
+});
+document.getElementById('repeat-preview-body').addEventListener('change',event=>{
+  const input=event.target.closest('[data-rp-date]');
+  if(!input||!repeatPreview)return;
+  const slot=input.dataset.rpDate;
+  if(!input.validity.valid||!input.value){
+    updateRepeatConflictOptions('請選擇排課起訖範圍內的日期。');
+  }else{
+    const changes=repeatPreview.changes;
+    changes.set(slot,{...changes.get(slot),date:input.value});
+    updateRepeatConflictOptions();
+  }
+  $id('repeat-preview-body').querySelector('[data-rp-date="'+slot+'"]')?.focus();
+});
 document.getElementById('repeat-preview-body').addEventListener('click',event=>{
+  const time=event.target.closest('[data-rp-time]');
+  if(time&&repeatPreview){
+    const slot=time.dataset.rpTime;
+    const lesson=repeatPreview.batch.dates.flatMap(day=>day.lessons).find(row=>row.slot===slot);
+    if(!lesson)return;
+    const changes=repeatPreview.changes;
+    openLessonTime(lesson,times=>{
+      if(repeatPreview?.changes!==changes)return;
+      changes.set(slot,{...changes.get(slot),times});
+      updateRepeatConflictOptions();
+      $id('repeat-preview-body').querySelector('[data-rp-time="'+slot+'"]')?.focus();
+    },time);
+    return;
+  }
   const b=event.target.closest('[data-rp-skip],[data-rp-restore]');
   if(!b||!repeatPreview)return;
   // A quick second tap after the list reflows must not hit a different row's button.
@@ -6520,16 +6642,20 @@ document.getElementById('repeat-preview-body').addEventListener('click',event=>{
 function recheckRepeatPreview(){
   if(!repeatPreview||!repeatHost?.open)return;
   const plan=readRepeatPlan(repeatForm);
-  if(JSON.stringify(plan)!==repeatPreview.key)return;
-  const skips=repeatPreview.skips||[];
-  const batch=projectRepeatBatch(plan,skips);
-  if(batch.error)return;
-  const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
-  if(!batchChanged&&repeatLoadKey(batch)===repeatPreview.loadKey){
-    renderRepeatConflicts('repeat-preview-conflicts',plan,batch);
+  if(JSON.stringify(plan)!==repeatPreview.key){
+    const original=course(repeatPreview.courseId);
+    const notice=!original?'原先選取的科目已不存在。':remaining(original)<=0?'這門課程已無未排堂次。':'排課條件已變更。';
+    repeatPreview.allow=false;
+    repeatPreview.invalidated=true;
+    renderRepeatPreview({name:repeatPreview.batch.name,error:notice},'同步後，請返回調整。',{keepScroll:true});
     return;
   }
-  repeatPreview={key:repeatPreview.key,courseId:plan.courseId,batch,loadKey:repeatLoadKey(batch),skips,pointerConfirmAfter:performance.now()+400};
+  const skips=repeatPreview.skips||[];
+  const batch=projectRepeatBatch(plan,skips,repeatPreview.changes,repeatPreview.onlyFree);
+  if(batch.error)return;
+  const batchChanged=JSON.stringify(batch)!==JSON.stringify(repeatPreview.batch);
+  if(!repeatPreview.invalidated&&!batchChanged&&repeatLoadKey(batch)===repeatPreview.loadKey)return;
+  repeatPreview={...repeatPreview,batch,loadKey:repeatLoadKey(batch),allow:false,invalidated:false,pointerConfirmAfter:performance.now()+400};
   renderRepeatPreview(batch,!batchChanged?'同步後，預覽日期的原有課堂數已更新，請重新確認。':batch.added?'同步後，排課結果已更新，請重新確認。':'同步後，排課結果已更新。');
 }
 repeatForm.addEventListener('input',event=>{
@@ -8307,7 +8433,7 @@ function syncScheduleFields(){
 for(const id of ['day-schedule-course','day-schedule-date'])$id(id).addEventListener('change',syncScheduleFields);
 function refreshDayScheduleCourses(){
   const select=document.getElementById('day-schedule-course');
-  const previous=select.value;
+  const previous=repeatHost===phoneCourseDialog?repeatPreview.courseId:select.value;
   select.replaceChildren();
   const pending=S.courses.filter(c=>remaining(c)>0);
   pending.forEach(c=>{
@@ -8329,6 +8455,7 @@ function beginCalendarSchedule(date,opener,fromDay){
   if(dayScheduleDate)return;
   cancelCalendarSchedule();
   dayScheduleDate=date;
+  pausedRepeatPreview=null;
   courseDialogOpener=opener;
   scheduleOriginDay=fromDay;
   if(fromDay)wideDay.close();
@@ -8344,6 +8471,7 @@ function beginCalendarSchedule(date,opener,fromDay){
   $id('repeat-preview-conflicts').open=false;
   $id('day-schedule-date').value=date;
   resetDayScheduleTime();
+  renderConflictChoice('day-schedule-conflicts',date,{},[],'');
   refreshDayScheduleCourses();
   openPhoneCourse('schedule');
 }
@@ -8369,6 +8497,7 @@ function submitDaySchedule(event){
   const c=course($id('day-schedule-course').value);
   if(!date||!c||remaining(c)<=0){refreshDayScheduleCourses();return;}
   const {time,endTime}=readScheduleTimes('day');
+  if(!requireConflictChoice(renderSingleScheduleConflict()))return;
   if(!persistCalendarSchedule(()=>addEvent(date,c.id,time,endTime))){
     $id('day-schedule-message').textContent='無法儲存排課，請重試。';
     return;
@@ -8533,6 +8662,16 @@ function finishDayEdit(restoreFocus=true){
     (entry?.getClientRects().length?entry:$id('day-schedule-open')).focus({preventScroll:true});
   }
 }
+function renderDayEditConflicts(){
+  if(!dayEditDraft)return null;
+  const {date,id,times,originalTimes}=dayEditDraft;
+  const lesson=S.calendar[date]?.find(item=>item.id===id);
+  const newDate=dayEditDate.value;
+  const changed=newDate!==date||!sameLessonTimes(times,originalTimes);
+  const proposed=sameLessonTimes(times,originalTimes)?lesson:times;
+  const lessons=lesson&&changed?scheduleConflicts(newDate,proposed,{exclude:lesson}):[];
+  return renderConflictChoice('day-edit-conflicts',newDate,proposed,lessons,'仍要儲存');
+}
 function openDayEdit(date,id,makeup=false){
   const wide=!makeup&&wideDay.open;
   const scroller=makeup?makeupDialog:wide?wideDay:$id('panel-r');
@@ -8548,6 +8687,7 @@ function openDayEdit(date,id,makeup=false){
   dayEditDraft.chapterSelection=selection;
   fillLessonChapterFields(selection);
   dayEditDate.value=date;
+  renderDayEditConflicts();
   dayEditDate.removeAttribute('aria-invalid');
   $id('day-edit-date-error').textContent='';
   dayEditTimeTrigger.textContent=lessonTimeLabel(times)||'未定時間';
@@ -8583,6 +8723,7 @@ dayEditDate.addEventListener('click',()=>{
 dayEditDate.addEventListener('input',()=>{
   $id('day-edit-date-error').textContent='';
   dayEditDate.removeAttribute('aria-invalid');
+  renderDayEditConflicts();
 });
 $id('day-edit-form').addEventListener('submit',event=>{
   event.preventDefault();
@@ -8610,6 +8751,7 @@ $id('day-edit-form').addEventListener('submit',event=>{
     dayEditStudyChapter.focus();
     return;
   }
+  if(!requireConflictChoice(renderDayEditConflicts()))return;
   if(chapterChanged){
     if(selected.chapterId)lesson.chapterLink=selected;
     else delete lesson.chapterLink;
@@ -8641,6 +8783,7 @@ dayEditTimeTrigger.addEventListener('click',()=>{
   openLessonTime(dayEditDraft.times,times=>{
     dayEditDraft.times=times;
     dayEditTimeTrigger.textContent=lessonTimeLabel(times)||'未定時間';
+    renderDayEditConflicts();
   },dayEditTimeTrigger);
 });
 
