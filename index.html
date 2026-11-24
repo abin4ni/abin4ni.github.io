@@ -2927,12 +2927,13 @@ body:has(#lesson-time-dialog[open]) #phone-course-dialog[data-calendar-schedule]
 #wide-calendar-add{width:44px;padding:0;font-size:1.2rem;}
 #phone-course-dialog .phone-repeat-choice{display:flex;}
 
-#panel-r .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr) auto;}
-#panel-r .day-lesson.is-untimed .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
 #panel-r .day-lesson-time{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-2);white-space:nowrap;}
 #panel-r .day-lesson-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;}
 #panel-r .day-lesson-actions .act-btn{font-weight:500;color:var(--text-2);}
-#panel-r .day-lesson-actions [data-delete-day-lesson]{color:var(--danger-c);}
+.day-chapter-actions{display:contents;}
+#panel-r .day-lesson-actions .day-chapter-actions button{min-height:44px;white-space:normal;overflow-wrap:anywhere;}
+#day-edit-study-link{display:grid;gap:8px;}
+#day-edit-study-link legend{padding:0;font-weight:600;}
 #panel-r .day-completed{border-top:1px solid var(--border-lt);}
 #panel-r .day-completed > summary{cursor:pointer;align-content:center;min-height:44px;font-size:14px;font-weight:600;color:var(--text-2);}
 #panel-r .day-completed-list .day-lesson{border-top:1px solid var(--border-lt);}
@@ -3035,7 +3036,6 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 #panel-r .day-lesson-number{font-size:.8125rem;line-height:1.4;white-space:nowrap;}
 #panel-r .day-lesson-details{display:contents;}
 @media(max-width:767px){
-  #panel-r .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
   #panel-r .day-lesson-details{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;min-width:0;}
   #panel-r .day-lesson-details .day-name{flex:1 1 auto;}
   #panel-r .day-lesson-details .day-lesson-time{flex:0 0 auto;}
@@ -3727,18 +3727,17 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   .week-timed-event[data-week-overlap] .week-ev-time { display: grid; font-size: .5rem; }
   .week-timed-event[data-week-overlap] .week-ev-time > span:nth-child(2) { display: none; }
 }
-/* Course details share the same row layout in Today and calendar dialogs. */
-#panel-r :is(.day-course-list,.day-completed-list) {
-  container: day-lessons / inline-size;
-}
+/* Today, the calendar side panel and date details share this lesson row. */
 #panel-r .day-card.day-lesson {
   display:grid;
   gap:0;
   padding-block:var(--sp-1);
 }
 #panel-r .day-lesson .day-card-head {
-  grid-template-columns:44px 8px minmax(0,1fr);
+  grid-template-columns:44px 8px minmax(0,1fr) auto;
   align-items:start;
+  gap:4px;
+  margin-bottom:0;
 }
 #panel-r .day-lesson .day-card-head > .dot {
   align-self:start;
@@ -3750,33 +3749,63 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   align-items:baseline;
   gap:2px var(--sp-2);
   min-width:0;
-  padding-block:.45rem;
+  min-height:44px;
+  padding:.55rem 0;
+  border:0;
+  border-radius:var(--r-sm);
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  text-align:start;
+  cursor:pointer;
 }
 #panel-r .day-lesson-details .day-name {
   flex:1 1 auto;
   min-width:0;
 }
 #panel-r .day-lesson-details .day-lesson-time {
-  flex:none;
+  flex:0 1 auto;
   color:var(--text-2);
   font-size:var(--ui-label);
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#panel-r .day-lesson-content-summary {
+  flex:1 0 100%;
+  min-width:0;
+  color:var(--text-2);
+  font-size:var(--ui-label);
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+#panel-r .day-lesson-tools { display:flex; gap:0; }
+#panel-r .day-lesson-tools .btn {
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--text-2);
+}
+#panel-r .day-lesson-tools svg {
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.75;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+#panel-r .day-lesson-tools [data-delete-day-lesson] { color:var(--danger-c); }
+@media (hover:hover) {
+  #panel-r .day-lesson-tools .btn:hover { background:var(--surface); }
+  #panel-r .day-lesson-details:hover .day-name-text { text-decoration:underline; text-underline-offset:.15em; }
 }
 #panel-r .day-lesson-actions .act-btn { min-height:44px; min-width:44px; }
-#panel-r .day-lesson-actions .act-btn:focus-visible { outline-offset:-2px; }
-@container day-lessons (min-width:20rem) {
-  #panel-r .day-card.day-lesson.is-untimed {
-    grid-template-columns:minmax(0,1fr) auto;
-    align-items:center;
-    column-gap:var(--sp-2);
-  }
-}
-@container day-lessons (min-width:29rem) {
-  #panel-r .day-card.day-lesson {
-    grid-template-columns:minmax(0,1fr) auto;
-    align-items:center;
-    column-gap:var(--sp-3);
-  }
-}
+#panel-r :is(.day-lesson-tools .btn,.day-lesson-details,.day-lesson-actions .act-btn):focus-visible { outline-offset:-2px; }
 
 /* Today reserves the filled treatment for its review action. */
 :is(#wide-today,#panel-r[data-mobile-day=today]) #day-schedule-open {
@@ -4127,7 +4156,6 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 @media (max-width:767px){
   #panel-r[data-mobile-day=today] .day-heading{margin-block-end:var(--sp-2);}
   #panel-r[data-mobile-day=today] .day-schedule-entry{margin-block-end:var(--sp-2);}
-  #panel-r[data-mobile-day=today] .day-lesson .day-card-head{grid-template-columns:44px 8px minmax(0,1fr);}
   #panel-r[data-mobile-day=today] .day-card.day-lesson{padding-block:0;}
   #panel-r[data-mobile-day=today] .day-lesson-actions .act-btn{padding-block:0;}
 }
@@ -4650,7 +4678,7 @@ onAuthStateChanged(auth,user=>{
 <dialog id="day-edit-dialog" class="local-dialog" aria-labelledby="day-edit-title">
   <section id="day-edit-panel" hidden>
     <div class="day-edit-head">
-      <h2 id="day-edit-title">編輯時間</h2>
+      <h2 id="day-edit-title">編輯課堂</h2>
       <button type="button" id="day-edit-close" class="btn popup-close" autofocus aria-label="取消編輯並返回當日課程"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
     </div>
     <form id="day-edit-form" novalidate>
@@ -4663,6 +4691,16 @@ onAuthStateChanged(auth,user=>{
         <label id="day-edit-time-label" for="day-edit-time-trigger">時間</label>
         <button type="button" id="day-edit-time-trigger" class="schedule-time-trigger" aria-labelledby="day-edit-time-label day-edit-time-trigger" aria-haspopup="dialog" aria-controls="lesson-time-dialog">未定時間</button>
       </div>
+      <label class="day-edit-field study-field" for="day-edit-content">
+        <span>上課內容（選填）</span>
+        <textarea id="day-edit-content" rows="4"></textarea>
+      </label>
+      <fieldset class="day-edit-field" id="day-edit-study-link">
+        <legend>對應章節（選填）</legend>
+        <label class="study-field">學習室科目<select id="day-edit-study-subject"></select></label>
+        <label class="study-field">章節<select id="day-edit-study-chapter" aria-describedby="day-edit-study-error"></select></label>
+        <p id="day-edit-study-error" class="schedule-time-error" role="status"></p>
+      </fieldset>
       <div class="day-schedule-actions dialog-actions"><button class="btn btn-primary">儲存</button></div>
     </form>
   </section>
@@ -6093,8 +6131,13 @@ function renderRepeatScheduleResult(){
   status.textContent=batch ? (batch.lessons?calendarScheduleMessage(batch.message,batch.courseId):batch.message) : '';
   document.getElementById('repeat-undo').hidden=!batch?.lessons;
 }
+function lessonContentText(lesson){
+  return typeof lesson.lessonContent==='string'?lesson.lessonContent:'';
+}
 function matchesRepeatLesson(lesson,original){
-  return original&&lesson.courseId===original.courseId&&sameLessonTimes(lesson,original)&&lesson.done===original.done&&lesson.lessonNumber===original.lessonNumber;
+  return original&&lesson.courseId===original.courseId&&sameLessonTimes(lesson,original)&&lesson.done===original.done&&lesson.lessonNumber===original.lessonNumber&&
+    sameLessonChapter(lesson.chapterLink,original.chapterLink)&&
+    lessonContentText(lesson)===lessonContentText(original);
 }
 function checkRepeatUndoLessons(){
   const recorded=lastRepeatBatch?.lessons;
@@ -8334,8 +8377,28 @@ document.getElementById('reschedule-cancel').addEventListener('click',()=>closeL
 const dayEditDialog=$id('day-edit-dialog');
 const dayEditPanel=$id('day-edit-panel');
 const dayEditDate=$id('day-edit-date');
+const dayEditContent=$id('day-edit-content');
 let dayEditDraft=null;
 
+const dayEditStudySubject=$id('day-edit-study-subject');
+const dayEditStudyChapter=$id('day-edit-study-chapter');
+function sameLessonChapter(a,b){
+  return (a?.subject||'')===(b?.subject||'')&&(a?.chapterId||'')===(b?.chapterId||'');
+}
+function fillLessonChapterFields({subject,chapterId}){
+  const subjects=studyRoom.librarySubjects();
+  dayEditStudySubject.replaceChildren(new Option('選擇學習室科目',''),...[...new Set([...subjects,...(subject?[subject]:[])])].map(name=>new Option(name,name)));
+  dayEditStudySubject.value=subject;
+  const chapters=studyRoom.chapterChoices(subject);
+  const missing=chapterId&&!chapters.some(chapter=>chapter.id===chapterId);
+  dayEditStudyChapter.replaceChildren(new Option('未設定',''),...chapters.map(chapter=>new Option(chapter.name,chapter.id)));
+  if(missing)dayEditStudyChapter.add(new Option('章節目前無法使用',chapterId));
+  dayEditStudyChapter.value=chapterId;
+  dayEditStudyChapter.disabled=!subject;
+  $id('day-edit-study-error').textContent=missing?'可重新選擇章節，也可只儲存日期與時間。':'';
+}
+dayEditStudySubject.addEventListener('change',()=>fillLessonChapterFields({subject:dayEditStudySubject.value,chapterId:''}));
+dayEditStudyChapter.addEventListener('change',()=>{$id('day-edit-study-error').textContent='';});
 const dayEditTimeTrigger=$id('day-edit-time-trigger');
 function finishDayEdit(restoreFocus=true){
   const draft=dayEditDraft;
@@ -8357,18 +8420,25 @@ function finishDayEdit(restoreFocus=true){
     makeupList.scrollTop=draft.listScroll;
     if(restoreFocus)focusMakeupAction(draft.id,'move');
   }else if(restoreFocus){
-    const entry=[...$id('day-events').querySelectorAll('[data-day-edit]')]
-      .find(button=>button.dataset.dayEdit===draft.id);
+    const entry=[...$id('day-events').querySelectorAll('['+draft.source+']')]
+      .find(button=>button.getAttribute(draft.source)===draft.id);
     (entry?.getClientRects().length?entry:$id('day-schedule-open')).focus({preventScroll:true});
   }
 }
-function openDayEdit(date,id,makeup=false){
+function openDayEdit(date,id,makeup=false,source='data-day-edit'){
   const wide=!makeup&&wideDay.open;
   const scroller=makeup?makeupDialog:wide?wideDay:$id('panel-r');
   const lesson=S.calendar[date]?.find(item=>item.id===id);
   if(!lesson){toast('原日期已找不到這堂課。','warn');return;}
   const times=lessonTimes(lesson);
-  dayEditDraft={date,id,wide,makeup,scroller,scroll:scroller.scrollTop,listScroll:makeupList.scrollTop,pageScroll:document.scrollingElement.scrollTop,originalTimes:times,times};
+  dayEditContent.value=lessonContentText(lesson);
+  const originalContent=dayEditContent.value;
+  dayEditDraft={date,id,wide,makeup,source,scroller,scroll:scroller.scrollTop,listScroll:makeupList.scrollTop,pageScroll:document.scrollingElement.scrollTop,originalTimes:times,times,originalContent};
+  const subject=course(lesson.courseId);
+  const suggested=subject?.studySubject||(subject&&studyRoom.examLibrary(subject.name)?.subject)||'';
+  const selection={subject:lesson.chapterLink?.subject||suggested,chapterId:lesson.chapterLink?.chapterId||''};
+  dayEditDraft.chapterSelection=selection;
+  fillLessonChapterFields(selection);
   dayEditDate.value=date;
   dayEditDate.removeAttribute('aria-invalid');
   $id('day-edit-date-error').textContent='';
@@ -8386,7 +8456,7 @@ function openDayEdit(date,id,makeup=false){
     wideDay.setAttribute('aria-labelledby','day-edit-title');
     wideDay.scrollTop=0;
   }else showAppDialog(dayEditDialog,()=>finishDayEdit());
-  $id('day-edit-close').focus({preventScroll:true});
+  (source==='data-day-chapter-edit'?dayEditStudySubject:$id('day-edit-close')).focus({preventScroll:true});
 }
 function reportMissingDayEditLesson(){
   finishDayEdit();
@@ -8420,12 +8490,34 @@ $id('day-edit-form').addEventListener('submit',event=>{
     return;
   }
   const lesson=S.calendar[date][index];
-  const {times,originalTimes}=dayEditDraft;
+  const {times,originalTimes,originalContent}=dayEditDraft;
+  const content=dayEditContent.value.trim();
+  const contentChanged=dayEditContent.value!==originalContent&&content!==lessonContentText(lesson);
   const dateChanged=newDate!==date;
   const timeChanged=!sameLessonTimes(times,originalTimes)&&!sameLessonTimes(times,lesson);
+  const selected={subject:dayEditStudySubject.value,chapterId:dayEditStudyChapter.value};
+  const chapterChanged=!sameLessonChapter(selected,dayEditDraft.chapterSelection);
+  if(chapterChanged&&selected.chapterId&&!studyRoom.lessonChapter(selected)?.name){
+    $id('day-edit-study-error').textContent='這個章節已無法選擇。請重新選擇或清除章節。';
+    dayEditStudyChapter.focus();
+    return;
+  }
+  if(chapterChanged){
+    if(selected.chapterId)lesson.chapterLink=selected;
+    else delete lesson.chapterLink;
+    const subject=course(lesson.courseId);
+    if(subject){
+      if(selected.subject)subject.studySubject=selected.subject;
+      else delete subject.studySubject;
+    }
+  }
   if(dateChanged)moveScheduledLesson(date,newDate,index);
   if(timeChanged)writeLessonTimes(lesson,times);
-  if(dateChanged||timeChanged){
+  if(contentChanged){
+    if(content)lesson.lessonContent=content;
+    else delete lesson.lessonContent;
+  }
+  if(dateChanged||timeChanged||chapterChanged||contentChanged){
     invalidateEntriesCache();
     saveState();
     render();
@@ -8472,11 +8564,26 @@ document.getElementById('day-events').addEventListener('click',event=>{
   }
   const remove=event.target.closest('[data-delete-day-lesson]');
   if(remove){
-    removeEvent(dayPanelDate(),remove.dataset.deleteDayLesson);
+    const date=dayPanelDate(),id=remove.dataset.deleteDayLesson;
+    const lesson=S.calendar[date]?.find(item=>item.id===id);
+    if(!lesson)return;
+    const name=course(lesson.courseId)?.name||'課堂';
+    showConfirm('刪除課堂','確定刪除 '+fmtDate(date)+' 的「'+name+'」課堂？',()=>{
+      if(S.calendar[date]?.some(item=>item.id===id))removeEvent(date,id);
+    });
     return;
   }
-  const edit=event.target.closest('[data-day-edit]');
-  if(edit)openDayEdit(dayPanelDate(),edit.dataset.dayEdit);
+  const practice=event.target.closest('[data-day-practice]');
+  if(practice){
+    const lesson=S.calendar[dayPanelDate()]?.find(item=>item.id===practice.dataset.dayPractice);
+    if(lesson?.chapterLink)studyRoom.openLessonChapter(lesson.chapterLink);
+    return;
+  }
+  const edit=event.target.closest('[data-day-edit],[data-day-chapter-edit],[data-day-lesson-open]');
+  if(edit){
+    const source=['data-day-edit','data-day-chapter-edit','data-day-lesson-open'].find(name=>edit.hasAttribute(name));
+    openDayEdit(dayPanelDate(),edit.getAttribute(source),false,source);
+  }
 });
 
 function compareDayLessons(a,b){
@@ -8497,24 +8604,50 @@ function scheduledLessonNumbers(subjects,calendar=S.calendar){
   }
   return numbers;
 }
+function lessonChapterActions(lesson){
+  const linked=lesson.chapterLink&&studyRoom.lessonChapter(lesson.chapterLink);
+  const label=linked?.name?'章節：'+linked.name:linked?.waiting?'章節載入中':lesson.chapterLink?'章節無法使用，重新選擇':'對應章節';
+  return `<button type="button" class="act-btn" data-day-chapter-edit="${esc(lesson.id)}">${esc(label)}</button>
+    ${isTodayPage()&&linked?.count?`<button type="button" class="act-btn" data-day-practice="${esc(lesson.id)}">練習本章</button>`:''}`;
+}
+function refreshLessonChapterActions(){
+  const lessons=new Map((S.calendar[dayPanelDate()]||[]).map(lesson=>[lesson.id,lesson]));
+  for(const slot of $id('day-events').querySelectorAll('[data-lesson-chapter]')){
+    const lesson=lessons.get(slot.dataset.lessonChapter);
+    const wanted=lesson&&lessonChapterActions(lesson);
+    if(wanted&&slot.chapterMarkup!==wanted){
+      const active=document.activeElement;
+      const hadFocus=slot.contains(active);
+      slot.innerHTML=wanted;
+      slot.chapterMarkup=wanted;
+      if(hadFocus)(active.hasAttribute('data-day-practice')?slot.querySelector('[data-day-practice]')||slot.firstElementChild:slot.firstElementChild).focus({preventScroll:true});
+    }
+  }
+}
 function renderDayLesson(ev,subject,lessonNumber){
   const name=esc(subject.name);
   const id=esc(ev.id);
   const number='第 '+lessonNumber+' 堂';
+  const time=lessonTimeLabel(ev);
+  const summary=esc(lessonContentText(ev).replace(/\s+/g,' ').trim());
   return `<div class="day-card day-lesson ${ev.done?'is-done':''} ${ev.time?'':'is-untimed'}">
     <div class="day-card-head">
       <button type="button" class="done-check ${ev.done?'checked':''}" data-day-toggle="${id}" aria-label="完成課堂，${name}，${number}" aria-pressed="${Boolean(ev.done)}">${ev.done?'✓':''}</button>
       <span class="dot" style="background:${subject.color}"></span>
-      <div class="day-lesson-details">
+      <button type="button" class="day-lesson-details" data-day-lesson-open="${id}" aria-haspopup="dialog" aria-label="編輯課堂，${name}，${number}${time?'，'+esc(time):''}">
         <span class="day-name${ev.done?' is-done':''}">
           <span class="day-name-text">${name}</span><span class="day-lesson-number">${number}</span>
         </span>
-        ${ev.time?`<span class="day-lesson-time">${esc(lessonTimeLabel(ev))}</span>`:''}
+        ${time?`<span class="day-lesson-time">${esc(time)}</span>`:''}
+        ${summary?`<span class="day-lesson-content-summary">${summary}</span>`:''}
+      </button>
+      <div class="day-lesson-tools" role="group" aria-label="${name}課堂操作">
+        <button type="button" class="btn" data-day-edit="${id}" aria-haspopup="dialog" aria-label="編輯課堂，${name}，${number}" title="編輯課堂"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-1 5 5-1L20 8l-4-4L4 16Zm10-10 4 4"/></svg></button>
+        <button type="button" class="btn" data-delete-day-lesson="${id}" aria-haspopup="dialog" aria-label="刪除課堂，${name}，${number}" title="刪除課堂"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
       </div>
     </div>
-    <div class="day-lesson-actions" role="group" aria-label="${name}的其他操作">
-      <button type="button" class="act-btn" data-day-edit="${id}">編輯時間</button>
-      <button type="button" class="act-btn" data-delete-day-lesson="${id}">刪除</button>
+    <div class="day-lesson-actions">
+      <span class="day-chapter-actions" data-lesson-chapter="${id}">${lessonChapterActions(ev)}</span>
     </div>
   </div>`;
 }
@@ -9842,7 +9975,7 @@ const studyRoom=(()=>{
   let filters={subject:'',chapter:''};
   let knowledgeQuery='',practiceSource=null,examRestartFrom=null;
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
-  let setupMode='practice',weakOnly=false,examSetup=false;
+  let setupMode='practice',weakOnly=false,examSetup=false,lessonSetup=null;
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
   let paperSearch='',paperArchiveOrigin=null,mixedArchive=false;
@@ -9894,7 +10027,7 @@ const studyRoom=(()=>{
       paperSubject=archive.subject;paperSubjectRef=archive.ref;paperSearch=archive.search;
     }
     const returningHome=next==='home'&&screen!=='home';
-    if(next!=='setup')examSetup=false;
+    if(next!=='setup'){examSetup=false;lessonSetup=null;}
     if(next!=='paper-exam-setup')examRestartFrom=null;
     if(next==='session'){paperResultRound=null;paperReviewReturn=null;}
     screen=next;
@@ -10149,9 +10282,10 @@ const studyRoom=(()=>{
     }
   }
   function collectionAction(q){
-    return data.points.some(p=>p.sourceQuestionId===q.id)?'<p class="study-meta">已收藏到知識庫</p>':
-      q.answer.trim()?action('收藏到知識庫','paper-collect',false,'data-question="'+esc(q.id)+'"'):
-      '<p class="study-meta">補上正解後即可收藏。</p>';
+    const attrs='data-question="'+esc(q.id)+'"';
+    return q.answer.trim()?action('加入知識庫','paper-collect',false,attrs):
+      '<p class="study-meta">補上正解後即可加入知識庫。</p>'+
+      action('補上正解','paper-answer-edit',false,attrs);
   }
   function questionDetail(){
     const q=point(questionId);
@@ -10186,22 +10320,55 @@ const studyRoom=(()=>{
       (!q?'<details class="study-supplements"><summary>同時收藏到知識庫</summary><label><input type="checkbox" name="collect"> 收藏這題</label>'+
         collectionFields(librarySubject)+'</details>':'')+
       '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">儲存題目</button></div></form>',
-      q?'paper-question-detail':questionBack==='paper'?'paper-return':'paper-mix-return');
+      q?(questionBack==='paper-review-detail'?'paper-answer-edit-back':'paper-question-detail'):questionBack==='paper'?'paper-return':'paper-mix-return');
   }
   function paperChoices(subject,target){
     return '<option value="">未歸卷</option>'+(data.papers||[]).filter(p=>paperRef(p)===subject).map(p=>
       '<option value="'+esc(p.id)+'" '+(p.id===target?'selected':'')+'>'+esc(paperTitle(p))+'</option>').join('');
   }
+  function collectedPoint(id,subject,chapter){
+    return data.points.find(p=>p.sourceQuestionId===id&&p.subject===subject&&p.chapter===chapter);
+  }
   function collectPage(){
     const q=point(questionId);
     if(!q?.answer.trim()){go(collectBack);return;}
     const subject=subjectNames().includes(q.subject)?q.subject:subjectNames()[0];
-    draw('收藏到知識庫','<form id="past-collection-form" class="study-surface"><p class="study-copy">'+esc(q.question)+
-      '</p>'+collectionFields(subject)+'<p class="study-error" role="alert"></p>'+
-      '<div class="study-actions"><button class="btn btn-primary">確認收藏</button></div></form>','paper-collect-back');
+    draw('加入知識庫','<form id="past-collection-form" class="study-surface">'+
+      '<div id="past-collection-fields"><p class="study-meta">'+esc(sourceLabel(q))+'</p>'+collectionFields(subject)+
+      '<div class="study-actions">'+action('預覽','paper-collect-preview',true)+'</div></div>'+
+      '<section id="past-collection-preview" hidden></section><p class="study-error" role="alert"></p></form>','paper-collect-back');
+  }
+  function previewCollection(){
+    const form=$id('past-collection-form'),q=point(questionId);
+    if(!form)return;
+    const {collectionSubject,collectionChapter}=form.elements;
+    const subject=collectionSubject.value,chapter=collectionChapter.value;
+    const error=form.querySelector('.study-error');
+    if(!q?.answer.trim()||!subjectNames().includes(subject)||chapter&&!chapters(subject).includes(chapter)){
+      form.previewSelection=null;
+      error.textContent=!q?.answer.trim()?'請先回原題補上正解，再加入知識庫。':'請選擇有效的收錄科目與章節。';
+      return;
+    }
+    const existing=collectedPoint(q.id,subject,chapter);
+    const confirm=existing?'<p class="study-meta" role="status">這題已收錄到此章節。</p>':
+      '<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+questionContext(q)+choiceList(q)+
+      '<h3>正解</h3><p class="study-copy">'+esc(q.answer)+'</p>'+
+      '<h3>詳解</h3><p class="study-copy">'+esc(q.explanation||'尚無詳解')+'</p>';
+    const preview=$id('past-collection-preview');
+    preview.innerHTML='<h3 tabindex="-1" id="collection-preview-title">收錄預覽</h3>'+
+      '<p class="study-meta">'+esc(subject+' · '+(chapter||'未分類'))+'</p><p class="study-meta">'+esc(sourceLabel(q))+'</p>'+confirm+
+      '<div class="study-actions">'+action('調整科目或章節','paper-collect-adjust')+
+      (existing?action('開啟已收錄題目','paper-collect-existing',true,'data-point="'+esc(existing.id)+'"'):
+        '<button type="submit" class="btn btn-primary">確認加入知識庫</button>')+'</div>';
+    form.previewSelection=JSON.stringify([q,subject,chapter]);
+    error.textContent='';
+    $id('past-collection-fields').hidden=true;
+    preview.hidden=false;
+    $id('collection-preview-title').focus();
   }
   async function collectionPoint(q,subject,chapter){
-    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('studyos-paper-collection:'+q.id));
+    const destination=chapter?chapterIdentity(subject,chapter):'';
+    const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('studyos-paper-collection:'+JSON.stringify([q.id,subject,destination])));
     const id='k-'+Array.from(new Uint8Array(hash,0,16),n=>n.toString(16).padStart(2,'0')).join('');
     const {question,answer,explanation,accepted,options}=q;
     return {id,subject,chapter,question:q.group?q.group+'\n\n'+question:question,answer,explanation,accepted,
@@ -10838,12 +11005,28 @@ const batchDialog=$id('study-batch');
         '<textarea'+attrs+' rows="3">'+value+'</textarea>':'<input type="text"'+attrs+' value="'+value+'">')+'</label>';
     };
     draw(p?'編輯知識點':'新增知識點','<form id="study-edit" class="study-editor study-surface">'+
-      '<p class="study-meta">'+esc(filters.subject)+'</p>'+
-      '<label class="study-field"><span>章節</span><select name="chapter">'+options(['',...chapters(filters.subject)],p?.chapter??filters.chapter,'未分類')+'</select></label>'+input('問題或提示（必填）','question',true,true)+input('參考答案（必填）','answer',true,true)+
+      '<p class="study-meta">'+esc(filters.subject)+'</p>'+(p?.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
+      '<label class="study-field"><span>章節</span><select name="chapter">'+options(['',...chapters(filters.subject)],p?.chapter??filters.chapter,'未分類')+'</select></label>'+input('問題或提示（必填）','question',true,true)+(p?.options?.length?'<div><span class="study-meta">原卷選項</span>'+choiceList(p)+'</div>':'')+
+      input('參考答案（必填）','answer',true,true)+
       '<details class="study-supplements"'+(hasSupplements?' open':'')+'><summary>補充資訊（選填）</summary><div class="study-editor">'+
       input('解析','explanation',true)+input('可接受的其他答案（每行一個）','accepted',true)+'</div></details>'+
       '<p class="study-error" role="alert"></p><div class="study-actions">'+action('取消','cancel-edit')+
       '<button class="btn btn-primary">儲存知識點</button></div></form>');
+  }
+  function chapterChoices(subject){
+    return chapters(subject).map(name=>({name,id:chapterIdentity(subject,name)}));
+  }
+  function lessonChapter(ref){
+    const chapter=chapterChoices(ref.subject).find(item=>item.id===ref.chapterId);
+    if(!chapter)return {waiting:waitingForToday()};
+    return {...chapter,count:data.points.filter(point=>point.subject===ref.subject&&point.chapter===chapter.name).length};
+  }
+  function openLessonChapter(ref){
+    const chapter=lessonChapter(ref);
+    if(!chapter.count){refreshLessonChapterActions();return;}
+    filters={subject:ref.subject,chapter:chapter.name};
+    openTodayPractice();
+    configurePractice('setup-chapter',false,ref);
   }
   function examLibrary(courseName){
     const key=courseName.trim().normalize('NFC');
@@ -10934,9 +11117,10 @@ const batchDialog=$id('study-batch');
     openTodayPractice();
     configurePractice('setup-chapter',id);
   }
-  function configurePractice(source,fromExam=false){
+  function configurePractice(source,fromExam=false,linkedChapter=null){
     examSetup=fromExam;
-    practiceSource=!fromExam&&['library','weak','subject'].includes(screen)?
+    lessonSetup=linkedChapter;
+    practiceSource=!fromExam&&!linkedChapter&&['library','weak','subject'].includes(screen)?
       {screen,filters:{...filters},query:knowledgeQuery,scroll:reviewScrollPositions().map(([,top])=>top)}:null;
     weakOnly=source==='setup-weak';
     if(source==='setup')filters.chapter='';
@@ -10944,13 +11128,15 @@ const batchDialog=$id('study-batch');
     go('setup');
   }
   function setup(){
-    const available=filtered(weakOnly).length;
-    const allowed=examSetup?upcomingExams().find(exam=>exam.id===examSetup)?.allowed:null;
-    draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+filterMarkup(allowed)+
+    const linked=lessonSetup&&lessonChapter(lessonSetup);
+    if(linked?.name)filters={subject:lessonSetup.subject,chapter:linked.name};
+    const available=lessonSetup?linked?.count||0:filtered(weakOnly).length;
+    const allowed=lessonSetup?(linked?.name?[linked]:[]):examSetup?upcomingExams().find(exam=>exam.id===examSetup)?.allowed:null;
+    draw(weakOnly?'重練待加強':'開始練習','<form id="study-setup" class="study-surface">'+(lessonSetup?'<p class="study-meta">'+esc(lessonSetup.subject)+'</p>':'')+filterMarkup(allowed)+
       '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend><div class="study-mode-options">'+
       ['cards','practice'].map((m,i)=>'<label><input type="radio" name="mode" value="'+m+'"'+(m===setupMode?' checked':'')+'>'+['字卡複習','互動練習'][i]+'</label>').join('')+
-      '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
-      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>',examSetup?'today-back':practiceSource?'library-return':true);
+      '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':lessonSetup&&!linked?.name?'章節已無法使用，請從今日重新選擇。':'沒有符合的知識點。')+
+      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>',examSetup||lessonSetup?'today-back':practiceSource?'library-return':true);
   }
   function start(ids,mode,extra,{shuffle=true,restartFrom=null}={}){
     if(!parkPaperDraft())return false;
@@ -11103,6 +11289,7 @@ const batchDialog=$id('study-batch');
     scheduleParkedPaperExpiry();
     refreshStudyBrief();
     refreshWeeklyReview();
+    refreshLessonChapterActions();
   }
   function record(outcome){
     if(!session||!['question','grade'].includes(session.phase))return;
@@ -12324,7 +12511,38 @@ const batchDialog=$id('study-batch');
       }
       rememberPaperReview();
     }else if(act==='paper-question-detail')go('paper-question');
-    else if(act==='paper-collect-back')go(collectBack);
+    else if(act==='paper-collect-back'){
+      rememberPaperReview();
+      if(collectBack==='paper-review-detail'&&paperResultRound)
+        openPaperReview({round:paperResultRound,position:readPaperReviewPosition(paperResultRound)});
+      else go(collectBack);
+    }else if(act==='paper-answer-edit-back')go('paper-review-detail');
+    else if(act==='paper-answer-edit'){
+      questionId=button.dataset.question;
+      if(screen==='paper-review-detail'){
+        rememberPaperReview();
+        questionBack='paper-review-detail';
+      }
+      go('paper-question-editor');
+      root.querySelector('[name=answer]').focus();
+    }else if(act==='paper-collect-preview')previewCollection();
+    else if(act==='paper-collect-adjust'){
+      const form=$id('past-collection-form');
+      form.previewSelection=null;
+      $id('past-collection-fields').hidden=false;
+      $id('past-collection-preview').hidden=true;
+      form.elements.collectionSubject.focus();
+    }else if(act==='paper-collect-existing'){
+      const item=data.points.find(p=>p.id===button.dataset.point);
+      if(!item){previewCollection();return;}
+      filters={subject:item.subject,chapter:item.chapter||unfiled};
+      knowledgeSubject=item.subject;
+      knowledgeQuery='';
+      rememberChapter();
+      from='library';
+      editing=item.id;
+      go('editor');
+    }
     else if(act==='paper-question-copy'){
       const q=point(button.dataset.question);
       if(q)copyPaperQuestion(q);
@@ -12338,7 +12556,7 @@ const batchDialog=$id('study-batch');
       }else $id('paper-explanation-text').focus();
     }else if(act==='paper-collect'){
       questionId=button.dataset.question;
-      if(data.points.some(p=>p.sourceQuestionId===questionId)){toast('此題已收藏到知識庫。');return;}
+      if(screen==='paper-review-detail')rememberPaperReview();
       collectBack=screen;
       go('paper-collect');
     }else if(act==='paper-subject'){
@@ -12497,6 +12715,7 @@ const batchDialog=$id('study-batch');
     }else if(act==='setup'||act==='setup-chapter'||act==='setup-weak'){
       configurePractice(act);
     }else if(act==='today-back'){
+      if(lessonSetup||(session?.lessonChapterPractice&&roundComplete(session)))go('home');
       returnToTodayPracticeDay();
     }else if(act==='library-return'){
       const source=screen==='setup'?practiceSource:session?.libraryReturn;
@@ -12652,6 +12871,16 @@ const batchDialog=$id('study-batch');
           filters={subject:exam.subject,chapter:exam.priority.name||unfiled};
         }
       }
+      if(lessonSetup){
+        const ref=lessonSetup;
+        confirmPaperMode('練習本章',null,()=>{
+          const linked=lessonChapter(ref);
+          if(!linked?.count){render();return;}
+          filters={subject:ref.subject,chapter:linked.name};
+          start(filtered(false).map(p=>p.id),values.get('mode'),{subject:ref.subject,returnMode:'today',lessonChapterPractice:true});
+        });
+        return;
+      }
       const ids=filtered(weakOnly).map(p=>p.id);
       if(ids.length)start(ids,values.get('mode'),{subject:filters.subject,...(examSetup?{returnMode:'today'}:practiceSource?{libraryReturn:practiceSource}:{})});
     }else if(form.id==='study-answer-form'&&session?.phase==='question'){
@@ -12677,7 +12906,7 @@ const batchDialog=$id('study-batch');
     let q=editingId?point(editingId):null;
     if(editingId&&!q){error.textContent='這道題目已刪除。';return;}
     if(editor){
-      const target=questionBack==='paper'?paperId:values.get('targetPaper')||'';
+      const target=questionBack==='paper-review-detail'?q?.paperId:questionBack==='paper'?paperId:values.get('targetPaper')||'';
       const p=paper(target);
       const subjectRef=p?paperRef(p):values.get('pastSubject');
       const subject=p?.subject||pastSubjects().find(item=>item.key===subjectRef)?.name;
@@ -12695,10 +12924,16 @@ const batchDialog=$id('study-batch');
       }
     }
     if(!q||checked&&!q.answer.trim()){error.textContent='請先補上正解，再收藏到知識庫。';return;}
-    if(checked&&data.points.some(point=>point.sourceQuestionId===q.id)){
-      error.textContent='此題已收藏到知識庫。';return;
-    }
     const subject=values.get('collectionSubject'),chapter=values.get('collectionChapter');
+    if(!editor&&form.previewSelection!==JSON.stringify([q,subject,chapter])){
+      previewCollection();
+      return;
+    }
+    if(checked&&collectedPoint(q.id,subject,chapter)){
+      if(editor)error.textContent='這題已收錄到所選章節。';
+      else previewCollection();
+      return;
+    }
     if(checked&&(!subjectNames().includes(subject)||(chapter&&!chapters(subject).includes(chapter)))){
       error.textContent='請選擇有效的收藏科目與章節。';return;
     }
@@ -12710,8 +12945,13 @@ const batchDialog=$id('study-batch');
         error.textContent='這道題目或所屬試卷已刪除。';
         return;
       }
-      if(item&&data.points.some(p=>p.sourceQuestionId===q.id)){
-        error.textContent='此題已收藏到知識庫。';return;
+      if(item&&chapter&&!chapters(subject).includes(chapter)){
+        error.textContent='所選章節已變更，請返回調整。';return;
+      }
+      if(item&&collectedPoint(q.id,subject,chapter)){
+        if(editor)error.textContent='這題已收錄到所選章節。';
+        else previewCollection();
+        return;
       }
       if(item&&account&&Object.values(account.operations).some(op=>op.kind==='delete'&&op.target===item.id)){
         error.textContent='這題的知識庫收藏已刪除。';return;
@@ -12720,8 +12960,10 @@ const batchDialog=$id('study-batch');
       if(item)data.points=[...data.points,item];
       if(!persist()){error.textContent='無法儲存，請再試一次。';return;}
       questionId=q.id;
-      go(editor?'paper-question':collectBack);
-      if(item)toast('已收藏到知識庫','success');
+      if(collectBack==='paper-review-detail'&&!editor&&paperResultRound)
+        openPaperReview({round:paperResultRound,position:readPaperReviewPosition(paperResultRound)});
+      else go(editor?(questionBack==='paper-review-detail'?'paper-review-detail':'paper-question'):collectBack);
+      if(item)toast('已加入知識庫','success');
     }catch{error.textContent='無法儲存，請再試一次。';}
     finally{savingQuestion=false;}
   }
@@ -13063,7 +13305,7 @@ const batchDialog=$id('study-batch');
     paperReviewReturn=null;
     filters={subject:'',chapter:''};
     knowledgeQuery='';
-    practiceSource=null;examRestartFrom=null;paperArchiveOrigin=null;paperSearch='';
+    practiceSource=null;lessonSetup=null;examRestartFrom=null;paperArchiveOrigin=null;paperSearch='';
     wrongSchool='';wrongYear='';
     screen='home';
     if(!uid){
@@ -13141,6 +13383,10 @@ const batchDialog=$id('study-batch');
     resumeTodayPaper,
     upcomingExams,
     examLibrary,
+    librarySubjects:subjectNames,
+    chapterChoices,
+    lessonChapter,
+    openLessonChapter,
     openExamChapter,
     startExamScope,
     startWeakBrief,
