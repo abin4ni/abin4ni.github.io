@@ -4088,6 +4088,38 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   .paper-exam-answer-actions{gap:6px;}
   .paper-exam-answer-actions .btn{min-width:44px;padding-inline:9px;}
 }
+.paper-workflow,.paper-mode-surface,.paper-archive-toolbar,.paper-year{min-width:0;}
+.paper-workflow{display:grid;gap:var(--sp-4);}
+.paper-workflow :is(h3,.study-meta),.paper-mode-surface h3{margin-block-start:0;}
+.paper-management{background:var(--card-2);}
+.paper-management .study-actions{margin-block-end:0;}
+.paper-workflow-heading{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);flex-wrap:wrap;}
+.paper-mode-surface{margin-block-end:var(--sp-4);}
+.paper-archive-toolbar{padding:var(--sp-3);border:1px solid var(--border-lt);border-radius:var(--r-md);background:var(--card);}
+.paper-choice-code{display:inline-grid;place-items:center;flex:none;align-self:start;min-width:1.65em;padding:0 .25em;
+  border:1px solid var(--border-lt);border-radius:var(--r-xs);font-weight:700;color:var(--text);line-height:1.5;}
+.paper-choice-text{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;}
+.paper-coded-options{list-style:none;padding-inline-start:0;}
+.paper-coded-options>li{display:flex;gap:var(--sp-2);align-items:baseline;}
+.past-answer-choices label:has(:checked) .paper-choice-code{border-color:var(--selection-edge);}
+.paper-batch-options{padding-inline:var(--sp-3);}
+#paper-exam-form{container:paper-form / inline-size;}
+.paper-passage{min-width:0;align-self:start;}
+.paper-passage-wide{display:none;}
+.paper-passage-narrow{margin-block:0 var(--sp-3);}
+.paper-passage-reader{overflow:auto;overscroll-behavior:contain;max-block-size:min(45dvh,25rem);padding:4px;
+  scrollbar-gutter:stable;overflow-wrap:anywhere;}
+.paper-passage-reader:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-2px;}
+.paper-passage-reader .study-copy{margin-block:0;}
+.paper-group-nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-block-end:var(--sp-2);}
+.paper-group-nav .btn{min-height:44px;}
+.paper-group-nav [aria-current=step]{background:var(--selection-fill);box-shadow:inset 0 0 0 1px var(--selection-edge);}
+@container paper-form (min-width: 690px){
+  .paper-attempt-body:has(.paper-passage){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:var(--sp-4);}
+  .paper-passage-wide{display:block;margin-block:0;}
+  .paper-passage-narrow{display:none;}
+  .paper-passage-reader{max-block-size:min(58dvh,34rem);}
+}
 .paper-exam-history{margin-block:var(--sp-4);border-block-start:1px solid var(--border-lt);padding-block-start:var(--sp-3);}
 .paper-exam-history ol{list-style:none;padding:0;margin:var(--sp-2) 0;}
 .paper-exam-history li+li{border-block-start:1px solid var(--border-lt);}
@@ -5042,7 +5074,7 @@ onAuthStateChanged(auth,user=>{
   <p class="study-meta" id="paper-answer-key-target"></p>
   <form id="paper-answer-key-form" class="study-editor" novalidate>
     <label class="study-field"><span>題號與官方答案</span><textarea id="paper-answer-key-text" rows="5" aria-describedby="paper-answer-key-help paper-answer-key-error" placeholder="1. D&#10;2. B"></textarea></label>
-    <p class="study-meta" id="paper-answer-key-help">每行一題，依原題號和單選選項順序填寫，例如 1. D。已有不同正解時，請在預覽逐題勾選。</p>
+    <p class="study-meta" id="paper-answer-key-help">每行一題，依原題號與原卷選項代號填寫，例如 1. D。已有不同正解時，請在預覽逐題勾選。</p>
     <p class="study-error" id="paper-answer-key-error" role="alert"></p>
     <div class="study-actions"><button class="btn btn-primary">預覽答案</button></div>
   </form>
@@ -10030,6 +10062,8 @@ const learningJournal=(()=>{
     return {step,due:date.toISOString().slice(0,10)};
   }
   const paperMetadata=['group','sourcePage','reviewNote'];
+  const validOptionCodes=(codes,options)=>codes===undefined||
+    (strings(codes)&&strings(options)&&codes.length===options.length&&new Set(codes).size===codes.length&&codes.every(code=>/^[A-Z]$/.test(code)));
   const pointValue=value=>text(value)&&value.length<=24&&/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value);
   const validScoring=value=>value===undefined||value===null||
     (objectValue(value)&&pointValue(value.correct)&&pointValue(value.wrong));
@@ -10052,7 +10086,8 @@ const learningJournal=(()=>{
         new Set(value.queue).size===value.queue.length&&Array.isArray(value.paperReview)&&
         value.queue.length===value.paperReview.length&&value.paperReview.every((row,i)=>row?.id===value.queue[i]&&text(row.number)&&typeof row.pending==='boolean'&&(row.marked===undefined||typeof row.marked==='boolean')&&
           (row.snapshot===undefined||objectValue(row.snapshot)&&text(row.snapshot.question)&&text(row.snapshot.group)&&
-            text(row.snapshot.answer)&&strings(row.snapshot.options)&&strings(row.snapshot.accepted)&&typeof row.snapshot.gradable==='boolean'))&&
+            text(row.snapshot.answer)&&strings(row.snapshot.options)&&validOptionCodes(row.snapshot.optionCodes,row.snapshot.options)&&
+            strings(row.snapshot.accepted)&&typeof row.snapshot.gradable==='boolean'))&&
         Number.isSafeInteger(value.index)&&value.index>=0&&
         Array.isArray(value.results)&&(!finished?value.results.length===0:value.results.every(r=>
           r&&value.queue.includes(r.id)&&outcomes.has(r.outcome)&&text(r.answer)&&text(r.reference))&&
@@ -10067,7 +10102,7 @@ const learningJournal=(()=>{
     if(op.kind==='paper-question')return validPointId(op.target)&&objectValue(value)&&(validPointId(value.paperId)||value.paperId===''&&text(value.subject)&&!!value.subject.trim())&&text(value.number)&&
       (value.subjectRef===undefined||text(value.subjectRef))&&text(value.question)&&!!value.question.trim()&&text(value.answer)&&
       text(value.explanation)&&strings(value.accepted)&&(value.options===undefined||strings(value.options))&&
-      paperMetadata.every(key=>value[key]===undefined||text(value[key]));
+      validOptionCodes(value.optionCodes,value.options)&&paperMetadata.every(key=>value[key]===undefined||text(value[key]));
     if(op.kind==='answer')return validPointId(op.target)&&outcomes.has(value);
     if(op.kind==='today-round')return validPointId(op.target)&&value&&text(value.subject)&&!!value.subject&&
       Array.isArray(value.queue)&&value.queue.length>0&&value.queue.length<=TODAY_ROUND_LIMIT&&value.queue.every(validPointId)&&
@@ -10568,14 +10603,14 @@ const studyRoom=(()=>{
     if(!years.includes(wrongYear))wrongYear='';
     const items=all.filter(matchesWrongFilters),resume=savedMixedPractice(true);
     const take=Math.min(items.length,TODAY_ROUND_LIMIT);
-    draw(esc(paperSubject)+'・錯題本',paperModes('paper-wrong-book')+'<div class="study-surface"><div class="study-chapter-filter">'+
+    draw(esc(paperSubject)+'・錯題本',paperModes('paper-wrong-book')+'<div class="study-surface paper-mode-surface"><div class="study-chapter-filter">'+
       '<label class="study-field"><span>學校</span><select id="paper-wrong-school">'+options(['',...schools],wrongSchool,'全部學校')+'</select></label>'+
       '<label class="study-field"><span>年度</span><select id="paper-wrong-year">'+options(['',...years],wrongYear,'全部年度')+'</select></label></div>'+
       '<p class="study-meta" role="status">符合篩選 '+items.length+' 題'+(take?' · 本輪 '+take+' 題':'')+'</p>'+
-      (resume||take?'<div class="study-actions">'+action(resume?'繼續重練':'開始重練','paper-wrong-start',true)+'</div>':'')+
-      (items.length?'<ul class="study-list">'+items.map(q=>'<li><div class="study-list-item"><p class="study-meta">'+
-        esc(sourceLabel(q)+(!q.paperId&&q.number?' · 第 '+q.number+' 題':''))+'</p><h3>'+esc(q.question)+'</h3></div></li>').join('')+'</ul>':
-        '<p class="study-empty">'+(all.length?'這個篩選範圍沒有待重練題目。':'目前沒有待重練題目。')+'</p>')+'</div>');
+      (resume||take?'<div class="study-actions">'+action(resume?'繼續重練':'開始重練','paper-wrong-start',true)+'</div>':'')+'</div>'+
+      (items.length?'<section class="study-surface"><h3>待重練題目</h3><ul class="study-list">'+items.map(q=>'<li><div class="study-list-item"><p class="study-meta">'+
+        esc(sourceLabel(q)+(!q.paperId&&q.number?' · 第 '+q.number+' 題':''))+'</p><h3>'+esc(q.question)+'</h3></div></li>').join('')+'</ul></section>':
+        '<p class="study-empty">'+(all.length?'這個篩選範圍沒有待重練題目。':'目前沒有待重練題目。')+'</p>'));
   }
   function paperModes(active){
     const count=wrongItems(paperSubjectRef).length;
@@ -10638,25 +10673,121 @@ const studyRoom=(()=>{
   function mixedPage(){
     const items=mixedItems(),ready=items.filter(canPracticePaper);
     draw(esc(mixedArchive?paperSubject+'・考古題':'混合刷題'),(mixedArchive?paperModes('paper-mix-subject'):'')+
-      '<div class="study-surface">'+(mixedArchive?'':'<label class="study-field">考科<select id="paper-mix-subject">'+
+      '<div class="study-surface paper-mode-surface">'+(mixedArchive?'<h3>混合刷題</h3>':'<label class="study-field">考科<select id="paper-mix-subject">'+
       subjectChoices(mixedSubject,'全部科目')+'</select></label>')+'<p class="study-meta">可作答 '+ready.length+' 題</p><div class="study-actions">'+
       action(savedMixedPractice()?'繼續考古題練習':'開始考古題練習','paper-mix-start',true)+
-      action('新增單題','paper-question-new')+'</div>'+pastQuestionList(items)+'</div>');
+      '</div></div><section class="study-surface"><div class="paper-workflow-heading"><h3>題目</h3>'+action('新增單題','paper-question-new')+'</div>'+pastQuestionList(items)+'</section>');
   }
   function sourceLabel(q){
     const p=paper(q.paperId);
     return p?[p.subject,paperTitle(p),q.number?'第 '+q.number+' 題':'',p.source,q.sourcePage?'原卷第 '+q.sourcePage+' 頁':''].filter(Boolean).join(' · '):q.subject+' · 未歸卷';
   }
-  function choiceList(q){
-    return q.options?.length?'<ol class="past-options">'+q.options.map(option=>'<li>'+esc(option)+'</li>').join('')+'</ol>':'';
+  function paperChoiceCode(q,index){
+    return q.optionCodes?(q.optionCodes[index]||'？'):(index<26?String.fromCharCode(65+index):String(index+1));
+  }
+  function paperChoice(q,code){
+    if(!/^[A-Z]$/.test(code))return '';
+    const matches=(q.options||[]).filter((_,index)=>paperChoiceCode(q,index)===code);
+    return matches.length===1&&q.options.filter(option=>option===matches[0]).length===1?matches[0]:'';
+  }
+  function paperAnswerText(q,value){
+    const index=q?.options?.indexOf(value)??-1;
+    return index<0?value:paperChoiceCode(q,index)+' · '+value;
+  }
+  function choiceMarkup(q,option,index){
+    return '<span class="paper-choice-code">'+esc(paperChoiceCode(q,index))+'</span><span class="paper-choice-text">'+esc(option)+'</span>';
+  }
+  function choiceList(q,coded=true){
+    if(!q.options?.length)return '';
+    return '<ol class="past-options'+(coded?' paper-coded-options':'')+'">'+q.options.map((option,index)=>
+      '<li>'+(coded?choiceMarkup(q,option,index):esc(option))+'</li>').join('')+'</ol>';
+  }
+  function readPaperChoices(choices){
+    if(!Array.isArray(choices))return {options:[],issue:'選項必須是陣列'};
+    if(choices.every(text))return {options:choices.map(value=>value.trim()).filter(Boolean)};
+    const coded=choices.every(choice=>object(choice)&&text(choice.code)&&text(choice.text));
+    if(!coded)return {options:[],issue:'選項須為文字陣列，或每項包含 code 與 text 的陣列'};
+    const options=choices.map(choice=>choice.text.trim());
+    const optionCodes=choices.map(choice=>choice.code.normalize('NFKC').trim().toUpperCase());
+    const issue=options.some(value=>!value)?'選項文字空白，請核對原卷':
+      optionCodes.some(code=>!/^[A-Z]$/.test(code))?'選項代號缺漏或無法辨識，請核對原卷':
+      new Set(optionCodes).size!==optionCodes.length?'選項代號重複，請核對原卷':'';
+    return {options,optionCodes,issue};
+  }
+  function paperChoiceInput(value,structured=false){
+    if(!value.trim())return {options:[]};
+    if(structured||/^\s*\[\s*(?:\{|\]|\[|")/.test(value)){
+      try{return readPaperChoices(JSON.parse(value));}
+      catch{return {options:[],issue:'選項 JSON 格式錯誤，請檢查括號及引號'};}
+    }
+    return readPaperChoices(value.split(/\r?\n/));
+  }
+  function paperChoiceInputText(q){
+    return q?.optionCodes?JSON.stringify(q.options.map((value,i)=>({code:q.optionCodes[i],text:value})),null,2):q?.options?.join('\n')||'';
+  }
+  function resolvePaperAnswer(q,answer){
+    if(!answer||!q.options.length)return answer;
+    const code=answer.normalize('NFKC').toUpperCase();
+    if(!q.optionCodes&&q.options.includes(answer))return answer;
+    if(/^[A-Z]$/.test(code))return paperChoice(q,code);
+    return q.options.includes(answer)?answer:'';
   }
 
-  function questionContext(q,collapseLongGroup=false){
+  function questionContext(q,collapseLongGroup=false,groupOpen=false){
     const group=q.group?'<p class="study-copy">'+esc(q.group)+'</p>':'';
     const expandable=collapseLongGroup&&q.group&&(q.group.length>220||q.group.split('\n').length>5);
-    return (expandable?'<details class="paper-question-context"><summary>閱讀共用題組</summary>'+group+'</details>':
+    return (expandable?'<details class="paper-question-context"'+(groupOpen?' open':'')+'><summary>閱讀共用題組</summary>'+group+'</details>':
       group?'<div class="paper-question-context"><h3>共用題組</h3>'+group+'</div>':'')+
       (q.reviewNote?'<p class="study-meta paper-review-note">需核對'+(q.sourcePage?' · 原卷第 '+esc(q.sourcePage)+' 頁':'')+'<br>'+esc(q.reviewNote)+'</p>':'');
+  }
+  let paperReading=null;
+  function rememberPaperReading(){
+    const panel=root.querySelector('.paper-passage'),mobile=panel?.querySelector('details');
+    if(!paperReading||!mobile)return;
+    if(mobile.getClientRects().length)paperReading.open=mobile.open;
+    for(const reader of panel.querySelectorAll('[data-paper-passage-reader]')){
+      if(reader.getClientRects().length)paperReading.scroll=reader.scrollTop;
+    }
+  }
+  function restorePaperReading(){
+    if(!paperReading)return;
+    root.querySelectorAll('[data-paper-passage-reader]').forEach(reader=>{
+      if(reader.getClientRects().length)reader.scrollTop=paperReading.scroll;
+    });
+  }
+  root.addEventListener('toggle',event=>{
+    const details=event.target;
+    if(!details.matches?.('.paper-passage-narrow')||!paperReading||!details.getClientRects().length)return;
+    paperReading.open=details.open;
+    if(details.open)restorePaperReading();
+  },true);
+  function paperAttemptQuestion(q,answer){
+    const question='<div><h3 class="study-copy">'+esc(q.question)+'</h3>'+answerField(q,answer)+'</div>';
+    const passage=q.group?.trim();
+    if(!passage){paperReading=null;return questionContext(q)+question;}
+    const source=q.paperId?paperItems(q.paperId):session.queue.map(point).filter(Boolean);
+    const position=source.findIndex(item=>item.id===q.id);
+    if(position<0){paperReading=null;return questionContext(q,true)+question;}
+    let first=position,last=position;
+    const same=item=>item.paperId===q.paperId&&(q.paperId||pastQuestionRef(item)===pastQuestionRef(q))&&item.group?.trim()===passage;
+    while(first>0&&same(source[first-1]))first--;
+    while(last+1<source.length&&same(source[last+1]))last++;
+    const group=source.slice(first,last+1);
+    const range=group[0]?.number&&group.at(-1)?.number?
+      ' · 原卷第 '+group[0].number+(group.length>1?'–'+group.at(-1).number:'')+' 題':'';
+    const key=JSON.stringify([session.paperResultId,q.paperId,group[0]?.id||q.id,passage]);
+    if(paperReading?.key!==key)paperReading={key,open:false,scroll:0};
+    const area='<div class="paper-passage-reader" data-paper-passage-reader tabindex="0" role="region" aria-label="共用題組原文"><p class="study-copy">'+esc(q.group)+'</p></div>';
+    const links=group.flatMap(item=>{
+      const index=session.queue.indexOf(item.id);
+      return index<0?[]:[action(esc(item.number||String(index+1)),'paper-exam-jump',false,'data-index="'+index+'" aria-label="跳到原卷第 '+esc(item.number||String(index+1))+' 題"'+
+        (index===session.index?' aria-current="step"':''))];
+    });
+    const navigation=links.length>1?'<nav class="paper-group-nav" aria-label="題組題號">'+links.join('')+'</nav>':'';
+    return '<div class="paper-attempt-body"><div class="paper-passage">'+
+      '<details class="paper-question-context paper-passage-narrow"'+(paperReading.open?' open':'')+'><summary>閱讀共用題組'+esc(range)+'</summary>'+area+'</details>'+
+      '<section class="paper-question-context paper-passage-wide"><h3>共用題組'+esc(range)+'</h3>'+area+'</section></div>'+
+      '<div>'+navigation+question+(q.reviewNote?questionContext({...q,group:''}):'')+'</div></div>';
   }
   function paperQuestionTools(q){
     const attrs='data-question="'+esc(q.id)+'"';
@@ -10675,8 +10806,8 @@ const studyRoom=(()=>{
       '試卷來源：'+sourceLabel(q),
       q.group?'共用題組：\n'+q.group:'',
       '題幹：\n'+q.question,
-      q.options?.length?'選項（原順序）：\n'+q.options.map((item,index)=>(index+1)+'. '+item).join('\n'):'',
-      '已確認正解：'+(q.answer||'未提供，請標明推論與不確定之處。'),
+      q.options?.length?'選項（原順序）：\n'+q.options.map((item,index)=>paperChoiceCode(q,index)+'. '+item).join('\n'):'',
+      '已確認正解：'+(paperAnswerText(q,q.answer)||'未提供，請標明推論與不確定之處。'),
       q.reviewNote?'原卷需核對：'+q.reviewNote:'',
     ].filter(Boolean).join('\n\n');
     try{await navigator.clipboard.writeText(prompt);toast('已複製題目與解題指令','success');}
@@ -10698,7 +10829,7 @@ const studyRoom=(()=>{
     const q=point(questionId);
     if(!q){go(questionBack);return;}
     draw('題目詳情','<div class="study-surface"><p class="study-meta">'+esc(sourceLabel(q))+'</p><h3 class="study-copy">'+
-      esc(q.question)+'</h3>'+questionContext(q)+choiceList(q)+'<h3>正解</h3><p class="study-copy">'+esc(q.answer||'待補答案')+'</p>'+
+      esc(q.question)+'</h3>'+questionContext(q)+choiceList(q)+'<h3>正解</h3><p class="study-copy">'+esc(paperAnswerText(q,q.answer)||'待補答案')+'</p>'+
       '<h3>詳解</h3><p class="study-copy">'+esc(q.explanation||'尚無詳解')+'</p>'+paperQuestionTools(q)+
       '<div class="study-actions">'+action('編輯題目','paper-question-edit')+'</div></div>',
       questionBack==='paper'?'paper-return':'paper-mix-return');
@@ -10720,8 +10851,9 @@ const studyRoom=(()=>{
       '<label class="study-field">試卷<select name="targetPaper" '+(questionBack==='paper'?'disabled':'')+'>'+paperChoices(subject,target)+'</select></label>'+
       '<label class="study-field">原題號（選填）<input name="number" value="'+esc(q?.number)+'"></label>'+
       '<label class="study-field">題目<textarea name="question" required rows="3">'+esc(q?.question)+'</textarea></label>'+
-      '<label class="study-field">選項（選填，每行一個）<textarea name="choices" rows="3">'+esc(q?.options?.join('\n'))+'</textarea></label>'+
-      '<label class="study-field">正解（未確認可留空）<textarea name="answer" rows="2">'+esc(q?.answer)+'</textarea></label>'+
+      '<label class="study-field">'+(q?.optionCodes?'選項（JSON，保留原卷代號）':'選項（選填，每行一個）')+'<textarea name="choices" rows="3">'+esc(paperChoiceInputText(q))+'</textarea></label>'+
+      '<label class="study-field">'+(q?.optionCodes?'正解（單一字母視為原卷代號，未確認可留空）':'正解（未確認可留空）')+
+      '<textarea name="answer" rows="2">'+esc(q?.answer)+'</textarea></label>'+
       '<label class="study-field">其他可接受答案（短答自動判分，每行一個）<textarea name="accepted" rows="2">'+esc(q?.accepted?.join('\n'))+'</textarea></label>'+
       (!q?'<label class="study-field">詳解<textarea name="explanation" rows="4"></textarea></label>':'')+
       (!q?'<details class="study-supplements"><summary>同時收藏到知識庫</summary><label><input type="checkbox" name="collect"> 收藏這題</label>'+
@@ -10844,24 +10976,24 @@ const studyRoom=(()=>{
     const paperDraft=savedMockExam(p.id);
     const resume=paperDraft?'<p class="study-meta" id="paper-resume-summary">'+paperDraftProgress(paperDraft)+' · 上次停在'+
       esc(paperReviewLabel(paperReviewEntries(paperDraft)[paperDraft.index]))+'</p>':'';
-    const actions=(paperDraft?action(paperDraft.paperPractice?'繼續整卷作答':'繼續模擬考','paper-exam-resume',true)+
-      action('重新開始','paper-exam-restart'):items.length?
-      action('開始整卷作答','paper-start',true)+action('模擬考','paper-exam-start'):'')+
-      (practiceDraft?action('繼續考古題練習','paper-practice-resume'):'');
     const rule=paperDraft?paperDraft.scoring:p.scoring;
     const checkpoint=readPaperReview(p.id);
     const position=checkpoint?.position;
     const selected=position?.id&&position.view!=='list'&&availableReviewQuestion(checkpoint.round,position.id);
-    const review=checkpoint?action(selected?'繼續檢討'+esc(paperReviewLabel(selected)):'查看本次檢討','paper-review-resume'):'';
-    draw(esc(paperTitle(p)),'<div class="study-surface"><div class="paper-overview"><p class="study-meta">'+items.length+' 題</p>'+
+    const review=checkpoint?action(selected?'繼續檢討'+esc(paperReviewLabel(selected)):'繼續檢討','paper-review-resume',!paperDraft):'';
+    const actions=(paperDraft?action('繼續作答','paper-exam-resume',true)+action('重新開始','paper-exam-restart')+review:
+      review+(items.length?action('開始整卷作答','paper-start',!checkpoint)+action('模擬考','paper-exam-start'):''))+
+      (practiceDraft?action('繼續考古題練習','paper-practice-resume'):'');
+    draw(esc(paperTitle(p)),'<div class="paper-workflow"><section class="study-surface">'+
+      '<p class="study-meta">'+esc(p.subject)+' · '+items.length+' 題'+(p.source?' · 來源 '+esc(p.source):'')+'</p>'+
+      '<p class="study-meta" id="paper-scoring-before-start">'+(paperDraft?'本次作答 · ':'')+paperScoringText(rule)+'</p>'+
+      resume+(actions?'<p class="study-meta">整卷作答與模擬考在交卷後判分。</p><div class="study-actions">'+actions+'</div>':'<p>匯入第一批題目後即可開始作答。</p>')+
+      '</section><section class="study-surface paper-management"><div class="paper-workflow-heading"><h3>試卷管理</h3>'+
       '<details id="paper-actions-menu"><summary aria-label="更多試卷選項" title="更多試卷選項">⋯</summary>'+
       '<div class="paper-actions-menu-panel">'+action('編輯試卷','paper-edit')+
       action('批次補官方答案','paper-official-answers')+action('刪除試卷','paper-delete')+'</div></details></div>'+
-      (p.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
-      '<p class="study-meta" id="paper-scoring-before-start">'+(paperDraft?'本次作答 · ':'')+paperScoringText(rule)+'</p>'+
-      resume+(items.length?'<p class="study-meta">整卷作答與模擬考在交卷後判分。</p>':'')+
-      '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+review+actions+
-      '</div>'+mockExamHistory(p.id)+paperPracticeHistory(p.id)+pastQuestionList(items)+'</div>','paper-list');
+      '<div class="study-actions">'+action('整卷匯入','paper-batch')+action('新增單題','paper-question-new')+'</div></section>'+
+      '<section class="study-surface">'+mockExamHistory(p.id)+paperPracticeHistory(p.id)+'<h3>試卷題目</h3>'+pastQuestionList(items)+'</section></div>','paper-list');
   }
   function subjectPage(){
     const ids=data.points.filter(p=>p.subject===filters.subject);
@@ -10991,9 +11123,11 @@ const batchDialog=$id('study-batch');
     batchDialog.scrollTop=0;
   }
   const paperImportExample=[
-    {number:8,question:'哪一個構造主要進行光合作用？',options:['葉綠體','粒線體'],group:'觀察植物細胞的構造並回答下列問題。',
-      answer:'葉綠體',explanation:'',sourcePage:4},
-    {number:9,question:'圖中箭頭指向哪個構造【請見原卷】？',options:['細胞膜','細胞壁'],group:'觀察植物細胞的構造並回答下列問題。',
+    {number:8,question:'哪一個構造主要進行光合作用？',
+      options:[{code:'A',text:'粒線體'},{code:'B',text:'細胞核'},{code:'C',text:'高基氏體'},{code:'D',text:'核糖體'},{code:'E',text:'葉綠體'}],
+      group:'觀察植物細胞的構造並回答下列問題。',answer:'E',explanation:'',sourcePage:4},
+    {number:9,question:'圖中箭頭指向哪個構造【請見原卷】？',
+      options:[{code:'A',text:'細胞膜'},{code:'B',text:'細胞壁'},{code:'C',text:'細胞質'},{code:'D',text:'液泡'}],group:'觀察植物細胞的構造並回答下列問題。',
       answer:'',explanation:'',sourcePage:'4–5',reviewNote:'第 9 題，PDF 第 5 頁箭頭模糊，請核對原圖。'}
   ];
   function openBatch(opener,ai=false,targetPaper=null){
@@ -11069,14 +11203,13 @@ const batchDialog=$id('study-batch');
     }
     return lines.map(row=>{
       const q=questions.get(row.key);
-      const option=/^[A-Z]$/.test(row.choice)?row.choice.charCodeAt(0)-65:-1;
-      const next=q?.options?.[option];
+      const next=q&&paperChoice(q,row.choice);
       if(!row.key)return {...row,state:'invalid',label:'格式不符，請輸入題號與答案，例如 1. D'};
       if(lineCounts.get(row.key)>1)return {...row,state:'invalid',label:'貼上的題號重複'};
       if(q===null)return {...row,state:'invalid',label:'試卷內有重複題號'};
       if(!q)return {...row,state:'invalid',label:'找不到這個原題號'};
       if(!q.options?.length)return {...row,state:'invalid',label:'此題沒有單選選項'};
-      if(!next||q.options.filter(value=>value===next).length!==1)return {...row,state:'invalid',label:'無法對應唯一的選項'};
+      if(!next)return {...row,state:'invalid',label:'無法對應唯一的選項'};
       const state=q.answer===next?'same':q.answer.trim()?'replace':'fill';
       return {...row,id:q.id,number:q.number,current:q.answer,next,state,
         label:{same:'無變更',replace:'與現有正解不同，請勾選才會更新',fill:'補上空白正解'}[state]};
@@ -11159,9 +11292,9 @@ const batchDialog=$id('study-batch');
       $id('study-ai-text').value=[
         '請依我上傳的試卷 PDF 整理考題，最後只輸出一個有效的 JSON 陣列，可直接儲存成 .json 或貼進 StudyOS。請勿輸出 Markdown、表格或額外說明。',
         '目標試卷：'+paperTitle(p)+' · '+p.subject,
-        '依原卷順序逐題整理。必填 number（原題號，整數或字串）和 question（原題幹）。保留原題號、原文、單位、化學符號和選項順序。options 是字串陣列，非選擇題可用 []。',
+        '依原卷順序逐題整理。必填 number（原題號，整數或字串）和 question（原題幹）。保留原題號、原文、單位、化學符號和選項順序。options 使用物件陣列，每個選項分別輸出 {"code":"A","text":"原選項文字"}。代號、文字、順序與選項數依原卷，四選一只列 A–D，五選一列 A–E，非選擇題用 []。代號看不清時留空並寫入 reviewNote，不自行補代號。',
         '共用題組請把完整原文放入同組每一題的 group，保留段落。不得把題組當成獨立一題。',
-        '只有上傳資料附官方答案時才填 answer。單選答案必須逐字對應 options 中的完整選項字串，不要只填 A、B、C、D。官方答案缺漏或無法確定時填空字串，不要推測。explanation 一律先留空，個別詳解之後再補。acceptedAnswers 是選填的其他已確認答案字串陣列。',
+        '只有上傳資料附官方答案時才填 answer。單選官方答案可填原卷代號，例如 E，該代號在 options 中必須唯一。官方答案缺漏或無法確定時填空字串，不要推測。explanation 一律先留空，個別詳解之後再補。acceptedAnswers 是選填的其他已確認答案字串陣列。',
         'sourcePage 使用從 1 起算的 PDF 頁碼，單頁可用整數或字串，跨頁可用字串，例如「4–5」。文字、圖表、圖片、化學結構看不清或缺頁時，在 reviewNote 標註原題號、PDF 頁碼及要回原卷核對的項目。',
         '無法辨識的文字或圖表可在 question 寫【請見原卷】。不要自行重畫結構或補出缺字。缺頁致題號無法判定時，將待核對頁碼附在最接近的可辨識題目，不虛構題號。',
         '輸出前核對可辨識的原題號、題數、選項順序，確保 JSON 可解析且沒有重複題號。範例第 8 題假設有附官方答案，第 9 題沒有。',
@@ -11197,12 +11330,14 @@ const batchDialog=$id('study-batch');
       const answer=row.answer.trim();
       if(!answer&&!batchPaperId)issues.push('請填寫參考答案');
       if(batchPaperId){
+        row.resolvedAnswer=resolvePaperAnswer(row,answer);
+        if(row.issue)issues.push(row.issue);
+        if(new Set(row.options).size!==row.options.length)issues.push('選項文字重複，無法唯一判分');
+        if(answer&&row.options.length&&!row.resolvedAnswer)issues.push('官方正解無法對應唯一的選項，請核對原卷');
         row.missing=!answer;
-        row.review=!!row.reviewNote.trim();
-        if(new Set(row.options).size!==row.options.length)issues.push('選項不得重複');
-        if(answer&&row.options.length&&!row.options.includes(answer))issues.push('正解須為選項中的完整文字');
+        row.review=!!row.reviewNote.trim()||issues.some(issue=>issue.includes('選項'));
       }
-      for(const key of row.invalid)issues.push(['acceptedAnswers','options'].includes(key)?key+' 須為字串陣列':'欄位 '+key+' 格式錯誤');
+      for(const key of row.invalid)issues.push(key==='acceptedAnswers'?key+' 須為字串陣列':'欄位 '+key+' 格式錯誤');
       const key=batchPaperId?learningJournal.numberKey(row.number):batchQuestion(row.question);
       if(batchPaperId&&!key)issues.push('請填寫原題號');
       row.duplicate=!!key&&seen.has(key);
@@ -11221,10 +11356,12 @@ const batchDialog=$id('study-batch');
       if(row.duplicate)flags.push(batchPaperId?'重複題號，保留既有題目':'疑似重複');
       if(batchPaperId){
         if(!answer)flags.push('待補答案');
-        if(row.reviewNote.trim())flags.push('需核對'+(row.sourcePage.trim()?'（原卷第 '+row.sourcePage.trim()+' 頁）':''));
+        if(row.review)flags.push('需核對'+(row.sourcePage.trim()?'（原卷第 '+row.sourcePage.trim()+' 頁）':''));
         element.querySelector('.paper-batch-number').textContent=row.number.trim()?'原題號 '+row.number.trim():'第 '+(row.index+1)+' 筆';
         element.querySelector('.paper-batch-page').textContent=row.sourcePage.trim()?'PDF 第 '+row.sourcePage.trim()+' 頁':'';
         element.querySelector('.paper-batch-stem').textContent=row.question.trim().replace(/\s+/g,' ');
+        const choices=element.querySelector('.paper-batch-options'),html=choiceList(row);
+        if(choices.innerHTML!==html)choices.innerHTML=html;
       }
       element.querySelector('.study-batch-status').textContent=flags.join(' · ');
     }
@@ -11305,10 +11442,10 @@ const batchDialog=$id('study-batch');
           if(Object.hasOwn(value,key)&&!allowed)invalid.add(key);
           row[key]=allowed?String(v):'';
         }
-        const choices=value.options;
-        if(Object.hasOwn(value,'options')&&(!Array.isArray(choices)||!choices.every(text)))invalid.add('options');
-        row.options=Array.isArray(choices)?choices.filter(text).map(option=>option.trim()).filter(Boolean):[];
-        row.optionText=row.options.join('\n');
+        const choices=Object.hasOwn(value,'options')?value.options:[];
+        Object.assign(row,readPaperChoices(choices));
+        row.optionStructured=Boolean(row.optionCodes||row.issue);
+        row.optionText=row.optionStructured?JSON.stringify(choices,null,2):paperChoiceInputText(row);
       }
       for(const key of ['question','answer','explanation']){
         const v=value[key];
@@ -11322,8 +11459,8 @@ const batchDialog=$id('study-batch');
       return row;
     });
     const fields=[...(batchPaperId?[['number','原題號']]:[]),['question','題目'],
-      ...(batchPaperId?[['optionText','選項（每行一個）'],['group','共用題組'],['sourcePage','PDF 頁碼'],['reviewNote','核對事項']]:[]),
-      ['answer',batchPaperId?'官方正解（可留空）':'參考答案'],['explanation','詳解'],['acceptedAnswers','其他答案（每行一個）']];
+      ...(batchPaperId?[['optionText','選項'],['group','共用題組'],['sourcePage','PDF 頁碼'],['reviewNote','核對事項']]:[]),
+      ['answer',batchPaperId?'官方正解（單一字母視為代號，可留空）':'參考答案'],['explanation','詳解'],['acceptedAnswers','其他答案（每行一個）']];
 
     batchFilter='all';
     batchFilters.hidden=!batchPaperId;
@@ -11331,12 +11468,14 @@ const batchDialog=$id('study-batch');
     batchFilters.innerHTML=batchPaperId?Object.keys(paperBatchFilters).map(key=>
       '<button type="button" class="btn btn-sand" data-batch-filter="'+key+'" aria-pressed="'+(key==='all')+'"></button>').join(''):'';
     batchList.innerHTML=batchRows.map(row=>{
-      const fieldsHTML=fields.map(([key,label])=>'<label class="study-field"><span>'+label+'</span><textarea rows="2" data-batch-field="'+key+'">'+esc(row[key])+'</textarea></label>').join('');
+      const fieldsHTML=fields.map(([key,label])=>'<label class="study-field"><span>'+label+
+        (key==='optionText'?(row.optionStructured?'（JSON，保留原卷代號）':'（每行一個）'):'')+
+        '</span><textarea rows="'+(key==='optionText'?4:2)+'" data-batch-field="'+key+'">'+esc(row[key])+'</textarea></label>').join('');
       const checkbox='<label><input type="checkbox" aria-label="匯入第 '+(row.index+1)+' 筆"> 匯入這題</label>';
       const status=batchPaperId?'<span class="study-batch-status"></span>':'<p class="study-batch-status"></p>';
       if(!batchPaperId)return '<li><fieldset class="study-editor"><legend>第 '+(row.index+1)+' 題</legend>'+checkbox+status+fieldsHTML+'</fieldset></li>';
       return '<li><details class="paper-batch-row"><summary><strong class="paper-batch-number"></strong><span class="paper-batch-page"></span>'+
-        '<span class="paper-batch-stem"></span>'+status+'</summary><fieldset class="study-editor">'+checkbox+fieldsHTML+'</fieldset></details></li>';
+        '<span class="paper-batch-stem"></span>'+status+'</summary><div class="paper-batch-options"></div><fieldset class="study-editor">'+checkbox+fieldsHTML+'</fieldset></details></li>';
     }).join('');
     batchStage(true);
     checkBatch();
@@ -11349,8 +11488,12 @@ const batchDialog=$id('study-batch');
     const key=element.dataset.batchField;
     if(key){
       row[key]=element.value;
-      row.invalid.delete(key==='optionText'?'options':key);
-      if(key==='optionText')row.options=element.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+      row.invalid.delete(key);
+      if(key==='optionText'){
+        delete row.optionCodes;
+        delete row.issue;
+        Object.assign(row,paperChoiceInput(element.value,row.optionStructured));
+      }
       if(key==='acceptedAnswers')row.aliases=element.value.split(/\r?\n/).filter(v=>v.trim());
       if(key==='question'||key==='number')row.checked=null;
     }else if(element.type==='checkbox')row.checked=element.checked;
@@ -11383,9 +11526,10 @@ const batchDialog=$id('study-batch');
     const subject=batchSubject.value,chapter=batchChapter.value.trim();
     const targetPaper=batchPaperId;
     const points=selected.map(row=>{
-      const destination=targetPaper?{paperId:targetPaper,number:row.number.trim(),options:row.options}: {subject,chapter};
+      const destination=targetPaper?{paperId:targetPaper,number:row.number.trim(),options:row.options,
+        ...(row.optionCodes?{optionCodes:row.optionCodes}:{})}: {subject,chapter};
       if(targetPaper)for(const key of learningJournal.paperMetadata)if(row[key].trim())destination[key]=row[key].trim();
-      return {id:newPointId(),...destination,question:row.question,answer:targetPaper?row.answer.trim():row.answer,
+      return {id:newPointId(),...destination,question:row.question,answer:targetPaper?row.resolvedAnswer:row.answer,
         explanation:row.explanation,accepted:row.aliases};
     });
     const next=targetPaper?{...data,paperQuestions:[...(data.paperQuestions||[]),...points]}:{...data,points:[...data.points,...points]};
@@ -11413,7 +11557,7 @@ const batchDialog=$id('study-batch');
     };
     draw(p?'編輯知識點':'新增知識點','<form id="study-edit" class="study-editor study-surface">'+
       '<p class="study-meta">'+esc(filters.subject)+'</p>'+(p?.source?'<p class="study-meta">來源 '+esc(p.source)+'</p>':'')+
-      '<label class="study-field"><span>章節</span><select name="chapter">'+options(['',...chapters(filters.subject)],p?.chapter??filters.chapter,'未分類')+'</select></label>'+input('問題或提示（必填）','question',true,true)+(p?.options?.length?'<div><span class="study-meta">原卷選項</span>'+choiceList(p)+'</div>':'')+
+      '<label class="study-field"><span>章節</span><select name="chapter">'+options(['',...chapters(filters.subject)],p?.chapter??filters.chapter,'未分類')+'</select></label>'+input('問題或提示（必填）','question',true,true)+(p?.options?.length?'<div><span class="study-meta">選項</span>'+choiceList(p,false)+'</div>':'')+
       input('參考答案（必填）','answer',true,true)+
       '<details class="study-supplements"'+(hasSupplements?' open':'')+'><summary>補充資訊（選填）</summary><div class="study-editor">'+
       input('解析','explanation',true)+input('可接受的其他答案（每行一個）','accepted',true)+'</div></details>'+
@@ -11776,8 +11920,8 @@ const batchDialog=$id('study-batch');
   function answerField(p,answer,required=false){
     const constraint=required?' required':'';
     if(p.options?.length)return '<fieldset class="past-answer-choices"><legend>你的答案</legend>'+
-      p.options.map(option=>'<label><input type="radio" name="answer"'+constraint+' value="'+esc(option)+'" '+
-        (option===answer?'checked':'')+'><span>'+esc(option)+'</span></label>').join('')+'</fieldset>';
+      p.options.map((option,index)=>'<label><input type="radio" name="answer"'+constraint+' value="'+esc(option)+'" '+
+        (option===answer?'checked':'')+'>'+(Object.hasOwn(p,'paperId')?choiceMarkup(p,option,index):'<span>'+esc(option)+'</span>')+'</label>').join('')+'</fieldset>';
     return '<label class="study-field"><span>你的答案</span><textarea class="study-answer" name="answer" rows="3"'+constraint+'>'+esc(answer)+'</textarea></label>';
   }
   function isFullPaperAttempt(round){
@@ -12046,10 +12190,12 @@ const batchDialog=$id('study-batch');
   }
   function closePaperQuestionMap(restoreFocus=true){
     if(!examMapDialog.open)return;
+    rememberPaperReading();
     examMapDialog.close();
     const slot=appDialogStack.findIndex(entry=>entry.dialog===examMapDialog);
     if(slot>=0)appDialogStack.splice(slot,1);
     root.classList.remove('paper-exam-map-open');
+    restorePaperReading();
     for(const trigger of root.querySelectorAll('[data-study-action=paper-exam-map]'))trigger.setAttribute('aria-expanded','false');
     if(restoreFocus)examMapTrigger?.focus({preventScroll:true});
     examMapTrigger=null;
@@ -12061,7 +12207,9 @@ const batchDialog=$id('study-batch');
     updatePaperQuestionMap();
     const docked=usePaperQuestionSidebar(),close=$id('paper-exam-map-close');
     examMapDialog.dataset.layout=docked?'sidebar':'modal';
+    rememberPaperReading();
     root.classList.toggle('paper-exam-map-open',docked);
+    restorePaperReading();
     close.textContent=docked?'收合':'關閉';
     close.setAttribute('aria-label',docked?'收合題號側欄':'關閉題號表');
     if(docked)examMapDialog.show();
@@ -12080,6 +12228,11 @@ const batchDialog=$id('study-batch');
     if(!paperQuestionMapDocked())closePaperQuestionMap(false);
     go('session');
   }
+  window.addEventListener('resize',restorePaperReading);
+  root.addEventListener('scroll',event=>{
+    if(event.target.matches?.('[data-paper-passage-reader]')&&event.target.getClientRects().length&&paperReading)
+      paperReading.scroll=event.target.scrollTop;
+  },true);
   widePaperMap.addEventListener('change',()=>{
     if(!examMapDialog.open||paperQuestionMapDocked()===usePaperQuestionSidebar())return;
     const trigger=examMapTrigger||$id('paper-exam-progress');
@@ -12105,6 +12258,7 @@ const batchDialog=$id('study-batch');
   const uncertaintyButton=marked=>'<span class="paper-exam-triangle" aria-hidden="true">'+(marked?'▲':'△')+'</span> '+(marked?'已標記':'不確定');
   function renderMockExam(){
     const {queue,index,mockExam}=session,id=queue[index],q=point(id);
+    rememberPaperReading();
     const marked=Boolean(mockExam.marked[id]),answer=mockExam.answers[id]||'';
     const label=paperReviewLabel(session.paperReview[index]),p=paper(session.paperId);
     const trigger='aria-haspopup="dialog" aria-controls="paper-exam-map-dialog" aria-expanded="'+examMapDialog.open+'"';
@@ -12124,14 +12278,14 @@ const batchDialog=$id('study-batch');
       '<div class="study-actions paper-exam-tools">'+
       (q?action(uncertaintyButton(marked),'paper-exam-mark',false,'aria-pressed="'+marked+'"')+
         action('清除答案','paper-exam-clear',false,'form="paper-exam-form" '+(answer?'':'disabled')):'')+'</div>'+
-      '<form id="paper-exam-form">'+(q?questionContext(q,true)+'<h3 class="study-copy">'+esc(q.question)+'</h3>'+
-        answerField(q,answer):'<p class="study-empty">這題已從試卷移除，可繼續作答其他題目。</p>')+
+      '<form id="paper-exam-form">'+(q?paperAttemptQuestion(q,answer):'<p class="study-empty">這題已從試卷移除，可繼續作答其他題目。</p>')+
       '<div class="study-actions paper-answer-actions paper-exam-answer-actions">'+
       '<div class="paper-exam-action-group">'+action('題號表','paper-exam-map',false,'id="paper-exam-map-footer" '+trigger)+
       (index?action('上一題','paper-exam-jump',false,'data-index="'+(index-1)+'"'):'')+'</div>'+
       '<div class="paper-exam-action-group">'+action('交卷','paper-exam-submit',index===queue.length-1)+
       action('下一題','paper-exam-jump',index+1<queue.length,index+1<queue.length?'data-index="'+(index+1)+'"':'disabled')+
       '</div></div></form></section>','paper-exam-exit');
+    restorePaperReading();
     if(examMapDialog.open){
       examMapTrigger=$id(examMapTrigger?.id||'paper-exam-progress');
       updatePaperQuestionMap();
@@ -12179,6 +12333,7 @@ const batchDialog=$id('study-batch');
       }
       const snapshot=q?{
         question:q.question,group:q.group||'',answer:q.answer,options:q.options||[],accepted:q.accepted,
+        ...(q.optionCodes?{optionCodes:q.optionCodes}:{}),
         gradable:!pending&&Boolean(q.options?.length||eligibleShortAnswers(q).length)
       }:undefined;
       return {...entry,pending,...(m.marked[entry.id]?{marked:true}:{}),...(snapshot?{snapshot}:{})};
@@ -12621,20 +12776,24 @@ const batchDialog=$id('study-batch');
       restoreReviewScroll(scroll);
       return;
     }
+    const previous=root.querySelector('.paper-review-detail');
+    const sameQuestion=previous?.dataset.reviewQuestion===row.id;
+    const originalOpen=!sameQuestion||Boolean(previous.querySelector('.paper-review-original')?.open);
+    const groupOpen=sameQuestion&&Boolean(previous.querySelector('.paper-review-original .paper-question-context')?.open);
     const current=point(row.id),live=current?.paperId===round.paperId?current:null;
     const q=round.mockExam?(row.snapshot||live):live;
     const ownAnswer=row.record?.answer||(row.kind==='unanswered'||row.kind==='pending'&&!row.record?'未作答':'此筆舊紀錄未保存答案');
     const reference=row.pending?(round.mockExam?'待補正解':'尚未補正解'):
       row.record?.reference||row.snapshot?.answer||(round.mockExam?'交卷當時的正解未記錄':live?.answer||'目前沒有可顯示的正解');
     draw(esc(paperReviewLabel(row)),'<div class="paper-review-layout">'+paperResultListPanel(rows,'paper-review-sidebar')+
-      '<section class="study-surface paper-review-detail">'+
+      '<section class="study-surface paper-review-detail" data-review-question="'+esc(row.id)+'">'+
       '<p class="study-meta">'+esc(paperTitle(paper(round.paperId)))+' · '+esc(row.status)+(row.marked?' · '+paperUncertainty:'')+'</p>'+
-      '<div class="paper-review-answers"><div><h3>我的答案</h3><p class="study-copy">'+esc(ownAnswer)+'</p></div>'+
-      '<div><h3>正解</h3><p class="study-copy">'+esc(reference)+'</p></div></div>'+
+      '<div class="paper-review-answers"><div><h3>我的答案</h3><p class="study-copy">'+esc(row.record?.answer?paperAnswerText(q,ownAnswer):ownAnswer)+'</p></div>'+
+      '<div><h3>官方正解</h3><p class="study-copy">'+esc(row.pending?reference:paperAnswerText(q,reference))+'</p></div></div>'+
       (live?paperQuestionTools(live):'')+
       '<div class="paper-review-saved"><h3>詳解</h3><p class="study-copy" id="paper-review-explanation">'+esc(live?.explanation||'尚無詳解')+'</p></div>'+
-      (q?'<details class="study-supplements paper-review-original"><summary>查看完整題目與選項</summary>'+
-      questionContext(q)+'<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+choiceList(q)+'</details>':
+      (q?'<details class="study-supplements paper-review-original"'+(originalOpen?' open':'')+'><summary>原題與選項</summary>'+
+      questionContext(q,true,groupOpen)+'<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+choiceList(q)+'</details>':
       '<p class="study-meta">原題已移除，這筆交卷未保存題目內容。</p>')+
       '<div class="study-actions">'+paperReviewFinishAction(round)+'</div></section></div>','paper-review-back');
     renderPaperResultList(rows);
@@ -13425,14 +13584,19 @@ const batchDialog=$id('study-batch');
       const p=paper(target);
       const subjectRef=p?paperRef(p):values.get('pastSubject');
       const subject=p?.subject||pastSubjects().find(item=>item.key===subjectRef)?.name;
-      const answer=values.get('answer').trim();
-      const choices=values.get('choices').split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+      const rawAnswer=values.get('answer').trim();
+      const parsed=paperChoiceInput(values.get('choices'),Boolean(q?.optionCodes));
+      const choices=parsed.options;
+      if(parsed.issue){error.textContent=parsed.issue;return;}
+      const answer=rawAnswer===q?.answer&&choices.includes(rawAnswer)?rawAnswer:resolvePaperAnswer(parsed,rawAnswer);
       q={...q,id:q?.id||newPointId(),paperId:target,subject,subjectRef,number:values.get('number').trim(),
         question:values.get('question').trim(),answer,options:choices,accepted:choices.length?[]:values.get('accepted').split(/\r?\n/).map(v=>v.trim()).filter(Boolean),
         explanation:q?.explanation??values.get('explanation').trim()};
       if(!subject||!q.question||target&&!p){error.textContent='請選考科並填寫題目。';return;}
-      if(choices.length&&(new Set(choices).size!==choices.length||answer&&!choices.includes(answer))){
-        error.textContent='選項不得重複，正解請填入其中一個選項的完整文字。';return;
+      if(parsed.optionCodes)q.optionCodes=parsed.optionCodes;
+      else delete q.optionCodes;
+      if(choices.length&&(new Set(choices).size!==choices.length||rawAnswer&&!answer)){
+        error.textContent='選項不得重複，正解請填入可唯一對應的代號或完整文字。';return;
       }
       if(target&&q.number&&paperItems(target).some(item=>item.id!==q.id&&learningJournal.numberKey(item.number)===learningJournal.numberKey(q.number))){
         error.textContent='這份試卷已有相同題號。';return;
