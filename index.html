@@ -1592,6 +1592,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 
 /* Date-detail scheduling is available at every viewport width. */
 .day-schedule-entry{display:block;margin-bottom:18px;}
+#today-makeup-open{margin-block-start:8px;}
   #day-schedule-form{margin-top:10px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);}
   #day-schedule-form[hidden]{display:none;}
   #day-schedule-form select,#day-schedule-form input{margin-bottom:12px;}
@@ -2352,6 +2353,8 @@ button:active:not(:disabled){filter:brightness(.91);}
 .cal-progress{min-width:0;flex:none;}
 #makeup-count{font-variant-numeric:tabular-nums;}
 #makeup-dialog[open]{display:flex;flex-direction:column;gap:12px;overflow:hidden;}
+#makeup-dialog[open][data-stage=edit]{overflow:auto;}
+#makeup-dialog[data-stage=edit] > :not(#day-edit-panel){display:none;}
 .makeup-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-shrink:0;}
 .makeup-head .btn{min-height:44px;}
 #makeup-empty{margin:0;color:var(--text-3);font-size:var(--ui-label);}
@@ -4620,6 +4623,7 @@ onAuthStateChanged(auth,user=>{
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
         <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-haspopup="dialog" aria-controls="phone-course-dialog">＋安排課程</button>
+        <button type="button" class="btn btn-sand" id="today-makeup-open" aria-haspopup="dialog" aria-controls="makeup-dialog" hidden></button>
 
       </div>
       <div id="day-events"></div>
@@ -7604,6 +7608,7 @@ const makeupClose=document.getElementById('makeup-close');
 const makeupList=document.getElementById('makeup-list');
 const makeupCount=document.getElementById('makeup-count');
 const makeupEmpty=document.getElementById('makeup-empty');
+const todayMakeupOpen=$id('today-makeup-open');
 let makeupRows='';
 
 function renderMakeupList(localToday){
@@ -7616,19 +7621,21 @@ function renderMakeupList(localToday){
     if(makeupDialog.open&&pending.length)dates.push([date,pending]);
   }
   makeupCount.textContent=count;
+  syncTodayMakeupEntry();
   if(!makeupDialog.open)return;
   makeupEmpty.hidden=count>0;
   dates.sort(([a],[b])=>a.localeCompare(b));
   const rows=dates.flatMap(([date,lessons])=>lessons.map(lesson=>{
     const name=esc(course(lesson.courseId)?.name||'未知課程');
+    const time=lessonTimeLabel(lesson);
     return `<li class="makeup-row" data-makeup-date="${esc(date)}" data-makeup-id="${esc(lesson.id)}">
       <div class="makeup-info">
         <strong class="makeup-name">${name}</strong>
-        <span class="makeup-when"><time datetime="${esc(date)}">${esc(date)}</time>${lesson.time?" · "+esc(lesson.time):""}</span>
+        <span class="makeup-when"><time datetime="${esc(date)}">${esc(date)}</time>${time?" · "+esc(time):""}</span>
       </div>
       <div class="makeup-actions">
         <button type="button" class="btn" data-makeup-action="done" aria-label="標記完成：${name}">標記完成</button>
-        <button type="button" class="btn btn-sand" data-makeup-action="move" aria-label="改期：${name}">改期</button>
+        <button type="button" class="btn btn-sand" data-makeup-action="move" aria-label="編輯時間：${name}">編輯時間</button>
       </div>
     </li>`;
   })).join('');
@@ -7643,24 +7650,36 @@ function renderMakeupList(localToday){
 
 function focusMakeupAction(id,action){
   const row=[...makeupList.children].find(item=>item.dataset.makeupId===id);
-  (row?.querySelector('[data-makeup-action="'+action+'"]')||makeupClose).focus();
+  (row?.querySelector('[data-makeup-action="'+action+'"]')||makeupClose).focus({preventScroll:true});
 }
 
+function syncTodayMakeupEntry(){
+  const count=Number(makeupCount.textContent);
+  todayMakeupOpen.hidden=!isTodayPage()||!count;
+  todayMakeupOpen.textContent=count?'待補課 '+count+' 堂':'';
+}
+function dismissMakeupList(){
+  if(dayEditDraft?.makeup)finishDayEdit();
+  else makeupDialog.close();
+}
 let makeupReturnFocus=null;
 function openMakeupList(returnFocus=null){
   makeupReturnFocus=returnFocus;
-  showAppDialog(makeupDialog,()=>makeupDialog.close());
+  showAppDialog(makeupDialog,dismissMakeupList);
   renderCalendarProgress();
   makeupList.scrollTop=0;
 }
 makeupOpen.addEventListener('click',()=>openMakeupList());
-makeupClose.addEventListener('click',()=>makeupDialog.close());
+todayMakeupOpen.addEventListener('click',()=>openMakeupList(()=>{
+  (todayMakeupOpen.hidden?$id('day-schedule-open'):todayMakeupOpen).focus({preventScroll:true});
+}));
+makeupClose.addEventListener('click',dismissMakeupList);
 makeupDialog.addEventListener('close',()=>{
   if(makeupReturnFocus)makeupReturnFocus();
   else makeupOpen.focus({preventScroll:true});
   makeupReturnFocus=null;
 });
-makeupDialog.addEventListener('keydown',event=>event.stopPropagation());
+bindWideDialog(makeupDialog,dismissMakeupList);
 makeupList.addEventListener('click',event=>{
   const button=event.target.closest('[data-makeup-action]');
   const row=button?.closest('[data-makeup-id]');
@@ -7672,7 +7691,7 @@ makeupList.addEventListener('click',event=>{
     return;
   }
   if(button.dataset.makeupAction==='done')toggleDone(date,id);
-  else openLessonReschedule(id,date,()=>focusMakeupAction(id,'move'));
+  else openDayEdit(date,id,true);
 });
 
 let progressClockDate=localDateKey();
@@ -8304,34 +8323,44 @@ function finishDayEdit(restoreFocus=true){
   dayEditDraft=null;
   if(lessonTimeDraft?.opener===dayEditTimeTrigger)closeLessonTime();
   dayEditPanel.hidden=true;
-  if(draft.wide){
+  if(draft.makeup){
+    delete makeupDialog.dataset.stage;
+    makeupDialog.setAttribute('aria-labelledby','makeup-title');
+  }else if(draft.wide){
     wideDay.dataset.stage='detail';
     wideDay.setAttribute('aria-labelledby','day-label');
   }else dayEditDialog.close();
   dayEditDialog.append(dayEditPanel);
   draft.scroller.scrollTop=draft.scroll;
   document.scrollingElement.scrollTop=draft.pageScroll;
-  if(restoreFocus){
+  if(draft.makeup){
+    makeupList.scrollTop=draft.listScroll;
+    if(restoreFocus)focusMakeupAction(draft.id,'move');
+  }else if(restoreFocus){
     const entry=[...$id('day-events').querySelectorAll('[data-day-edit]')]
       .find(button=>button.dataset.dayEdit===draft.id);
     (entry?.getClientRects().length?entry:$id('day-schedule-open')).focus({preventScroll:true});
   }
 }
-function openDayEdit(opener){
-  const date=dayPanelDate();
-  const id=opener.dataset.dayEdit;
-  const wide=wideDay.open;
-  const scroller=wide?wideDay:$id('panel-r');
+function openDayEdit(date,id,makeup=false){
+  const wide=!makeup&&wideDay.open;
+  const scroller=makeup?makeupDialog:wide?wideDay:$id('panel-r');
   const lesson=S.calendar[date]?.find(item=>item.id===id);
   if(!lesson){toast('原日期已找不到這堂課。','warn');return;}
   const times=lessonTimes(lesson);
-  dayEditDraft={date,id,wide,scroller,scroll:scroller.scrollTop,pageScroll:document.scrollingElement.scrollTop,originalTimes:times,times};
+  dayEditDraft={date,id,wide,makeup,scroller,scroll:scroller.scrollTop,listScroll:makeupList.scrollTop,pageScroll:document.scrollingElement.scrollTop,originalTimes:times,times};
   dayEditDate.value=date;
   dayEditDate.removeAttribute('aria-invalid');
   $id('day-edit-date-error').textContent='';
   dayEditTimeTrigger.textContent=lessonTimeLabel(times)||'未定時間';
   dayEditPanel.hidden=false;
-  if(wide){
+  $id('day-edit-close').setAttribute('aria-label',makeup?'取消編輯並返回補課清單':'取消編輯並返回當日課程');
+  if(makeup){
+    makeupDialog.append(dayEditPanel);
+    makeupDialog.dataset.stage='edit';
+    makeupDialog.setAttribute('aria-labelledby','day-edit-title');
+    makeupDialog.scrollTop=0;
+  }else if(wide){
     $id('panel-r').append(dayEditPanel);
     wideDay.dataset.stage='edit';
     wideDay.setAttribute('aria-labelledby','day-edit-title');
@@ -8427,7 +8456,7 @@ document.getElementById('day-events').addEventListener('click',event=>{
     return;
   }
   const edit=event.target.closest('[data-day-edit]');
-  if(edit)openDayEdit(edit);
+  if(edit)openDayEdit(dayPanelDate(),edit.dataset.dayEdit);
 });
 
 function compareDayLessons(a,b){
@@ -8616,6 +8645,7 @@ function renderDayPanel(){
 
   const date=dayPanelDate(),onToday=isTodayPage();
   $id('panel-r').dataset.dayContext=onToday?'today':'calendar';
+  syncTodayMakeupEntry();
   if(!date){
     label.textContent='選擇日期';
     el.innerHTML=`<div class="day-panel-shell">
@@ -9739,7 +9769,7 @@ const studyRoom=(()=>{
   let setupMode='practice',weakOnly=false,examSetup=false;
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
-  let paperSearch='',mixedArchive=false;
+  let paperSearch='',paperArchiveOrigin=null,mixedArchive=false;
   let paperResultRound=null,paperResultFilter='all',paperReviewReturn=null;
   const examMapDialog=$id('paper-exam-map-dialog');
   const widePaperMap=matchMedia('(min-width:1200px)');
@@ -9778,12 +9808,28 @@ const studyRoom=(()=>{
     if(session?.mockExam?.deadline&&!roundComplete(session))queueMicrotask(updateMockClock);
   }
   function go(next){
+    if(screen==='papers'&&next!=='papers'){
+      paperArchiveOrigin={subject:paperSubject,ref:paperSubjectRef,search:paperSearch,
+        id:['paper','session'].includes(next)?paperId:null,scroll:reviewScrollPositions().map(([,top])=>top)};
+    }
+    const archive=next==='papers'&&screen!=='papers'&&paperArchiveOrigin&&
+      (!paperArchiveOrigin.id||!paperId||paperArchiveOrigin.id===paperId)?paperArchiveOrigin:null;
+    if(archive){
+      paperSubject=archive.subject;paperSubjectRef=archive.ref;paperSearch=archive.search;
+    }
     const returningHome=next==='home'&&screen!=='home';
     if(next!=='setup')examSetup=false;
     if(next!=='paper-exam-setup')examRestartFrom=null;
     if(next==='session'){paperResultRound=null;paperReviewReturn=null;}
     screen=next;
     render();
+    if(archive){
+      const card=[...root.querySelectorAll('[data-study-action=paper-open]')].find(button=>button.dataset.paper===archive.id);
+      (card||$id('paper-query')).focus({preventScroll:true});
+      restoreReviewScroll(archive.scroll);
+      paperArchiveOrigin=null;
+      return;
+    }
     if(!root.hidden&&['results','paper-review-detail'].includes(screen))trackPaperReview(paperResultRound);
     const subject=homeMode==='papers'?paperSubject:knowledgeSubject;
     const card=returningHome&&[...root.querySelectorAll('#study-home-cards [data-subject]')]
@@ -9801,6 +9847,27 @@ const studyRoom=(()=>{
   function chapters(subject){
     return [...new Set([...(data.catalog?.find(item=>item.name===subject)?.chapters||[]),
       ...data.points.filter(p=>p.subject===subject&&p.chapter).map(p=>p.chapter)])].sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  }
+  function chapterIdentity(subject,name){
+    const chapterKey=JSON.stringify([subject,name]);
+    return data.chapterRefs?.[chapterKey]??'legacy:'+chapterKey;
+  }
+  function chapterPreferenceKey(subject){
+    return key+':chapter-filter:'+JSON.stringify([account?.uid||null,subject]);
+  }
+  function rememberedChapter(subject){
+    try{
+      const saved=localStorage.getItem(chapterPreferenceKey(subject));
+      return saved===unfiled?unfiled:chapters(subject).find(name=>chapterIdentity(subject,name)===saved)||'';
+    }catch{return '';}
+  }
+  function rememberChapter(){
+    const {subject,chapter}=filters;
+    try{
+      const preference=chapterPreferenceKey(subject);
+      if(!chapter)localStorage.removeItem(preference);
+      else localStorage.setItem(preference,chapter===unfiled?unfiled:chapterIdentity(subject,chapter));
+    }catch{/* The current filter still works if storage is unavailable. */}
   }
   function filterMarkup(allowed=null){
     if(allowed)return '<label class="study-field"><span>章節</span><select id="study-filter-chapter">'+
@@ -10192,6 +10259,8 @@ const studyRoom=(()=>{
       action('新增單題','add')+action('AI 快速匯入','ai-batch',true)+'</div></div>';
   }
   function library(weak){
+    if(!weak&&filters.chapter&&filters.chapter!==unfiled&&!chapters(filters.subject).includes(filters.chapter))
+      filters.chapter=rememberedChapter(filters.subject);
     const items=filtered(weak);
     const canPracticeChapter=!weak&&filters.chapter&&filters.chapter!==unfiled&&items.length;
     const search=!weak&&items.length?'<div class="knowledge-search"><label class="study-field"><span>搜尋題目</span>'+
@@ -10705,10 +10774,7 @@ const batchDialog=$id('study-batch');
     const matches=subjectNames().filter(name=>name.trim().normalize('NFC')===key);
     if(matches.length!==1)return null;
     const subject=matches[0];
-    return {subject,chapters:chapters(subject).map(name=>{
-      const key=JSON.stringify([subject,name]);
-      return {name,id:data.chapterRefs?.[key]??'legacy:'+key};
-    })};
+    return {subject,chapters:chapters(subject).map(name=>({name,id:chapterIdentity(subject,name)}))};
   }
   function examFocusRound(points,answered,day){
     const tiers=[[],[],[]];
@@ -12005,6 +12071,7 @@ const batchDialog=$id('study-batch');
     else if(id==='study-filter-chapter'){
       if(screen==='library')knowledgeQuery='';
       filters.chapter=event.target.value==='unfiled'?unfiled:event.target.value.slice(8);
+      if(screen==='library')rememberChapter();
       render();
       $id(id).focus({preventScroll:true});
     }else if(event.target.name==='mode')setupMode=event.target.value;
@@ -12065,7 +12132,7 @@ const batchDialog=$id('study-batch');
       $id('study-home-cards').innerHTML=studyHomeCards();
       $id('paper-home-tools').hidden=homeMode!=='papers';
     }else if(act==='paper-add-subject')go('paper-subject-editor');
-    else if(act==='paper-archive'){paperSubject='';paperSubjectRef='';paperSearch='';go('papers');}
+    else if(act==='paper-archive'){paperArchiveOrigin=null;paperSubject='';paperSubjectRef='';paperSearch='';go('papers');}
     else if(act==='paper-clear'){
       paperSearch='';
       $id('paper-query').value='';
@@ -12166,6 +12233,7 @@ const batchDialog=$id('study-batch');
       collectBack=screen;
       go('paper-collect');
     }else if(act==='paper-subject'){
+      paperArchiveOrigin=null;
       paperSubject=button.dataset.subject;paperSubjectRef=button.dataset.paperSubject;
       wrongSchool='';wrongYear='';
       paperSearch='';go('papers');
@@ -12275,6 +12343,7 @@ const batchDialog=$id('study-batch');
     else if(act==='home')go('home');
     else if(act==='library'||act==='weak'||act==='subject'&&!button.dataset.subject){
       if(act==='weak')filters.chapter='';
+      if(act==='library'&&screen==='subject')filters.chapter=rememberedChapter(filters.subject);
       go(act);
     }else if(act==='subject'){
       subjectHub=screen;
@@ -12387,7 +12456,7 @@ const batchDialog=$id('study-batch');
       }
       const id=newPointId();
       data.paperSubjects=[...(data.paperSubjects||[]),{id,name}];
-      if(persist()){paperSubject=name;paperSubjectRef=id;paperSearch='';go('papers');}
+      if(persist()){paperArchiveOrigin=null;paperSubject=name;paperSubjectRef=id;paperSearch='';go('papers');}
     }else if(['past-question-form','past-collection-form'].includes(form.id)){
       await savePastForm(form,values);
     }else if(form.id==='study-paper-form'){
@@ -12885,7 +12954,7 @@ const batchDialog=$id('study-batch');
     paperReviewReturn=null;
     filters={subject:'',chapter:''};
     knowledgeQuery='';
-    practiceSource=null;examRestartFrom=null;
+    practiceSource=null;examRestartFrom=null;paperArchiveOrigin=null;paperSearch='';
     wrongSchool='';wrongYear='';
     screen='home';
     if(!uid){
