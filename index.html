@@ -1070,7 +1070,17 @@ body{
 #memo-add,#memo-item-form{margin-top:12px;}
 #memo-item-input{display:block;min-height:68px;margin-bottom:8px;}
 .memo-form-actions{display:flex;flex-wrap:wrap;gap:8px;}
-#today-task-lists{display:grid;gap:var(--sp-4);}
+#today-task-lists [hidden]{display:none;}
+.today-task-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-block-end:var(--sp-3);}
+#today-task-tabs{flex-wrap:nowrap;max-inline-size:100%;overflow-x:auto;scrollbar-width:none;}
+#today-task-tabs button{flex:none;min-height:44px;white-space:nowrap;}
+#today-task-add{display:grid;place-items:center;flex:none;min-width:44px;min-height:44px;padding:0;font-size:1.3rem;}
+.today-task-completed{margin-block-start:var(--sp-3);}
+#today-task-lists .today-task-completed h4{margin:0 0 var(--sp-1);color:var(--text-2);}
+.today-task-item .memo-item-text{display:grid;gap:2px;align-content:center;min-width:0;}
+.today-task-annotation{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--text-2);font-size:var(--ui-caption);}
+#today-task-lists .memo-row.is-done .memo-item-text{text-decoration:none;}
+.today-task-item.is-done .today-task-name{text-decoration:line-through;text-decoration-color:var(--text-3);}
 .today-task-section{min-width:0;padding:var(--sp-3);background:var(--card);border:1px solid var(--border-lt);border-radius:var(--r-md);}
 .today-task-section :is(h3,.memo-checklist){margin-block:0 var(--sp-2);}
 .today-task-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:start;}
@@ -1089,7 +1099,7 @@ body{
 .today-focus-row.is-done .today-focus-open{color:var(--text-2);}
 .today-focus-row .btn,[data-focus-toggle]{min-height:44px;}
 [data-focus-toggle][aria-pressed=true]{background:var(--selection-fill);color:var(--text);}
-.memo-row:has(.today-task-buttons){grid-template-columns:44px minmax(0,1fr) auto;}
+.today-task-item.memo-row{grid-template-columns:44px minmax(0,1fr) auto;}
 .today-task-buttons{display:flex;flex-wrap:wrap;justify-content:end;max-width:7em;}
 .today-task-section .memo-row>button:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-2px;}
 #memo-item-message{margin:0 0 8px;font-size:13px;color:var(--danger-c);}
@@ -14346,110 +14356,168 @@ const batchDialog=$id('study-batch');
   };
 })();
 
+
 todayTaskView=(()=>{
+  const groups=[['daily','每日作業','例如背 30 個單字'],['todo','待辦清單','輸入待辦事項']];
   const root=document.createElement('div');
   root.id='today-task-lists';
-  root.innerHTML=[['daily','每日作業','例如：背 30 個單字'],['todo','待辦清單','輸入待辦事項']].map(([type,title,placeholder])=>
-    '<section class="today-task-section" data-today-task-type="'+type+'" aria-labelledby="today-task-title-'+type+'">'+
-    '<h3 id="today-task-title-'+type+'" class="day-panel-title">'+title+'</h3>'+
-    '<div class="today-task-items"></div><form class="today-task-form">'+
-    '<input aria-label="新增'+title+'" type="text" maxlength="160" placeholder="'+placeholder+'" required>'+
-    '<button class="btn btn-primary">新增</button><button type="button" class="btn btn-sand" data-task-action="cancel" hidden>取消</button>'+
-    '</form><p class="today-task-status" role="status"></p></section>').join('');
-  const sections=[...root.children];
-  let timer,ownerEpoch=0;
+  root.className='today-task-section';
+  root.innerHTML='<div class="today-task-toolbar"><div id="today-task-tabs" class="study-mode-options" role="group" aria-label="任務清單">'+
+    groups.map(([type,title])=>'<button type="button" data-task-tab="'+type+'" aria-pressed="'+(type==='daily')+
+      '" aria-controls="today-task-panel-'+type+'">'+title+'</button>').join('')+
+    '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業">＋</button></div>'+
+    groups.map(([type,title,placeholder])=>'<section id="today-task-panel-'+type+'" data-today-task-type="'+type+'" aria-label="'+title+'"'+
+      (type==='daily'?'':' hidden')+'><form class="today-task-form" hidden>'+
+      '<input aria-label="新增'+title+'" type="text" maxlength="160" placeholder="'+placeholder+'" required>'+
+      '<button class="btn btn-primary">新增</button><button type="button" class="btn btn-sand" data-task-action="cancel">取消</button>'+
+      '</form><p class="today-task-status" role="status"></p><div class="today-task-items"></div></section>').join('');
+  const sections=[...root.querySelectorAll('[data-today-task-type]')],add=root.querySelector('#today-task-add');
+  const tabs=[...root.querySelectorAll('[data-task-tab]')];
+  let timer,ownerEpoch=0,selected='daily';
+  function select(type){
+    if(type===selected)return;
+    selected=type;
+    for(const tab of tabs)tab.setAttribute('aria-pressed',String(tab.dataset.taskTab===type));
+    for(const section of sections)section.hidden=section.dataset.todayTaskType!==type;
+    add.setAttribute('aria-label','新增'+groups.find(group=>group[0]===type)[1]);
+  }
   function activeTasks(type,now){
     const date=localDateKey(new Date(now));
     return studyRoom.todayTasks().filter(item=>item.type===type).map(item=>({
-      ...item,completedAt:type==='daily'?item.days[date]??null:item.completedAt
+      ...item,date:type==='daily'?date:'',completedAt:type==='daily'?item.days[date]??null:item.completedAt
     })).filter(item=>item.completedAt===null||now<item.completedAt+todayTaskLifetime);
   }
-  function edit(section,item){
+  function completedTasks(type,items,now){
+    if(type==='todo')return items.filter(item=>item.completedAt!==null);
+    return studyRoom.todayTasks().filter(item=>item.type==='daily').flatMap(item=>Object.entries(item.days)
+      .filter(([,at])=>now<at+todayTaskLifetime).map(([date,completedAt])=>({...item,date,completedAt})));
+  }
+  function findRow(section,id,date){
+    return [...section.querySelectorAll('[data-today-task]')].find(row=>row.dataset.todayTask===id&&row.dataset.taskDate===date);
+  }
+  function edit(section,show=false,item){
     const form=section.querySelector('form'),input=form.querySelector('input');
-    const title=section.querySelector('h3').textContent;
+    const title=section.getAttribute('aria-label');
     section.dataset.editTask=item?.id||'';
+    section.dataset.editDate=item?.date||'';
+    form.hidden=!show;
     input.value=item?.text||'';
     input.setAttribute('aria-label',(item?'編輯':'新增')+title);
-    form.querySelector('button').textContent=item?'儲存':'新增';
-    form.querySelector('[data-task-action=cancel]').hidden=!item;
+    form.querySelector('.btn-primary').textContent=item?'儲存':'新增';
     section.querySelector('.today-task-status').textContent='';
+    if(show)input.focus();
+  }
+  function rowHTML(item,type,today){
+    const done=item.completedAt!==null;
+    const date=done?(item.date||localDateKey(new Date(item.completedAt))):'';
+    const annotation=(type==='daily'?'<span>↻ 每天</span>':'')+(date?'<time datetime="'+esc(date)+'">'+esc(fmtDate(date))+'</time>':'');
+    return '<li class="memo-row today-task-item'+(done?' is-done':'')+'" data-today-task="'+esc(item.id)+'" data-task-date="'+esc(item.date)+'">'+
+      '<button type="button" class="memo-check" data-task-action="toggle" aria-label="完成：'+esc(item.text)+
+      (date?'，'+esc(fmtDate(date)):'')+'" aria-pressed="'+done+'"><span aria-hidden="true">'+(done?'✓':'')+'</span></button>'+
+      '<button type="button" class="memo-item-text" data-task-action="edit" aria-label="編輯：'+esc(item.text)+'">'+
+      '<span class="today-task-name">'+esc(item.text)+'</span>'+
+      (annotation?'<span class="today-task-annotation">'+annotation+'</span>':'')+'</button>'+
+      '<div class="today-task-buttons">'+(type==='todo'||item.date===today?todayFocusToggle(type,item.id):'')+
+      '<button type="button" class="memo-delete" data-task-action="delete" aria-label="刪除：'+esc(item.text)+'">刪除</button></div></li>';
   }
   function refresh(){
     clearTimeout(timer);
     if(!root.isConnected||!isTodayPage())return;
-    const now=Date.now(),deadlines=[];
+    const now=Date.now(),today=localDateKey(new Date(now)),deadlines=[];
     for(const section of sections){
-      const type=section.dataset.todayTaskType;
-      const items=activeTasks(type,now).sort((a,b)=>Number(a.completedAt!==null)-Number(b.completedAt!==null)||
-        (a.completedAt??a.createdAt)-(b.completedAt??b.createdAt));
+      const type=section.dataset.todayTaskType,items=activeTasks(type,now);
+      const pending=items.filter(item=>item.completedAt===null).sort((a,b)=>a.createdAt-b.createdAt);
+      const completed=completedTasks(type,items,now).sort((a,b)=>b.completedAt-a.completedAt);
+      for(const item of completed)deadlines.push(item.completedAt+todayTaskLifetime);
       const list=section.querySelector('.today-task-items');
-      const active=list.contains(document.activeElement)?document.activeElement:null;
+      const focus=list.contains(document.activeElement)?document.activeElement:null;
+      const previous=focus?.closest('[data-today-task]');
       const editing=section.dataset.editTask;
-      if(editing&&!items.some(item=>item.id===editing)){
+      if(editing&&!editableTask(type,editing,now)){
         edit(section);
         section.querySelector('.today-task-status').textContent='這個項目已移除。';
       }
-      const markup=items.length?'<ul class="memo-checklist">'+items.map(item=>{
-        const done=item.completedAt!==null;
-        if(done)deadlines.push(item.completedAt+todayTaskLifetime);
-        return '<li class="memo-row'+(done?' is-done':'')+'" data-today-task="'+esc(item.id)+'">'+
-          '<button type="button" class="memo-check" data-task-action="toggle" aria-label="完成：'+esc(item.text)+'" aria-pressed="'+done+'"><span aria-hidden="true">'+(done?'✓':'')+'</span></button>'+
-          '<button type="button" class="memo-item-text" data-task-action="edit" aria-label="編輯：'+esc(item.text)+'">'+esc(item.text)+'</button>'+
-          '<div class="today-task-buttons">'+todayFocusToggle(type,item.id)+
-          '<button type="button" class="memo-delete" data-task-action="delete" aria-label="刪除：'+esc(item.text)+'">刪除</button></div></li>';
-      }).join('')+'</ul>':'<p class="memo-empty">'+(type==='daily'?'今天沒有每日作業。':'目前沒有待辦事項。')+'</p>';
+      const rows=entries=>'<ul class="memo-checklist">'+entries.map(item=>rowHTML(item,type,today)).join('')+'</ul>';
+      const markup=(pending.length?rows(pending):'<p class="memo-empty">'+
+        (type==='daily'?'今天沒有未完成的每日作業。':'目前沒有未完成的待辦事項。')+'</p>')+
+        (completed.length?'<div class="today-task-completed"><h4>已完成</h4>'+rows(completed)+'</div>':'');
       if(list.dataset.rendered!==markup){
         list.dataset.rendered=markup;
         list.innerHTML=markup;
-        if(active){
-          const row=list.querySelector('[data-today-task="'+active.closest('li').dataset.todayTask+'"]');
-          (row?.querySelector('[data-task-action="'+active.dataset.taskAction+'"]')||section.querySelector('input')).focus({preventScroll:true});
+        if(previous){
+          const id=previous.dataset.todayTask,date=previous.dataset.taskDate;
+          const row=findRow(section,id,date)||(type==='daily'?findRow(section,id,today):null);
+          const selector=focus.hasAttribute('data-focus-toggle')?'[data-focus-toggle]':'[data-task-action="'+focus.dataset.taskAction+'"]';
+          (row?.querySelector(selector)||row?.querySelector('.memo-check')||add).focus({preventScroll:true});
         }
       }
     }
     if(deadlines.length)timer=setTimeout(refresh,Math.max(0,Math.min(...deadlines)-now));
     refreshTodayFocus();
   }
-  function save(section,action,fields){
-    const now=Date.now(),type=section.dataset.todayTaskType;
-    const status=section.querySelector('.today-task-status');
-    if(fields.id&&!activeTasks(type,now).some(item=>item.id===fields.id)){
+  function getTask(section,id,date,now){
+    const type=section.dataset.todayTaskType,items=activeTasks(type,now);
+    return [...items,...completedTasks(type,items,now)].find(item=>item.id===id&&item.date===date);
+  }
+  function editableTask(type,id,now){
+    const items=type==='daily'?studyRoom.todayTasks():activeTasks(type,now);
+    return items.find(item=>item.type===type&&item.id===id);
+  }
+  function save(section,action,{id,text,date}){
+    const now=Date.now(),type=section.dataset.todayTaskType,status=section.querySelector('.today-task-status');
+    const toggling=action==='check'||action==='uncheck';
+    if(id&&!(toggling?getTask(section,id,date,now):editableTask(type,id,now))){
       refresh();
       status.textContent='這個項目已移除。';
       return false;
     }
-    const date=type==='daily'&&['check','uncheck'].includes(action)?localDateKey(new Date(now)):undefined;
-    const saved=studyRoom.changeTodayTask(type,action,{...fields,date,at:now});
-    if(!saved)status.textContent='無法儲存，請重試。';
+    const day=type==='daily'&&toggling?date:undefined;
+    const saved=studyRoom.changeTodayTask(type,action,{id,text,date:day,at:now});
+    status.textContent=saved?'':'無法儲存，請重試。';
     return saved;
   }
   root.addEventListener('submit',event=>{
     event.preventDefault();
     const form=event.target,section=form.closest('[data-today-task-type]');
     const input=form.querySelector('input'),text=input.value.trim();
-    const status=section.querySelector('.today-task-status');
-    if(!text){status.textContent='請輸入項目名稱。';input.focus();return;}
-    const id=section.dataset.editTask||undefined;
-    if(save(section,id?'edit':'create',{id,text})){
+    if(!text){section.querySelector('.today-task-status').textContent='請輸入項目名稱。';input.focus();return;}
+    const id=section.dataset.editTask||undefined,date=section.dataset.editDate;
+    if(save(section,id?'edit':'create',{id,text,date})){
       edit(section);
-      input.focus();
+      const row=id&&(findRow(section,id,date)||findRow(section,id,localDateKey()));
+      (row?.querySelector('.memo-item-text')||add).focus({preventScroll:true});
     }
   });
+  root.addEventListener('keydown',event=>{
+    if(!event.target.dataset.taskTab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();
+    const next=event.key==='Home'?tabs[0]:event.key==='End'?tabs.at(-1):tabs.find(tab=>tab!==event.target);
+    select(next.dataset.taskTab);
+    next.focus();
+  });
   root.addEventListener('click',event=>{
+    const tab=event.target.closest('[data-task-tab]');
+    if(tab){select(tab.dataset.taskTab);return;}
     const button=event.target.closest('[data-task-action]');
     if(!button)return;
-    const section=button.closest('[data-today-task-type]'),action=button.dataset.taskAction;
-    const input=section.querySelector('input');
-    if(action==='cancel'){edit(section);input.focus();return;}
-    const id=button.closest('[data-today-task]').dataset.todayTask;
-    const item=activeTasks(section.dataset.todayTaskType,Date.now()).find(item=>item.id===id);
+    const action=button.dataset.taskAction;
+    const section=button.closest('[data-today-task-type]')||sections.find(item=>item.dataset.todayTaskType===selected);
+    if(action==='add'){edit(section,true);return;}
+    if(action==='cancel'){
+      const row=findRow(section,section.dataset.editTask,section.dataset.editDate);
+      edit(section);
+      (row?.querySelector('.memo-item-text')||add).focus({preventScroll:true});
+      return;
+    }
+    const {todayTask:id,taskDate:date}=button.closest('[data-today-task]').dataset;
+    const item=getTask(section,id,date,Date.now());
     if(!item){refresh();return;}
-    if(action==='edit'){edit(section,item);input.focus();return;}
-    if(action==='toggle'){save(section,item.completedAt===null?'check':'uncheck',{id});return;}
+    if(action==='edit'){edit(section,true,item);return;}
+    if(action==='toggle'){save(section,item.completedAt===null?'check':'uncheck',{id,date});return;}
     const type=section.dataset.todayTaskType,owner=ownerEpoch;
     showConfirm(type==='daily'?'刪除每日作業':'刪除待辦事項',
       '確定刪除「'+item.text+'」？'+(type==='daily'?'之後每天都會移除。':''),
-      ()=>{if(owner===ownerEpoch&&root.isConnected)save(section,'delete',{id});});
+      ()=>{if(owner===ownerEpoch&&root.isConnected)save(section,'delete',{id,date});});
   });
   window.addEventListener('pageshow',()=>{
     refreshWeekProgressClock();
@@ -14458,14 +14526,26 @@ todayTaskView=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
   return {
     root,refresh,activeTasks,
+    open(type,id){
+      select(type);
+      refresh();
+      const section=sections.find(section=>section.dataset.todayTaskType===type);
+      const row=findRow(section,id,type==='daily'?localDateKey():'');
+      row?.querySelector('.memo-check').focus({preventScroll:true});
+      row?.scrollIntoView({block:'nearest'});
+    },
     reset(){
       ownerEpoch++;
+      select('daily');
       if(['刪除每日作業','刪除待辦事項'].includes($id('confirm-title').textContent))hideConfirm();
       sections.forEach(section=>edit(section));
     },
     mount(focus){
       const slot=$id('today-tasks-slot');
-      if(slot&&root.parentElement!==slot)slot.append(root);
+      if(slot&&root.parentElement!==slot){
+        slot.append(root);
+        pillMotion.mount(root);
+      }
       if(focus?.isConnected)focus.focus({preventScroll:true});
       refresh();
     }
@@ -14487,11 +14567,7 @@ function resolveTodayFocus({type,ref},date,now){
   if(type==='daily'||type==='todo'){
     const item=todayTaskView.activeTasks(type,now).find(task=>task.id===ref);
     if(!item)return null;
-    return {title:item.text,done:item.completedAt!==null,open:()=>{
-      const row=[...todayTaskView.root.querySelectorAll('[data-today-task]')].find(row=>row.dataset.todayTask===ref);
-      row?.querySelector('.memo-check').focus({preventScroll:true});
-      row?.scrollIntoView({block:'nearest'});
-    }};
+    return {title:item.text,done:item.completedAt!==null,open:()=>todayTaskView.open(type,ref)};
   }
   if(type==='plan'){
     const item=S.reviewPlans.find(plan=>plan.id===ref);
