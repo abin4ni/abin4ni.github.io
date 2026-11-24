@@ -2538,7 +2538,7 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:1px
   .header-row :is(.wide-tabs,.header-actions) button{min-height:var(--wide-header-target);}
   .app-header .wide-brand{display:inline;}
   .app-header .phone-brand,.app-header .progress-track,
-  .header-actions>:not(.auth-area),.app-header .phone-header-action{display:none!important;}
+  .header-actions>:not(.auth-area,#global-search-open),.app-header .phone-header-action{display:none!important;}
   .app-header .header-actions{justify-self:end;}
   .wide-tabs{
     display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:relative;isolation:isolate;
@@ -2776,7 +2776,7 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 
 .phone-only{display:none;}
 @media(max-width:767px){
-  .app-header .header-actions>:not(.auth-area){display:none!important;}
+  .app-header .header-actions>:not(.auth-area,#global-search-open){display:none!important;}
   #panel-cal .cal-head{
     grid-template-columns:auto minmax(0,1fr) auto;gap:4px 6px;padding:8px 10px;
     align-items:center;
@@ -2930,8 +2930,8 @@ body:has(#lesson-time-dialog[open]) #phone-course-dialog[data-calendar-schedule]
 #panel-r .day-lesson-time{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-2);white-space:nowrap;}
 #panel-r .day-lesson-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;}
 #panel-r .day-lesson-actions .act-btn{font-weight:500;color:var(--text-2);}
-#day-edit-study-link{display:grid;gap:8px;}
-#day-edit-study-link legend{padding:0;font-weight:600;}
+#day-edit-study-link{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-2);min-inline-size:0;margin:0;padding:0;border:0;}
+#day-edit-study-link legend{display:block;margin:0 0 var(--sp-2);padding:0;font-weight:600;}
 #panel-r .day-completed{border-top:1px solid var(--border-lt);}
 #panel-r .day-completed > summary{cursor:pointer;align-content:center;min-height:44px;font-size:14px;font-weight:600;color:var(--text-2);}
 #panel-r .day-completed-list .day-lesson{border-top:1px solid var(--border-lt);}
@@ -3727,6 +3727,32 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   .week-timed-event[data-week-overlap] .week-ev-time { display: grid; font-size: .5rem; }
   .week-timed-event[data-week-overlap] .week-ev-time > span:nth-child(2) { display: none; }
 }
+#global-search-open {
+  display:grid;place-items:center;width:44px;height:44px;padding:0;color:var(--text);
+}
+#global-search-open:disabled {opacity:.45;cursor:default;}
+#global-search-dialog[open] {
+  display:flex;flex-direction:column;gap:12px;
+  width:min(34rem,calc(100vw - 28px));max-height:min(42rem,calc(100dvh - 28px));
+  overflow:hidden;
+}
+#global-search-dialog .makeup-head {flex:none;margin:0;}
+#global-search-dialog .study-field {flex:none;margin:0;}
+#global-search-status {flex:none;margin:0;}
+#global-search-status:empty {display:none;}
+#global-search-results {min-height:0;overflow:auto;overscroll-behavior:contain;scroll-padding:4px;}
+.global-search-group h3 {margin:10px 4px 4px;font-size:var(--ui-label);color:var(--text-2);}
+.global-search-group ul {list-style:none;margin:0;padding:0;}
+.global-search-result {
+  display:grid;gap:2px;width:100%;min-height:44px;padding:8px 10px;
+  background:transparent;color:var(--text);text-align:start;white-space:normal;overflow-wrap:anywhere;
+}
+.global-search-result:focus-visible {outline-offset:-2px;background:var(--segment-press);}
+@media(hover:hover) {.global-search-result:hover {background:var(--segment-press);}}
+#global-search-day-return[hidden] {display:none;}
+#global-search-day-return {margin-block-end:8px;}
+#panel-r .day-lesson[data-search-target] {box-shadow:inset 0 0 0 1px var(--ui-focus);}
+
 /* Today, the calendar side panel and date details share this lesson row. */
 #panel-r .day-card.day-lesson {
   display:grid;
@@ -4313,7 +4339,7 @@ window._fb={
     doc(db,'users',uid,'data','state'),
     {...data,updatedAt:serverTimestamp()}
   ).catch(e=>{console.error('[Firebase] saveToCloud error',e);throw e;}),
-  listenCloud:(uid,cb)=>{
+  listenCloud:(uid,cb,failed)=>{
     if(_unsubscribe)_unsubscribe();
     _unsubscribe=onSnapshot(
       doc(db,'users',uid,'data','state'),
@@ -4321,7 +4347,7 @@ window._fb={
         if(snap.metadata.hasPendingWrites)return;   // 自己剛寫入的回聲，不需要重繪
         cb(snap.exists()?snap.data():null);
       },
-      e=>console.error('[Firebase] snapshot error',e)
+      e=>{console.error('[Firebase] snapshot error',e);failed?.();}
     );
   },
   listenLearning:(uid,receive,failed)=>onSnapshot(learningOperations(uid),
@@ -4429,6 +4455,7 @@ onAuthStateChanged(auth,user=>{
       <button type="button" class="btn" data-wide-page-button="study">學習室</button>
     </nav>
     <div class="header-actions">
+      <button type="button" class="btn" id="global-search-open" aria-label="全站搜尋" aria-haspopup="dialog" aria-controls="global-search-dialog" aria-keyshortcuts="Control+K Meta+K" title="全站搜尋（Ctrl／⌘ + K）"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="5.8"/><path d="m15 15 4.5 4.5"/></svg></button>
       <!-- Auth area -->
       <div class="auth-area" id="auth-area">
         <div class="account-controls">
@@ -4681,6 +4708,7 @@ onAuthStateChanged(auth,user=>{
       </div>
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
+        <button type="button" class="btn btn-sand" id="global-search-day-return" hidden>返回搜尋</button>
         <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-haspopup="dialog" aria-controls="phone-course-dialog">＋安排課程</button>
         <button type="button" class="btn btn-sand" id="today-makeup-open" aria-haspopup="dialog" aria-controls="makeup-dialog" hidden></button>
 
@@ -4699,6 +4727,12 @@ onAuthStateChanged(auth,user=>{
     <input id="day-schedule-end-time" type="hidden" value="">
   </div>
 </template>
+<dialog id="global-search-dialog" class="local-dialog" aria-labelledby="global-search-title">
+  <div class="makeup-head"><h2 id="global-search-title">全站搜尋</h2><button type="button" class="btn popup-close" id="global-search-close" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <label class="study-field"><span>搜尋課堂、知識庫與考古題</span><input id="global-search-query" type="search" placeholder="例如：中國醫 115" autocomplete="off" aria-controls="global-search-results"></label>
+  <p id="global-search-status" class="study-meta" role="status"></p>
+  <div id="global-search-results"></div>
+</dialog>
 <dialog id="day-edit-dialog" class="local-dialog" aria-labelledby="day-edit-title">
   <section id="day-edit-panel" hidden>
     <div class="day-edit-head">
@@ -5312,6 +5346,7 @@ document.getElementById('confirm-backdrop').addEventListener('click',e=>{
 
 // ── Persistence ───────────────────────────────────────────────────
 const LS='course-tracker-v1';
+let globalSearch=null,scheduleSearchLoading=false;
 let _syncPaused=false; // prevent echo loop when applying remote data
 
 function statePayload(){
@@ -5371,6 +5406,7 @@ function loadState(){
 
 // ── Auth callbacks (called from Firebase module) ──────────────────
 window.onFirebaseLogin=function(user){
+  scheduleSearchLoading=true;
   studyRoom.switchAccount(user.uid);
   document.getElementById('account-login').hidden=true;
   const accountPhoto=document.getElementById('account-photo');
@@ -5382,6 +5418,8 @@ window.onFirebaseLogin=function(user){
   setSyncStatus('syncing');
   // Start real-time listener
   window._fb.listenCloud(user.uid,remoteData=>{
+    scheduleSearchLoading=false;
+    globalSearch?.refresh();
     if(!remoteData){
       // 雲端還沒有資料（第一次登入）：把本機資料上傳
       if(S.courses.length){
@@ -5397,9 +5435,13 @@ window.onFirebaseLogin=function(user){
     if(typeof recheckRepeatPreview==='function')recheckRepeatPreview();
     _syncPaused=false;
     setSyncStatus('synced');
+  },()=>{
+    scheduleSearchLoading=false;
+    globalSearch?.refresh();
   });
 };
 window.onFirebaseLogout=function(){
+  scheduleSearchLoading=false;
   studyRoom.switchAccount(null);
   document.getElementById('account-login').hidden=false;
   document.getElementById('account-name').textContent='尚未登入';
@@ -6763,6 +6805,7 @@ function setWidePage(page){
   }
   if(wide&&onCalendar)renderDayPanel();
   if(wide&&onCalendar)scroller.scrollTop=wideCalendarScroll;
+  globalSearch?.syncEntry();
   for(const button of document.querySelectorAll('[data-wide-page-button]')){
     if(button.dataset.widePageButton===page)button.setAttribute('aria-current','page');
     else button.removeAttribute('aria-current');
@@ -7120,6 +7163,7 @@ function mobileTab(tab,dayMode='today'){
     else button.removeAttribute('aria-current');
   });
   if(tab==='day')renderDayPanel();
+  globalSearch?.syncEntry();
 }
 
 $id('panel-r').addEventListener('keydown',event=>{
@@ -7196,6 +7240,7 @@ function initStaggerObserver(){
 
 function render(){
   renderHeader();renderCourses();renderRepeatSelect();renderTodo();renderCalendar();renderDayPanel();renderMemo();
+  globalSearch?.refresh();
   requestAnimationFrame(initStaggerObserver);
 }
 
@@ -8864,6 +8909,7 @@ function renderDayPanel(){
   const el=document.getElementById('day-events');
 
   const date=dayPanelDate(),onToday=isTodayPage();
+  $id('global-search-day-return').hidden=onToday||!globalSearch?.fromLessonDate(date);
   $id('panel-r').dataset.dayContext=onToday?'today':'calendar';
   syncTodayMakeupEntry();
   if(!date){
@@ -10034,7 +10080,11 @@ const studyRoom=(()=>{
     const priorPills=pillMotion.capture(root);
     root.innerHTML='<div class="study-head"><h2 id="study-heading" tabindex="-1">'+title+'</h2>'+
       (back?action(back===true?'返回學習室':'返回',back===true?'home':back):'')+'</div><p class="study-local"><span id="study-sync-state" role="status">'+esc(syncText)+'</span> <button type="button" class="btn btn-sand" id="study-sync-retry" data-study-action="sync-retry" hidden>重試同步</button></p>'+body;
+    if(globalSearch?.fromStudyView(screen,paperId,filters.subject)){
+      root.querySelector('.study-head').insertAdjacentHTML('beforeend','<button type="button" class="btn btn-sand" id="global-search-study-return">返回搜尋</button>');
+    }
     showLearningSync(syncText,syncFailed);
+    globalSearch?.syncEntry();
     pillMotion.mount(root,priorPills);
     if(session?.mockExam?.deadline&&!roundComplete(session))queueMicrotask(updateMockClock);
   }
@@ -11035,6 +11085,41 @@ const batchDialog=$id('study-batch');
       '<p class="study-error" role="alert"></p><div class="study-actions">'+action('取消','cancel-edit')+
       '<button class="btn btn-primary">儲存知識點</button></div></form>');
   }
+  function searchCatalog(){
+    const knowledge=subjectNames().flatMap(subject=>[
+      {kind:'knowledge',id:'',subject,title:subject,detail:'全部章節'},
+      ...chapterChoices(subject).map(({id,name})=>({kind:'knowledge',id,subject,title:name,detail:subject})),
+    ]);
+    const papers=[...(data.papers||[])].sort((a,b)=>Number(b.year)-Number(a.year)).map(p=>({
+      kind:'paper',id:p.id,title:paperTitle(p),detail:p.subject,terms:[p.subject,p.school,p.name,p.year],
+    }));
+    return {knowledge,papers,loading:waitingForToday()};
+  }
+  function openSearchDestination(item){
+    if(item.kind==='knowledge'){
+      if(!subjectNames().includes(item.subject))return false;
+      const chapter=item.id?chapterChoices(item.subject).find(ch=>ch.id===item.id):null;
+      if(item.id&&!chapter)return false;
+      homeMode='knowledge';
+      knowledgeSubject=item.subject;
+      knowledgeQuery='';
+      filters={subject:item.subject,chapter:chapter?.name||''};
+      openTodayPractice();
+      go('library');
+    }else{
+      const p=paper(item.id);
+      if(!p)return false;
+      homeMode='papers';
+      paperId=p.id;
+      paperSubject=p.subject;
+      paperSubjectRef=paperRef(p);
+      paperSearch='';
+      paperArchiveOrigin=null;
+      openTodayPractice();
+      go('paper');
+    }
+    return true;
+  }
   function chapterChoices(subject){
     return chapters(subject).map(name=>({name,id:chapterIdentity(subject,name)}));
   }
@@ -11308,6 +11393,7 @@ const batchDialog=$id('study-batch');
     go('session');
   }
   function briefChanged(){
+    globalSearch?.refresh();
     scheduleParkedPaperExpiry();
     refreshStudyBrief();
     refreshWeeklyReview();
@@ -13315,6 +13401,7 @@ const batchDialog=$id('study-batch');
   }
   function switchLearning(uid){
     if(account?.uid===uid||(!account&&!uid))return;
+    globalSearch?.reset();
     flushExamDraft();
     clearTimeout(examTimer);
     account?.stop?.();
@@ -13406,6 +13493,9 @@ const batchDialog=$id('study-batch');
     upcomingExams,
     examLibrary,
     librarySubjects:subjectNames,
+    searchCatalog,
+    openSearchDestination,
+    searchBlocked:()=>screen==='session'&&!root.hidden&&session?.mockExam&&!roundComplete(session),
     chapterChoices,
     lessonChapter,
     openLessonChapter,
@@ -13454,6 +13544,175 @@ const batchDialog=$id('study-batch');
       return true;
     }
   };
+})();
+
+globalSearch=(()=>{
+  const dialog=$id('global-search-dialog'),input=$id('global-search-query');
+  const list=$id('global-search-results'),status=$id('global-search-status'),trigger=$id('global-search-open');
+  const groups=[['lesson','課堂'],['knowledge','知識庫'],['paper','考古題']];
+  let results=[],target=null,opener=null,savedScroll=0,selectedKey='',previousMarkup='';
+  const normalized=value=>String(value??'').normalize('NFKC').toLocaleLowerCase('zh-Hant').replace(/\s+/g,' ').trim();
+  const compact=value=>normalized(value).replace(/\s/g,'');
+  const resultKey=item=>JSON.stringify([item.kind,item.id,item.subject,item.date]);
+  const resultButtons=()=>[...list.querySelectorAll('[data-global-result]')];
+
+  function matchingLessons(query){
+    const ordinal=query.match(/(?:第\s*)?(\d+)\s*堂/);
+    const tokens=(ordinal?query.replace(ordinal[0],''):query).split(/\s+/).filter(Boolean);
+    const courses=new Map(S.courses.map(c=>[c.id,c]));
+    const numbers=scheduledLessonNumbers(S.courses);
+    const found=[];
+    for(const date of Object.keys(S.calendar).sort().reverse()){
+      for(const lesson of [...S.calendar[date]].sort(compareDayLessons)){
+        const course=courses.get(lesson.courseId),number=numbers.get(lesson);
+        if(!course||ordinal&&number!==Number(ordinal[1]))continue;
+        const content=lessonContentText(lesson).replace(/\s+/g,' ').trim();
+        const fields=[course.name,'第 '+number+' 堂',content].map(compact);
+        if(!tokens.every(token=>fields.some(field=>field.includes(token))))continue;
+        const time=lessonTimeLabel(lesson);
+        found.push({kind:'lesson',id:lesson.id,date,title:course.name+' · 第 '+number+' 堂',
+          detail:date+(time?' · '+time:'')+(content?' · '+content.slice(0,72)+(content.length>72?'…':''):'')});
+      }
+    }
+    return found;
+  }
+  function refresh(){
+    if(!dialog.open)return;
+    const query=normalized(input.value),tokens=query.split(' ').filter(Boolean);
+    if(!tokens.length){
+      status.textContent='';list.replaceChildren();results=[];previousMarkup='';
+      return;
+    }
+    const {knowledge,papers,loading}=studyRoom.searchCatalog();
+    const matches=item=>{
+      const fields=[item.title,item.detail,...(item.terms||[])].map(compact);
+      return tokens.every(token=>fields.some(field=>field.includes(token)));
+    };
+    const active=document.activeElement.closest('[data-global-result]');
+    const focusedKey=active&&list.contains(active)&&results[Number(active.dataset.globalResult)]?.key;
+    const scroll=list.scrollTop;
+    results=[...matchingLessons(query),...knowledge.filter(matches),...papers.filter(matches)]
+      .map(item=>({...item,key:resultKey(item)}));
+    const loadingMore=loading||scheduleSearchLoading&&navigator.onLine;
+    const summary=results.length?'找到 '+results.length+' 筆'+(loadingMore?' · 部分資料仍在載入':''):
+      loadingMore?'資料載入中…':'找不到符合的結果。';
+    if(status.textContent!==summary)status.textContent=summary;
+    const markup=groups.map(([kind,label])=>{
+      const rows=results.map((item,index)=>item.kind===kind?`<li><button type="button" class="btn global-search-result" data-global-result="${index}" data-search-kind="${kind}">
+        <strong>${esc(item.title)}</strong><span class="study-meta">${esc(item.detail)}</span>
+      </button></li>`:'').join('');
+      return rows?' <section class="global-search-group"><h3>'+label+'</h3><ul>'+rows+'</ul></section>':'';
+    }).join('');
+    if(markup===previousMarkup)return;
+    previousMarkup=markup;
+    list.innerHTML=markup;
+    list.scrollTop=scroll;
+    if(focusedKey)(buttonFor(focusedKey)||input).focus({preventScroll:true});
+  }
+  function buttonFor(key){
+    const index=results.findIndex(item=>item.key===key);
+    return index<0?null:list.querySelector('[data-global-result="'+index+'"]');
+  }
+  function syncEntry(){
+    const blocked=!!studyRoom.searchBlocked();
+    trigger.disabled=blocked;
+    trigger.title=blocked?'作答期間暫停全站搜尋':'全站搜尋（Ctrl／⌘ + K）';
+    if(blocked&&dialog.open)close(false);
+  }
+  function open(restoreResult=false){
+    if(studyRoom.searchBlocked())return;
+    if(dialog.open){input.focus({preventScroll:true});return;}
+    const top=topAppDialog()?.dialog;
+    if(top&&!(top===wideDay&&wideDay.dataset.stage==='detail'&&target?.kind==='lesson'))return;
+    opener=document.activeElement;
+    showAppDialog(dialog,close);
+    refresh();
+    list.scrollTop=savedScroll;
+    ((restoreResult&&buttonFor(selectedKey))||input).focus({preventScroll:true});
+  }
+  function close(restoreFocus=true){
+    if(!dialog.open)return;
+    savedScroll=list.scrollTop;
+    dialog.close();
+    if(restoreFocus&&opener?.isConnected)opener.focus({preventScroll:true});
+    opener=null;
+  }
+  function reset(){
+    close(false);
+    input.value='';savedScroll=0;target=null;selectedKey='';results=[];previousMarkup='';
+    status.textContent='';list.replaceChildren();
+    $id('global-search-day-return').hidden=true;
+    $id('global-search-study-return')?.remove();
+  }
+  function visitLesson(item){
+    if(isMobile())mobileTab('cal');
+    else setWidePage('calendar');
+    const [year,month]=item.date.split('-').map(Number);
+    S.year=year;S.month=month-1;
+    selectDate(item.date);
+    if(isMobile())mobileTab('day','detail');
+    const entry=[...$id('day-events').querySelectorAll('[data-day-edit]')].find(button=>button.dataset.dayEdit===item.id);
+    if(entry){
+      const completed=entry.closest('.day-completed');
+      if(completed)completed.open=true;
+      entry.closest('.day-lesson').setAttribute('data-search-target','');
+      entry.scrollIntoView({block:'nearest'});
+      entry.focus({preventScroll:true});
+    }
+  }
+  function choose(index){
+    const item=results[index];
+    if(!item||studyRoom.searchBlocked())return;
+    if(item.kind==='lesson'&&!S.calendar[item.date]?.some(lesson=>lesson.id===item.id)){refresh();return;}
+    selectedKey=item.key;
+    target=item;
+    close(false);
+    if(wideDay.open)closeDayPanel();
+    if(item.kind==='lesson')visitLesson(item);
+    else if(!studyRoom.openSearchDestination(item)){target=null;open();}
+  }
+  trigger.addEventListener('click',()=>open());
+  $id('global-search-close').addEventListener('click',()=>close());
+  $id('global-search-day-return').addEventListener('click',()=>open(true));
+  $id('study-room').addEventListener('click',event=>{
+    if(event.target.closest('#global-search-study-return'))open(true);
+  });
+  bindWideDialog(dialog,close);
+  input.addEventListener('input',event=>{
+    if(event.isComposing)return;
+    savedScroll=0;list.scrollTop=0;refresh();
+  });
+  input.addEventListener('compositionend',()=>{savedScroll=0;list.scrollTop=0;refresh();});
+  list.addEventListener('click',event=>{
+    const button=event.target.closest('[data-global-result]');
+    if(button)choose(Number(button.dataset.globalResult));
+  });
+  dialog.addEventListener('keydown',event=>{
+    if(event.isComposing||event.keyCode===229)return;
+    if(event.key==='Escape'){
+      event.preventDefault();close();return;
+    }
+    const buttons=resultButtons(),index=buttons.indexOf(document.activeElement);
+    if(event.key==='Enter'&&event.target===input&&buttons.length){
+      event.preventDefault();choose(0);
+    }else if((event.key==='ArrowDown'||event.key==='ArrowUp')&&(index>=0||event.target===input)){
+      event.preventDefault();
+      const step=event.key==='ArrowDown'?1:-1;
+      const next=index<0?(step===1?buttons[0]:buttons.at(-1)):buttons[index+step];
+      (next||input).focus();
+    }
+  });
+  document.addEventListener('keydown',event=>{
+    if(event.isComposing||event.altKey||event.shiftKey||!(event.ctrlKey||event.metaKey)||event.key.toLowerCase()!=='k')return;
+    event.preventDefault();
+    open();
+  },true);
+  for(const type of ['online','offline'])window.addEventListener(type,refresh);
+
+  return {refresh,reset,syncEntry,
+    fromLessonDate:date=>target?.kind==='lesson'&&target.date===date,
+    fromStudyView:(screen,id,subject)=>target?.kind==='paper'&&screen==='paper'&&target.id===id||
+      target?.kind==='knowledge'&&screen==='library'&&target.subject===subject};
 })();
 
 // Refresh the due count in tabs that stay open overnight or resume from sleep.
