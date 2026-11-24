@@ -3753,6 +3753,23 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
 #global-search-day-return {margin-block-end:8px;}
 #panel-r .day-lesson[data-search-target] {box-shadow:inset 0 0 0 1px var(--ui-focus);}
 
+#review-plan-dialog .study-field{margin-block:12px;}
+#review-plan-source{overflow-wrap:anywhere;}
+#review-plan-form [hidden],#paper-group-actions [hidden]{display:none;}
+.review-plan-presets{justify-content:flex-start;gap:8px;}
+.review-plan-presets button[aria-pressed=true]{background:var(--nav-sel);}
+.planned-review-list{display:grid;gap:8px;margin-block:8px;}
+.planned-review-row{flex-wrap:wrap;}
+.planned-review-row .study-brief-text{min-width:min(100%,9rem);}
+.planned-review-actions{display:flex;flex-wrap:wrap;gap:6px;}
+.cal-review-tag,.week-review-tag{
+  display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:var(--nav-sel);color:var(--text);border-radius:4px;
+  padding:1px 4px;font-size:.7rem;line-height:1.35;
+}
+.week-review-tag{margin:2px;}
+#day-planned-reviews:empty{display:none;}
+
 /* Today, the calendar side panel and date details share this lesson row. */
 #panel-r .day-card.day-lesson {
   display:grid;
@@ -3846,7 +3863,7 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   stroke-linejoin:round;
 }
 #panel-r .day-lesson .day-lesson-remove {color:var(--danger-c);}
-#panel-r .day-lesson :is(.done-check,.day-lesson-remove,[data-day-practice]) {position:relative;z-index:2;}
+#panel-r .day-lesson :is(.done-check,.day-lesson-remove,[data-day-practice],[data-plan-chapter]) {position:relative;z-index:2;}
 #panel-r .day-lesson-actions[hidden] {display:none;}
 #panel-r .day-lesson-actions .act-btn {min-height:44px;min-width:44px;}
 #panel-r .day-lesson-chapter {margin-inline-end:auto;align-self:center;overflow-wrap:anywhere;}
@@ -4733,6 +4750,24 @@ onAuthStateChanged(auth,user=>{
   <p id="global-search-status" class="study-meta" role="status"></p>
   <div id="global-search-results"></div>
 </dialog>
+<dialog id="review-plan-dialog" class="local-dialog" aria-labelledby="review-plan-title">
+  <div class="makeup-head"><h2 id="review-plan-title">安排複習</h2><button type="button" class="btn popup-close" id="review-plan-close" aria-label="關閉複習設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+  <p id="review-plan-source" class="study-meta"></p>
+  <form id="review-plan-form">
+    <div class="study-actions review-plan-presets" role="group" aria-label="複習日期快捷選擇">
+      <button type="button" class="btn btn-sand" data-review-offset="1" aria-pressed="false">明天</button>
+      <button type="button" class="btn btn-sand" data-review-offset="3" aria-pressed="false">3 天後</button>
+      <button type="button" class="btn btn-sand" data-review-offset="7" aria-pressed="false">7 天後</button>
+    </div>
+    <label class="study-field">日期<input id="review-plan-date" type="date" required></label>
+    <p class="study-error" id="review-plan-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-sand" id="review-plan-cancel-item" hidden>取消這項複習</button>
+      <button type="button" class="btn btn-sand" id="review-plan-complete" hidden>標記完成</button>
+      <button type="submit" class="btn btn-primary">確認安排</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="day-edit-dialog" class="local-dialog" aria-labelledby="day-edit-title">
   <section id="day-edit-panel" hidden>
     <div class="day-edit-head">
@@ -5234,7 +5269,7 @@ function checkIOSInstall() {
 const PALETTE=['#c96442','#7a8c6e','#6b8fa8','#9e7b8a','#c4924a','#5a7a8a','#8a7a9e','#7a6a5a'];
 let colorCursor=0;
 const S={
-  courses:[],calendar:{},
+  courses:[],calendar:{},reviewPlans:[],
   year:new Date().getFullYear(),month:new Date().getMonth(),
   selectedDate:null,view:'month',weekStart:null,
   dragCourseId:null,tapCourseId:null,cid:1,eid:1,
@@ -5350,11 +5385,12 @@ let globalSearch=null,scheduleSearchLoading=false;
 let _syncPaused=false; // prevent echo loop when applying remote data
 
 function statePayload(){
-  return{courses:S.courses,calendar:S.calendar,cid:S.cid,eid:S.eid,colorCursor,notes:S.notes};
+  return{courses:S.courses,calendar:S.calendar,reviewPlans:S.reviewPlans,cid:S.cid,eid:S.eid,colorCursor,notes:S.notes};
 }
 function applyPayload(d){
   if(d.courses)S.courses=d.courses;
   if(d.calendar)S.calendar=d.calendar;
+  S.reviewPlans=normalizeReviewPlans(d.reviewPlans);
   if(d.cid)S.cid=d.cid;
   if(d.eid)S.eid=d.eid;
   if(d.colorCursor!=null)colorCursor=d.colorCursor;
@@ -5488,7 +5524,7 @@ function showFirebaseSetup(){
 
 // ── Export / Import ───────────────────────────────────────────────
 function exportData(){
-  return JSON.stringify({courses:S.courses,calendar:S.calendar,cid:S.cid,eid:S.eid,colorCursor,notes:S.notes,learning:studyRoom.backup(),exportedAt:new Date().toISOString()},null,2);
+  return JSON.stringify({...statePayload(),learning:studyRoom.backup(),exportedAt:new Date().toISOString()},null,2);
 }
 function showExport(){
   const url=URL.createObjectURL(new Blob([exportData()],{type:'application/json'}));
@@ -5595,7 +5631,7 @@ backupConfirm.addEventListener('click',()=>{
   }
   closeBackupImport();
   lastRepeatBatch=null;
-  S.courses=d.courses||[];S.calendar=d.calendar||{};
+  S.courses=d.courses||[];S.calendar=d.calendar||{};S.reviewPlans=normalizeReviewPlans(d.reviewPlans);
   updateRepeatScheduleForm(repeatForm);
   renderRepeatScheduleResult();
   S.notes=d.notes||{};
@@ -7488,7 +7524,9 @@ function monthMarkup(y,m,slideClass=''){
     const s=ds(y,m,d),evts=calendarLessonsForDate(s);
     const isTap=!!S.tapCourseId;
     // empty-day = has no events and is not in the past for quick-add hint
-    const isEmpty=!S.calendar[s]?.length;
+    const reviewCount=reviewPlansOn(s).length;
+    const reviewTag=calendarReviewTag(reviewCount);
+    const isEmpty=!S.calendar[s]?.length&&!reviewTag;
     const cls=['cal-cell',
       s===todayStr?'today':'',
       s===S.selectedDate?'selected':'',
@@ -7497,7 +7535,7 @@ function monthMarkup(y,m,slideClass=''){
     ].filter(Boolean).join(' ');
     const exam=examMarkHtml(s);
     const compact=isMobile();
-    const capacity=compact&&exam?1:3;
+    const capacity=Math.max(1,(compact&&exam?1:3)-(reviewTag?1:0));
     const limit=compact&&evts.length>capacity?capacity-1:capacity;
     const tags=evts.slice(0,limit).map(ev=>{
       const c=course(ev.courseId);if(!c)return'';
@@ -7510,10 +7548,10 @@ function monthMarkup(y,m,slideClass=''){
     }).join('');
     const overflow=evts.length-limit;
     const more=overflow>0?`<span class="cal-overflow">${compact?'＋':'+'}${overflow}${compact?' 堂':''}</span>`:'';
-    html+=`<div class="${cls}" role="button" tabindex="0" data-calendar-date="${s}" aria-label="${s}，${evts.length} 堂課" aria-pressed="${s===S.selectedDate}" ${s===todayStr?'aria-current="date"':''} onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')"
+    html+=`<div class="${cls}" role="button" tabindex="0" data-calendar-date="${s}" aria-label="${s}，${evts.length} 堂課${reviewCount?"，"+reviewCount+" 項複習":""}" aria-pressed="${s===S.selectedDate}" ${s===todayStr?'aria-current="date"':''} onclick="handleCellClick('${s}')" onkeydown="activateCalendarDate(event,'${s}')"
          ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${s}')">
       <div class="date-num">${d}</div>
-      <div class="cal-tags">${exam}${tags}${more}</div>
+      <div class="cal-tags">${exam}${reviewTag}${tags}${more}</div>
     </div>`;
   }
   return `<div class="cal-grid${slideClass?' '+slideClass:''}">${html}</div>`;
@@ -7584,7 +7622,8 @@ function weekMarkup(start){
   weekDays.forEach((date,i)=>{
     const d=Number(date.slice(-2));
     const exams=examMarkHtml(date);
-    headHtml+=`<div class="wch-day ${date===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${date}，${lessonsByDay[i].length} 堂課" aria-pressed="${date===S.selectedDate}" data-calendar-date="${date}" onclick="handleCellClick('${date}')" onkeydown="activateCalendarDate(event,'${date}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span></button>${exams?'<div class="wch-exams">'+exams+'</div>':''}</div>`;
+    const reviewCount=reviewPlansOn(date).length;
+    headHtml+=`<div class="wch-day ${date===todayStr?'today-col':''}"><button class="week-day-button" aria-label="${date}，${lessonsByDay[i].length} 堂課${reviewCount?"，"+reviewCount+" 項複習":""}" aria-pressed="${date===S.selectedDate}" data-calendar-date="${date}" onclick="handleCellClick('${date}')" onkeydown="activateCalendarDate(event,'${date}')">${WDAYS[(i+(isMobile()?0:1))%7]}<span class="wch-date">${d}</span>${calendarReviewTag(reviewCount,true)}</button>${exams?'<div class="wch-exams">'+exams+'</div>':''}</div>`;
     const untimed=lessonsByDay[i].filter(lesson=>weekMinute(lesson.time)===null);
     const cls=['week-slot-unsched',date===S.selectedDate?'selected-slot':'',isTap?'tap-target-ready':''].filter(Boolean).join(' ');
     unHtml+=`<div class="${cls}" data-drop-date="${date}" onclick="handleCellClick('${date}')" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'${date}','')">${untimed.map(lesson=>wkEv(lesson,date)).join('')}</div>`;
@@ -8642,6 +8681,22 @@ document.getElementById('day-events').addEventListener('click',event=>{
     });
     return;
   }
+  const chapterPlan=event.target.closest('[data-plan-chapter]');
+  const editPlan=event.target.closest('[data-review-edit]');
+  const startPlan=event.target.closest('[data-review-start]');
+  if(chapterPlan){
+    const lesson=S.calendar[dayPanelDate()]?.find(item=>item.id===chapterPlan.dataset.planChapter);
+    if(lesson?.chapterLink)openReviewPlan({kind:'chapter',...lesson.chapterLink},chapterPlan);
+    return;
+  }
+  if(editPlan||startPlan){
+    const item=S.reviewPlans.find(plan=>plan.id===(editPlan?.dataset.reviewEdit||startPlan?.dataset.reviewStart)&&!plan.done);
+    if(item){
+      if(editPlan)openReviewPlan(item.source,editPlan,item);
+      else studyRoom.startPlannedReview(item);
+    }
+    return;
+  }
   const practice=event.target.closest('[data-day-practice]');
   if(practice){
     const lesson=S.calendar[dayPanelDate()]?.find(item=>item.id===practice.dataset.dayPractice);
@@ -8670,11 +8725,145 @@ function scheduledLessonNumbers(subjects,calendar=S.calendar){
   }
   return numbers;
 }
+function reviewPlanKey(source){
+  return source.kind==='chapter'?JSON.stringify(['chapter',source.subject,source.chapterId]):
+    JSON.stringify(['paper',source.paperId,source.roundId,source.filter]);
+}
+function normalizeReviewPlans(items){
+  if(!Array.isArray(items))return [];
+  const ids=new Set(),pending=new Set(),result=[];
+  for(const item of items){
+    const source=item?.source;
+    if(typeof item?.id!=='string'||ids.has(item.id)||typeof item.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(item.date)||
+      addDays(item.date,0)!==item.date||typeof item.title!=='string'||
+      !(source?.kind==='chapter'&&typeof source.subject==='string'&&typeof source.chapterId==='string'||
+        source?.kind==='paper'&&typeof source.paperId==='string'&&typeof source.roundId==='string'&&
+        ['incorrect','uncertain','unanswered'].includes(source.filter)))continue;
+    const key=reviewPlanKey(source);
+    if(!item.done&&pending.has(key))continue;
+    ids.add(item.id);
+    if(!item.done)pending.add(key);
+    result.push({id:item.id,date:item.date,title:item.title,source,done:!!item.done});
+  }
+  return result;
+}
+function reviewPlansOn(date){
+  return S.reviewPlans.filter(item=>item.date===date);
+}
+function pendingReviewPlan(source){
+  const key=reviewPlanKey(source);
+  return S.reviewPlans.find(item=>!item.done&&reviewPlanKey(item.source)===key);
+}
+function calendarReviewTag(count,weekly=false){
+  return count?`<span class="${weekly?'week-review-tag':'cal-review-tag'}">複習${count>1?' '+count:''}</span>`:'';
+}
+function reviewScheduleHTML(date=null){
+  const today=localDateKey();
+  const items=(date?reviewPlansOn(date):S.reviewPlans.filter(item=>!item.done&&item.date<=today))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  if(!items.length)return '';
+  return `<div class="planned-review-list"><h3 class="day-panel-title">${date?'安排的複習':'待複習安排'}</h3>
+  ${items.map(item=>{
+    const info=studyRoom.plannedReviewInfo(item.source);
+    const state=item.done?'已完成':item.date<today?'逾期':item.date===today?'今天到期':'已安排';
+    return `<div class="study-brief-card planned-review-row">
+      <div class="study-brief-text"><strong class="study-brief-subject">${esc(info?.title||item.title)}</strong>
+        <span class="study-brief-meta">${esc(item.date)} · ${state}${!item.done&&!info?.count?' · '+(info?.waiting?'載入中':info?'目前沒有可練題目':'來源已無法使用'):''}</span></div>
+      <div class="planned-review-actions">${!item.done&&info?.count?`<button type="button" class="btn btn-primary" data-review-start="${esc(item.id)}">${studyRoom.plannedReviewActive(item)?'繼續':'開始'}</button>`:''}
+        ${!item.done?`<button type="button" class="btn btn-sand" data-review-edit="${esc(item.id)}">查看或改期</button>`:''}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function refreshDayReviewPlans(){
+  const slot=$id('day-planned-reviews');
+  if(!slot)return;
+  const wanted=isTodayPage()?'':reviewScheduleHTML(dayPanelDate());
+  if(slot.planMarkup===wanted)return;
+  slot.planMarkup=wanted;
+  const active=document.activeElement,focused=slot.contains(active);
+  slot.innerHTML=wanted;
+  if(focused){
+    const controls=[...slot.querySelectorAll('[data-review-edit],[data-review-start]')];
+    (controls.find(control=>control.dataset.reviewEdit===active.dataset.reviewEdit&&control.dataset.reviewStart===active.dataset.reviewStart)||$id('day-schedule-open')).focus({preventScroll:true});
+  }
+}
+function saveReviewPlans(items){
+  const previous=S.reviewPlans;
+  S.reviewPlans=items;
+  try{saveState({requireLocal:true});}
+  catch{S.reviewPlans=previous;return false;}
+  return true;
+}
+function completePlannedReview(id){
+  if(!id||!S.reviewPlans.some(item=>item.id===id&&!item.done))return;
+  if(saveReviewPlans(S.reviewPlans.map(item=>item.id===id?{...item,done:true}:item)))render();
+  else toast('複習已作答，尚未儲存完成狀態。','warn');
+}
+const reviewPlanDialog=$id('review-plan-dialog'),reviewPlanForm=$id('review-plan-form'),reviewPlanDate=$id('review-plan-date');
+let reviewPlanDraft=null;
+function syncReviewPlanPresets(){
+  for(const button of reviewPlanForm.querySelectorAll('[data-review-offset]'))
+    button.setAttribute('aria-pressed',String(reviewPlanDate.value===addDays(localDateKey(),Number(button.dataset.reviewOffset))));
+}
+function closeReviewPlan(){
+  const previous=reviewPlanDraft;
+  reviewPlanDraft=null;
+  reviewPlanDialog.close();
+  if(previous?.opener?.isConnected)previous.opener.focus({preventScroll:true});
+}
+function openReviewPlan(source,opener,existing=pendingReviewPlan(source)){
+  const info=studyRoom.plannedReviewInfo(source);
+  if(!existing&&!info?.title){toast('這個複習來源已無法使用。','warn');return;}
+  reviewPlanDraft={source,id:existing?.id||null,opener};
+  reviewPlanDate.value=existing?.date||addDays(localDateKey(),1);
+  $id('review-plan-title').textContent=existing?'查看或改期':'安排複習';
+  $id('review-plan-source').textContent=info?.title||existing.title;
+  $id('review-plan-error').textContent='';
+  $id('review-plan-cancel-item').hidden=!existing;
+  $id('review-plan-complete').hidden=!existing;
+  reviewPlanForm.querySelector('[type=submit]').textContent=existing?'儲存日期':'確認安排';
+  syncReviewPlanPresets();
+  showAppDialog(reviewPlanDialog,closeReviewPlan);
+  reviewPlanDate.focus({preventScroll:true});
+}
+bindWideDialog(reviewPlanDialog,closeReviewPlan);
+$id('review-plan-close').addEventListener('click',closeReviewPlan);
+reviewPlanForm.addEventListener('click',event=>{
+  const button=event.target.closest('[data-review-offset]');
+  if(!button)return;
+  reviewPlanDate.value=addDays(localDateKey(),Number(button.dataset.reviewOffset));
+  syncReviewPlanPresets();
+});
+reviewPlanDate.addEventListener('input',syncReviewPlanPresets);
+reviewPlanForm.addEventListener('submit',event=>{
+  event.preventDefault();
+  if(!reviewPlanDraft||!reviewPlanDate.value||!reviewPlanDate.validity.valid)return;
+  const {source,id}=reviewPlanDraft;
+  const existing=pendingReviewPlan(source),info=studyRoom.plannedReviewInfo(source);
+  if(id&&existing?.id!==id||!existing&&!info?.title){$id('review-plan-error').textContent='這項複習已變更，請關閉後重新開啟。';return;}
+  const item={id:existing?.id||'r-'+crypto.randomUUID(),source,date:reviewPlanDate.value,title:info?.title||existing.title,done:false};
+  const items=existing?S.reviewPlans.map(plan=>plan.id===existing.id?item:plan):[...S.reviewPlans,item];
+  if(!saveReviewPlans(items)){$id('review-plan-error').textContent='無法儲存複習安排，請重試。';return;}
+  closeReviewPlan();render();
+  toast(existing?'已更新複習日期':'已安排複習','success');
+});
+function finishReviewPlan(remove){
+  const id=reviewPlanDraft?.id;
+  if(!id||!S.reviewPlans.some(item=>item.id===id&&!item.done))return;
+  const next=remove?S.reviewPlans.filter(item=>item.id!==id):S.reviewPlans.map(item=>item.id===id?{...item,done:true}:item);
+  if(!saveReviewPlans(next)){$id('review-plan-error').textContent='無法儲存複習狀態，請重試。';return;}
+  closeReviewPlan();render();
+  toast(remove?'已取消複習':'已標記完成','success');
+}
+$id('review-plan-cancel-item').addEventListener('click',()=>finishReviewPlan(true));
+$id('review-plan-complete').addEventListener('click',()=>finishReviewPlan(false));
+
 function lessonChapterActions(lesson){
   if(!lesson.chapterLink)return '';
   const linked=studyRoom.lessonChapter(lesson.chapterLink);
   const label=linked?.name?'章節：'+linked.name:linked?.waiting?'章節載入中':'章節無法使用，請在編輯課堂重新選擇';
   return `<span class="study-meta day-lesson-chapter">${esc(label)}</span>
+    ${linked?.name?`<button type="button" class="act-btn" data-plan-chapter="${esc(lesson.id)}" aria-haspopup="dialog">安排複習</button>`:''}
     ${isTodayPage()&&linked?.count?`<button type="button" class="act-btn" data-day-practice="${esc(lesson.id)}">練習本章</button>`:''}`;
 }
 function refreshLessonChapterActions(){
@@ -8689,7 +8878,7 @@ function refreshLessonChapterActions(){
     const hadFocus=slot.contains(document.activeElement);
     slot.innerHTML=wanted;
     slot.hidden=!wanted;
-    if(hadFocus)(slot.querySelector('[data-day-practice]')||slot.closest('.day-lesson').querySelector('[data-day-edit]')).focus({preventScroll:true});
+    if(hadFocus)([...slot.querySelectorAll('button')].find(button=>button.dataset.planChapter===active.dataset.planChapter&&button.dataset.dayPractice===active.dataset.dayPractice)||slot.closest('.day-lesson').querySelector('[data-day-edit]')).focus({preventScroll:true});
   }
 }
 function renderDayLesson(ev,subject,lessonNumber){
@@ -8792,6 +8981,7 @@ function studyBriefHTML(){
           <span class="study-brief-meta">${esc(review.position)}</span></div>
         <button type="button" class="btn ${hasPrimary?'btn-sand':'btn-primary'} study-brief-go" id="study-brief-review-resume">繼續檢討</button>
       </div>`:''}
+      ${reviewScheduleHTML()}
       <div class="day-study-options">${studyDueHTML(brief)}${studyExamHTML(brief)}</div>
     </section>`;
 }
@@ -8969,6 +9159,7 @@ function renderDayPanel(){
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
+      <div id="day-planned-reviews"></div>
     </section>${onToday?`<div class="today-review-column">
       <div class="study-brief-slot" id="study-brief-slot"></div>
       <section class="day-panel-section">
@@ -8992,6 +9183,7 @@ function renderDayPanel(){
     </section>
   </div>`;
   renderDayMemo();
+  refreshDayReviewPlans();
   refreshStudyBrief();
   refreshWeeklyReview();
 }
@@ -11398,6 +11590,7 @@ const batchDialog=$id('study-batch');
     refreshStudyBrief();
     refreshWeeklyReview();
     refreshLessonChapterActions();
+    refreshDayReviewPlans();
   }
   function record(outcome){
     if(!session||!['question','grade'].includes(session.phase))return;
@@ -11667,7 +11860,10 @@ const batchDialog=$id('study-batch');
       phase:record?'feedback':drafts[nextId]?.phase||'question',
       answer:record?.answer??(record?'':drafts[nextId]?.answer||'')};
     if(!persist()){session=previous;return;}
-    if(session.paperId&&roundComplete(session))rememberCompletedPaper(session);
+    if(roundComplete(session)){
+      if(session.paperId)rememberCompletedPaper(session);
+      completePlannedReview(session.reviewPlanId);
+    }
     if(!paperQuestionMapDocked()||roundComplete(session))closePaperQuestionMap(false);
     go(roundComplete(session)?'results':'session');
   }
@@ -11819,6 +12015,7 @@ const batchDialog=$id('study-batch');
     if(active){closePaperQuestionMap(false);flushExamDraft();}
     const previous=data.examSubmissions?.[round.paperResultId]||(active?readPaperReview(round.paperId)?.round:null);
     if(previous?.paperResultId===round.paperResultId){
+      completePlannedReview(previous.reviewPlanId);
       if(active){session=previous;go('results');}
       return true;
     }
@@ -11855,6 +12052,7 @@ const batchDialog=$id('study-batch');
       return false;
     }
     rememberCompletedPaper(completed);
+    completePlannedReview(completed.reviewPlanId);
     if(active&&(screen==='session'||screen==='paper'&&paperId===round.paperId))go('results');
     else if(screen==='papers')updatePaperList();
     else if(screen==='paper'&&paperId===round.paperId)render();
@@ -12206,7 +12404,7 @@ const batchDialog=$id('study-batch');
         Object.entries(paperResultFilters).map(([key,label])=>'<button type="button" class="btn btn-sand" data-study-action="paper-review-filter" data-paper-result-filter="'+key+
           '" aria-pressed="'+(paperResultFilter===key)+'">'+(key==='uncertain'?paperUncertainty:label)+
           ' <span class="paper-review-count">'+rows.filter(row=>matchesPaperResult(row,key)).length+'</span></button>').join('')+'</div>'+
-      '<div class="study-actions" id="paper-group-actions" hidden>'+action('重練這組','paper-retry-group',true)+'</div>'+
+      '<div class="study-actions" id="paper-group-actions" hidden>'+action('重練這組','paper-retry-group',true)+action('安排複習','paper-schedule-review',false,'aria-haspopup="dialog"')+'</div>'+
       '<p id="paper-group-empty" class="study-empty" role="status" hidden>此篩選沒有可重練的題目。</p>'+
       '<ul id="paper-result-list"></ul><p id="paper-result-empty" class="study-empty" role="status" hidden>此篩選沒有題目。</p></section>';
   }
@@ -12230,7 +12428,8 @@ const batchDialog=$id('study-batch');
     const groupCount=retryGroupRows(paperResultRound,paperResultFilter,rows).length;
     const groupActions=$id('paper-group-actions');
     groupActions.hidden=!groupCount;
-    groupActions.querySelector('button').textContent='重練這組（'+groupCount+' 題）';
+    groupActions.querySelector('[data-study-action=paper-retry-group]').textContent='重練這組（'+groupCount+' 題）';
+    groupActions.querySelector('[data-study-action=paper-schedule-review]').hidden=!paperResultRound?.paperResultId||!paper(paperResultRound.paperId);
     $id('paper-group-empty').hidden=paperResultFilter==='all'||!visible.length||groupCount>0;
   }
   function renderPaperResults(currentPaper,round){
@@ -12345,24 +12544,85 @@ const batchDialog=$id('study-batch');
         earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,fromToday||Boolean(session?.paperMix))).join('')+'</details>':'')+
       '<div class="study-actions">'+back+(retryCount?action('重練錯題（'+retryCount+' 題）','retry',true):'')+'</div></div>',false);
   }
+  function plannedPaperSource(source){
+    if(!paper(source.paperId))return null;
+    return completedPaperRounds(source.paperId).find(round=>round.paperResultId===source.roundId);
+  }
+  function plannedReviewInfo(source){
+    if(source.kind==='chapter'){
+      const chapter=lessonChapter(source);
+      if(chapter?.name)return {title:source.subject+' · '+chapter.name,count:chapter.count};
+    }else{
+      const original=plannedPaperSource(source);
+      const p=paper(source.paperId);
+      if(original&&p)return {title:paperTitle(p)+' · '+p.subject+' · '+paperResultFilters[source.filter],
+        count:retryGroupRows(original,source.filter).length};
+    }
+    return waitingForToday()?{waiting:true,count:0}:null;
+  }
+  function plannedReviewActive(item){
+    if(item.source.kind==='paper')return savedMockExam(item.source.paperId,round=>round.reviewPlanId===item.id);
+    return session?.reviewPlanId===item.id&&!roundComplete(session)?session:null;
+  }
+  function startPlannedReview(item){
+    const {source,id}=item;
+    const p=source.kind==='paper'?paper(source.paperId):null;
+    const resume=plannedReviewActive(item);
+    if(resume){
+      const proceed=()=>{
+        if(!S.reviewPlans.some(plan=>plan.id===id&&!plan.done))return;
+        openTodayPractice();
+        if(resume.mockExam){paperId=resume.paperId;resumePaperDraft(resume);}
+        else go('session');
+      };
+      if(resume===session)proceed();
+      else confirmPaperMode('繼續複習',p,proceed);
+      return;
+    }
+    confirmPaperMode('開始複習',p,()=>{
+      if(!S.reviewPlans.some(plan=>plan.id===id&&!plan.done))return;
+      if(source.kind==='paper'){
+        const original=plannedPaperSource(source);
+        if(!original||!retryGroupRows(original,source.filter).length){briefChanged();return;}
+        openTodayPractice();
+        paperId=source.paperId;
+        launchReviewGroup(original,source.filter,id);
+      }else{
+        const chapter=lessonChapter(source);
+        if(!chapter?.count){briefChanged();return;}
+        const ids=data.points.filter(point=>point.subject===source.subject&&point.chapter===chapter.name).map(point=>point.id);
+        openTodayPractice();
+        start(ids,'practice',{subject:source.subject,returnMode:'today',lessonChapterPractice:true,reviewPlanId:id});
+      }
+    });
+  }
+  function launchReviewGroup(source,filter,reviewPlanId=null){
+    const rows=retryGroupRows(source,filter);
+    if(!rows.length)return false;
+    const {paperId,subject,paperMix,wrongBook,mixedSubject,mixedArchive}=source;
+    const scoring=paper(paperId)?.scoring;
+    return startPaperAttempt(rows.map(row=>row.id),{
+      paperId,subject,paperPractice:true,paperRetry:true,
+      ...(paperMix?{paperMix,...(wrongBook?{wrongBook}:{}),mixedSubject:mixedSubject||'',mixedArchive:!!mixedArchive}:{}),
+      scoring:scoring?{...scoring}:null,
+      paperReview:rows.map(({id,number})=>({...paperReviewItem(point(id)),number})),
+      reviewRetry:{roundId:source.paperResultId||'legacy',filter},
+      ...(reviewPlanId?{reviewPlanId}:{}),
+    });
+  }
   function startReviewGroup(){
     const source=paperResultRound,filter=paperResultFilter;
     if(!source||!['results','paper-review-detail'].includes(screen))return;
     confirmPaperMode('重練這組',paper(source.paperId),()=>{
       if(paperResultRound!==source||paperResultFilter!==filter)return;
-      const rows=retryGroupRows(source,filter);
-      if(!rows.length){renderPaperResultList(paperResultRows(source));return;}
-      const {paperId,subject,paperMix,wrongBook,mixedSubject,mixedArchive}=source;
-      const scoring=paper(paperId)?.scoring;
+      if(!retryGroupRows(source,filter).length){renderPaperResultList(paperResultRows(source));return;}
       savePaperReviewPosition(source,{filter,scroll:reviewScrollPositions().map(([,top])=>top)});
-      startPaperAttempt(rows.map(row=>row.id),{
-        paperId,subject,paperPractice:true,paperRetry:true,
-        ...(paperMix?{paperMix,...(wrongBook?{wrongBook}:{}),mixedSubject:mixedSubject||'',mixedArchive:!!mixedArchive}:{}),
-        scoring:scoring?{...scoring}:null,
-        paperReview:rows.map(({id,number})=>({...paperReviewItem(point(id)),number})),
-        reviewRetry:{roundId:source.paperResultId||'legacy',filter}
-      });
+      launchReviewGroup(source,filter);
     });
+  }
+  function scheduleReviewGroup(opener){
+    if(!paperResultRound?.paperResultId||!paper(paperResultRound.paperId)||!retryGroupRows(paperResultRound,paperResultFilter).length)return;
+    openReviewPlan({kind:'paper',paperId:paperResultRound.paperId,roundId:paperResultRound.paperResultId,filter:paperResultFilter},opener);
   }
   function returnToReviewSource(round){
     const link=round?.reviewRetry;
@@ -12587,6 +12847,7 @@ const batchDialog=$id('study-batch');
       }
       go(act==='paper-question'?'paper-question':'paper-question-editor');
     }else if(act==='paper-retry-group')startReviewGroup();
+    else if(act==='paper-schedule-review')scheduleReviewGroup(button);
     else if(act==='paper-retry-source')returnToReviewSource(paperResultRound);
     else if(act==='paper-review-resume'||act==='paper-exam-history-open'||act==='paper-practice-history-open'){
       const history=act!=='paper-review-resume';
@@ -12848,7 +13109,10 @@ const batchDialog=$id('study-batch');
       if(session.origin==='today')syncTodaySession();
       else{session.index++;session.phase='question';session.answer='';}
       const saved=persist();
-      if(saved&&session.paperId&&roundComplete(session))rememberCompletedPaper(session);
+      if(saved&&roundComplete(session)){
+        if(session.paperId)rememberCompletedPaper(session);
+        completePlannedReview(session.reviewPlanId);
+      }
       go(session.index===session.queue.length?'results':'session');
     }else if(session?.phase==='grade'&&Object.hasOwn(outcomes,act))record(act);
   });
@@ -13499,6 +13763,9 @@ const batchDialog=$id('study-batch');
     chapterChoices,
     lessonChapter,
     openLessonChapter,
+    plannedReviewInfo,
+    plannedReviewActive,
+    startPlannedReview,
     openExamChapter,
     startExamScope,
     startWeakBrief,
