@@ -1070,6 +1070,16 @@ body{
 #memo-add,#memo-item-form{margin-top:12px;}
 #memo-item-input{display:block;min-height:68px;margin-bottom:8px;}
 .memo-form-actions{display:flex;flex-wrap:wrap;gap:8px;}
+#today-task-lists{display:grid;gap:var(--sp-4);}
+.today-task-section{min-width:0;padding:var(--sp-3);background:var(--card);border:1px solid var(--border-lt);border-radius:var(--r-md);}
+.today-task-section :is(h3,.memo-checklist){margin-block:0 var(--sp-2);}
+.today-task-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:start;}
+.today-task-form input,.today-task-form .btn{min-height:44px;}
+.today-task-form [hidden]{display:none;}
+.today-task-form input{min-width:0;width:100%;}
+.today-task-status{margin:var(--sp-2) 0 0;color:var(--danger-c);font-size:var(--ui-caption);}
+.today-task-status:empty{display:none;}
+.today-task-section .memo-row>button:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-2px;}
 #memo-item-message{margin:0 0 8px;font-size:13px;color:var(--danger-c);}
 #memo-item-message:empty{display:none;}
 
@@ -6970,7 +6980,7 @@ function isTodayPage(){
   return isMobile()?$id('panel-r').dataset.mobileDay==='today':!wideToday.hidden;
 }
 function dayPanelDate(){
-  return isTodayPage()?todayStr:S.selectedDate;
+  return isTodayPage()?localDateKey():S.selectedDate;
 }
 function setWidePage(page){
   const wide=wideMedia.matches;
@@ -8032,6 +8042,7 @@ function refreshWeekProgressClock(){
   if(localToday!==progressClockDate){
     progressClockDate=localToday;
     renderCourses();
+    if(isTodayPage())renderDayPanel();
   }
   nextDay.setHours(24,0,0,0);
   weekProgressRollover=setTimeout(refreshWeekProgressClock,Math.max(0,nextDay.getTime()-Date.now())+50);
@@ -9268,6 +9279,8 @@ $id('day-events').addEventListener('click',event=>{
   }
 });
 
+const todayTaskLifetime=24*60*60*1000;
+let todayTaskView=null;
 function renderDayPanel(){
   if(dayScheduleDate)refreshDayScheduleCourses();
   const label=document.getElementById('day-label');
@@ -9301,7 +9314,7 @@ function renderDayPanel(){
   }
 
   label.textContent=fmtDate(date);
-  if(date===todayStr){
+  if(date===localDateKey()){
     const badge=document.createElement('span');
     badge.className='day-label-today-badge';
     badge.textContent='今天';
@@ -9330,6 +9343,7 @@ function renderDayPanel(){
     <div class="day-lesson-list day-completed-list">${completed.join('')}</div>
   </details>`:'';
 
+  const taskFocus=todayTaskView?.root.contains(document.activeElement)?document.activeElement:null;
   el.innerHTML=`<div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
@@ -9343,6 +9357,7 @@ function renderDayPanel(){
           <div class="today-weekly-content" id="today-weekly-content"></div>
         </details>
       </section>
+      <div id="today-tasks-slot"></div>
     </div>`:''}
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">提醒事項</h3>
@@ -9361,6 +9376,7 @@ function renderDayPanel(){
   refreshDayReviewPlans();
   refreshStudyBrief();
   refreshWeeklyReview();
+  todayTaskView?.mount(taskFocus);
 }
 
 const ghost=document.getElementById('drag-ghost');
@@ -10038,7 +10054,7 @@ pillMotion.mount(document);
 
 const TODAY_ROUND_LIMIT=5;
 const learningJournal=(()=>{
-  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer','paper','paper-question','paper-subject','exam-draft','exam-submit']);
+  const kinds=new Set(['point','delete','subject','chapter','move','baseline','answer','today-round','today-answer','paper','paper-question','paper-subject','exam-draft','exam-submit','today-task']);
   const outcomes=new Set(['correct','incorrect','partial','missed','viewed']);
   const fields=['subject','chapter','question','answer','explanation','accepted','options','source','sourceQuestionId'];
   const text=v=>typeof v==='string';
@@ -10068,9 +10084,46 @@ const learningJournal=(()=>{
   const validScoring=value=>value===undefined||value===null||
     (objectValue(value)&&pointValue(value.correct)&&pointValue(value.wrong));
   const numberKey=value=>String(value).trim().normalize('NFKC').toLowerCase().replace(/^0+(?=\d+$)/,'');
-  function valid(op){
+  function validTodayTask(target,value){
+    if(!validPointId(target)||!objectValue(value)||!['daily','todo'].includes(value.type)||
+      !Number.isSafeInteger(value.at)||value.at<0)return false;
+    const keys=Object.keys(value);
+    if(value.action==='create'||value.action==='edit')return keys.length===4&&text(value.text)&&
+      value.text.trim()===value.text&&value.text.length>0&&value.text.length<=160;
+    if(value.action==='delete')return keys.length===3;
+    if(!['check','uncheck'].includes(value.action))return false;
+    return value.type==='daily'?keys.length===4&&validDay(value.date):keys.length===3;
+  }
+  function projectTodayTasks(entries){
+    const events=entries.filter(([,op])=>op.kind==='today-task');
+    const items=new Map();
+    for(const [id,{target,value}] of events){
+      if(id===target&&value.action==='create'){
+        items.set(id,{id,type:value.type,text:value.text,createdAt:value.at,completedAt:null,days:{}});
+      }
+    }
+    // Compare actual event times so an offline uncheck made before expiry can still be honored.
+    for(const [, {target,value}] of events.sort(([,a],[,b])=>a.value.at-b.value.at)){
+      const item=items.get(target);
+      if(!item||item.type!==value.type||value.action==='create')continue;
+      if(value.action==='delete'){items.delete(target);continue;}
+      if(item.type==='todo'&&item.completedAt!==null&&value.at>=item.completedAt+todayTaskLifetime)continue;
+      if(value.action==='edit'){item.text=value.text;continue;}
+      const completedAt=item.type==='daily'?item.days[value.date]??null:item.completedAt;
+      if(completedAt!==null&&value.at>=completedAt+todayTaskLifetime)continue;
+      if(value.action==='check'&&completedAt!==null||value.action==='uncheck'&&completedAt===null)continue;
+      const next=value.action==='check'?value.at:null;
+      if(item.type==='todo')item.completedAt=next;
+      else if(next===null)delete item.days[value.date];
+      else item.days[value.date]=next;
+    }
+    return [...items.values()];
+  }
+  function valid(op,id){
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
     const value=op.value;
+    if(op.kind==='today-task')return validTodayTask(op.target,value)&&
+      (id===undefined||(value.action==='create')===(id===op.target));
     if(op.kind==='exam-draft'&&value?.patch){
       const patch=value.patch;
       return validPointId(op.target)&&value.paperResultId===op.target&&Number.isSafeInteger(value.updatedAt)&&objectValue(patch)&&
@@ -10134,10 +10187,11 @@ const learningJournal=(()=>{
       }
       return aliases.get(key);
     }
-    const ordered=Object.entries(journal).filter(([,op])=>valid(op))
+    const ordered=Object.entries(journal).filter(([id,op])=>valid(op,id))
       .sort(([a,x],[b,y])=>x.clock-y.clock||(a<b?-1:a>b?1:0));
     for(const [id,op] of ordered){
       const {kind,target,value}=op;
+      if(kind==='today-task')continue;
       if(kind==='exam-draft'){
         if(value.patch?.discarded){examDiscarded.add(target);continue;}
         if(!value.patch){
@@ -10268,7 +10322,7 @@ const learningJournal=(()=>{
     const paperLastGraded=Object.fromEntries(keptPaperQuestions.filter(p=>lastGraded.has(p.id)).map(p=>[p.id,lastGraded.get(p.id)]));
     for(const id of examSubmissions.keys())examDrafts.delete(id);
     for(const id of examDiscarded)examDrafts.delete(id);
-    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examDiscarded:[...examDiscarded],examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],...(todayRound?{todayRound,todayRetries}:{})};
+    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examDiscarded:[...examDiscarded],examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],todayTasks:projectTodayTasks(ordered),...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
     const ops=[];
@@ -10320,6 +10374,7 @@ const learningJournal=(()=>{
 
 const studyRoom=(()=>{
   const key='studyos-learning-v1';
+  const guestTaskPrefix=key+':task-op:';
   const builtins=['國文','英文','生物','普通化學','有機化學'];
   const outcomes={correct:'答對',incorrect:'答錯',partial:'部分答對',missed:'沒答出來',viewed:'直接看答案'};
   const root=$id('study-room');
@@ -10337,7 +10392,7 @@ const studyRoom=(()=>{
       item.chapters.every(ch=>text(ch)&&ch.trim()===ch&&!!ch)&&new Set(item.chapters).size===item.chapters.length)||
       new Set(data.catalog.map(item=>item.name)).size!==data.catalog.length))return false;
     if(data.syncJournal!==undefined&&(!object(data.syncJournal)||!Object.entries(data.syncJournal).every(([id,op])=>
-      /^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op))))return false;
+      /^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op,id))))return false;
     const subjects=subjectNames(data);
     const ids=new Set();
     for(const point of data.points){
@@ -10375,10 +10430,38 @@ const studyRoom=(()=>{
       Object.entries(progress).every(([id,p])=>known.has(id)&&object(p)&&count(p.attempts)&&
       count(p.streak)&&p.streak<=2&&p.streak<=p.attempts&&typeof p.weak==='boolean'));
   }
+  function guestTaskOps(){
+    const operations={};
+    const stored=JSON.parse(localStorage.getItem(key)||'null');
+    const keep=(id,op)=>{
+      if(op?.kind==='today-task'&&/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op,id))operations[id]=op;
+    };
+    for(const [id,op] of Object.entries(stored?.data?.syncJournal||{}))keep(id,op);
+    for(const storageKey of Object.keys(localStorage)){
+      if(storageKey.startsWith(guestTaskPrefix))keep(storageKey.slice(guestTaskPrefix.length),JSON.parse(localStorage.getItem(storageKey)));
+    }
+    return operations;
+  }
+  function mergeGuestTasks(saved,operations){
+    const journal={...saved.syncJournal};
+    for(const [id,op] of Object.entries(journal))if(op.kind==='today-task')delete journal[id];
+    const hasTasks=Object.keys(operations).length>0;
+    if(!saved.syncJournal&&!hasTasks)return saved;
+    if(!saved.syncJournal){
+      // Snapshot entries seed a guest's existing library without overwriting newer account edits.
+      for(const op of learningJournal.changes(fresh(),saved))journal[newPointId()]={...op,clock:0};
+    }
+    return {...saved,syncJournal:{...journal,...operations}};
+  }
+  function readGuestData(saved){
+    if(localStorage.getItem(key+'-claim'))return fresh();
+    return withLocalReview(mergeGuestTasks(valid(saved)?saved:fresh(),guestTaskOps()));
+  }
   function withLocalReview(saved){
     const projection=saved.syncJournal?learningJournal.project(saved.syncJournal):null;
     const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
     const restored={...saved,review:projection?.review??{},paperLastGraded:projection?.paperLastGraded??{},examDrafts:projection?.examDrafts??{},examDiscarded:projection?.examDiscarded??[],examSubmissions:projection?.examSubmissions??{},chapterRefs:projection?.chapterRefs??{},answered};
+    restored.todayTasks=projection?.todayTasks??[];
     // Old clients can export a raw paper alongside its delete operation.
     const deleted=new Set(Object.values(saved.syncJournal||{}).filter(op=>op.kind==='delete').map(op=>op.target));
     if(deleted.size){
@@ -10397,8 +10480,8 @@ const studyRoom=(()=>{
   let data=fresh(),session=null;
   try{
     const stored=JSON.parse(localStorage.getItem(key));
+    data=readGuestData(stored?.data);
     if(!localStorage.getItem(key+'-claim')&&valid(stored?.data)){
-      data=withLocalReview(stored.data);
       const s=stored.session;
       if(object(s)&&['cards','practice'].includes(s.mode)&&Array.isArray(s.queue)&&s.queue.length&&
         (s.origin==='today'||s.mockExam||roundComplete(s)||s.queue.every(id=>data.points.some(p=>p.id===id)||data.paperQuestions?.some(p=>p.id===id)))&&count(s.index)&&s.index<=s.queue.length&&
@@ -11872,6 +11955,7 @@ const batchDialog=$id('study-batch');
     go('session');
   }
   function briefChanged(){
+    todayTaskView?.refresh();
     globalSearch?.refresh();
     scheduleParkedPaperExpiry();
     refreshStudyBrief();
@@ -13700,7 +13784,7 @@ const batchDialog=$id('study-batch');
       if(!storedKey.startsWith(prefix))continue;
       const batch=JSON.parse(localStorage.getItem(storedKey)||'{}');
       for(const [id,op] of Object.entries(batch)){
-        if(!learningJournal.valid(op))continue;
+        if(!learningJournal.valid(op,id))continue;
         if(op.kind==='exam-submit'&&operations[id]&&localStorage.getItem(state.key+':ack:'+id))continue;
         operations[id]=op;
         pending.add(id);
@@ -13758,13 +13842,16 @@ const batchDialog=$id('study-batch');
   }
   function saveLearning(next,answer,move,roundOperation){
     if(!account){
+      const taskWrite=roundOperation?.kind==='today-task';
+      const tasks=localStorage.getItem(key+'-claim')?{}:guestTaskOps();
+      next=mergeGuestTasks(next,tasks);
       const removedPaper=(lastSaved.papers?.length||0)>(next.papers?.length||0);
       if(next.syncJournal||answer||move||removedPaper||roundOperation){
         const journal={...next.syncJournal};
         if(!next.syncJournal){
           let initialClock=0;
           for(const op of learningJournal.changes(learningJournal.fresh(),lastSaved)){
-            const fromSnapshot=removedPaper&&['point','paper','paper-question','baseline'].includes(op.kind);
+            const fromSnapshot=(removedPaper||taskWrite)&&['point','paper','paper-question','baseline'].includes(op.kind);
             journal[newPointId()]={...op,clock:fromSnapshot?0:++initialClock};
           }
         }
@@ -13775,11 +13862,17 @@ const batchDialog=$id('study-batch');
         if(roundOperation)changes.push(...(Array.isArray(roundOperation)?roundOperation:[roundOperation]));
         for(const {opId,...op} of changes){
           const id=opId||newPointId();
-          if(!Object.hasOwn(journal,id))journal[id]={...op,clock:++clock};
+          if(!Object.hasOwn(journal,id)){
+            const entry={...op,clock:++clock};
+            if(entry.kind==='today-task')localStorage.setItem(guestTaskPrefix+id,JSON.stringify(entry));
+            journal[id]=entry;
+          }
         }
         next={...learningJournal.project(journal),syncJournal:journal};
       }
-      localStorage.setItem(key,JSON.stringify({data:next,session}));
+      // A task operation is durable after its unique key is written, even if this cache write fails.
+      try{localStorage.setItem(key,JSON.stringify({data:next,session}));}
+      catch(error){if(!taskWrite)throw error;}
     }else{
       const refs=new Map();
       projectAccount(account,refs);
@@ -13935,7 +14028,7 @@ const batchDialog=$id('study-batch');
         refreshLearningOutbox(state);
         const next={...state.operations};
         const submitted=[];
-        for(const [id,op] of remote)if(/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op)){
+        for(const [id,op] of remote)if(/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op,id)){
           next[id]=op;
           if(op.kind==='exam-submit'&&state.pending.includes(id))submitted.push(id);
         }
@@ -13953,6 +14046,7 @@ const batchDialog=$id('study-batch');
           }
           appendLearning(state,changes,true);
           localStorage.removeItem(key);
+          for(const storageKey of Object.keys(localStorage))if(storageKey.startsWith(guestTaskPrefix))localStorage.removeItem(storageKey);
           localStorage.removeItem(key+'-claim');
           state.guest=null;
         }
@@ -13977,6 +14071,7 @@ const batchDialog=$id('study-batch');
     clearTimeout(examTimer);
     account?.stop?.();
     account=null;
+    todayTaskView?.reset();
     closeBatch();
     if(answerKeyDialog.open)closePaperAnswerKey();
     data=fresh();
@@ -13992,8 +14087,8 @@ const batchDialog=$id('study-batch');
       showLearningSync('學習資料僅存於此瀏覽器');
       try{
         const stored=JSON.parse(localStorage.getItem(key));
+        data=readGuestData(stored?.data);
         if(!localStorage.getItem(key+'-claim')&&valid(stored?.data)){
-          data=withLocalReview(stored.data);
           if(stored.session?.mockExam&&(stored.session.paperMix||data.papers?.some(p=>p.id===stored.session.paperId))){
             session=stored.session;
             screen=roundComplete(session)?'results':'session';
@@ -14007,14 +14102,17 @@ const batchDialog=$id('study-batch');
         const saved=JSON.parse(localStorage.getItem(state.key));
         if(saved){
           session=saved.session||null;
-          state.operations=Object.fromEntries(Object.entries(saved.operations||{}).filter(([id,op])=>/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op)));
+          state.operations=Object.fromEntries(Object.entries(saved.operations||{}).filter(([id,op])=>/^k-[a-f0-9]{32}$/.test(id)&&learningJournal.valid(op,id)));
           state.pending=(saved.pending||[]).filter(id=>Object.hasOwn(state.operations,id));
         }
         const owner=localStorage.getItem(key+'-claim');
         const guest=JSON.parse(localStorage.getItem(key));
-        if((!owner||owner===uid)&&valid(guest?.data)){
-          localStorage.setItem(key+'-claim',uid);
-          state.guest=guest.data;
+        if(!owner||owner===uid){
+          const tasks=guestTaskOps();
+          if(valid(guest?.data)||Object.keys(tasks).length){
+            localStorage.setItem(key+'-claim',uid);
+            state.guest=mergeGuestTasks(valid(guest?.data)?guest.data:fresh(),tasks);
+          }
         }
       }catch{}
       try{refreshLearningOutbox(state);}catch{showLearningSync('無法讀取待同步資料',true);}
@@ -14032,6 +14130,16 @@ const batchDialog=$id('study-batch');
   }
   window.addEventListener('storage',event=>{
     const state=account;
+    if(!state&&event.key&&(event.key===key||event.key===key+'-claim'||event.key.startsWith(guestTaskPrefix))){
+      try{
+        const tasks=localStorage.getItem(key+'-claim')?{}:guestTaskOps();
+        const snapshot=mergeGuestTasks(data,tasks);
+        data={...snapshot,todayTasks:learningJournal.project(tasks).todayTasks};
+        lastSaved=structuredClone(data);
+        todayTaskView?.refresh();
+      }catch{}
+      return;
+    }
     if(!state||!event.key||!event.key.startsWith(state.key+':'))return;
     try{
       refreshLearningOutbox(state);
@@ -14056,6 +14164,18 @@ const batchDialog=$id('study-batch');
   return {
     valid,
     todayBrief,
+    todayTasks:()=>data.todayTasks||[],
+    changeTodayTask(type,action,{id,text,date,at}){
+      if(!account){
+        try{
+          if(localStorage.getItem(key+'-claim')||id&&!learningJournal.project(guestTaskOps()).todayTasks.some(item=>item.id===id))return false;
+        }catch{return false;}
+      }
+      const target=id||newPointId();
+      const value={type,action,at,...(text!==undefined?{text}:{}),...(date?{date}:{})};
+      const operation={kind:'today-task',target,value,...(!id?{opId:target}:{})};
+      return learningJournal.valid({...operation,clock:0})&&persist(null,null,operation);
+    },
     todayReviewBrief,
     weeklyPaperReview,
     openWeeklyPaperReview,
@@ -14105,7 +14225,8 @@ const batchDialog=$id('study-batch');
       }else{
         if(!localStorage.getItem(key+'-claim')){
           try{
-            const restored=withLocalReview(newData);
+            const incoming=Object.fromEntries(Object.entries(newData.syncJournal||{}).filter(([,op])=>op.kind==='today-task'));
+            const restored=withLocalReview(mergeGuestTasks(newData,{...incoming,...guestTaskOps()}));
             localStorage.setItem(key,JSON.stringify({data:restored,session:null}));
             data=restored;
             lastSaved=structuredClone(restored);
@@ -14119,6 +14240,131 @@ const batchDialog=$id('study-batch');
     }
   };
 })();
+
+todayTaskView=(()=>{
+  const root=document.createElement('div');
+  root.id='today-task-lists';
+  root.innerHTML=[['daily','每日作業','例如：背 30 個單字'],['todo','待辦清單','輸入待辦事項']].map(([type,title,placeholder])=>
+    '<section class="today-task-section" data-today-task-type="'+type+'" aria-labelledby="today-task-title-'+type+'">'+
+    '<h3 id="today-task-title-'+type+'" class="day-panel-title">'+title+'</h3>'+
+    '<div class="today-task-items"></div><form class="today-task-form">'+
+    '<input aria-label="新增'+title+'" type="text" maxlength="160" placeholder="'+placeholder+'" required>'+
+    '<button class="btn btn-primary">新增</button><button type="button" class="btn btn-sand" data-task-action="cancel" hidden>取消</button>'+
+    '</form><p class="today-task-status" role="status"></p></section>').join('');
+  const sections=[...root.children];
+  let timer,ownerEpoch=0;
+  function activeTasks(type,now){
+    const date=localDateKey(new Date(now));
+    return studyRoom.todayTasks().filter(item=>item.type===type).map(item=>({
+      ...item,completedAt:type==='daily'?item.days[date]??null:item.completedAt
+    })).filter(item=>item.completedAt===null||now<item.completedAt+todayTaskLifetime);
+  }
+  function edit(section,item){
+    const form=section.querySelector('form'),input=form.querySelector('input');
+    const title=section.querySelector('h3').textContent;
+    section.dataset.editTask=item?.id||'';
+    input.value=item?.text||'';
+    input.setAttribute('aria-label',(item?'編輯':'新增')+title);
+    form.querySelector('button').textContent=item?'儲存':'新增';
+    form.querySelector('[data-task-action=cancel]').hidden=!item;
+    section.querySelector('.today-task-status').textContent='';
+  }
+  function refresh(){
+    clearTimeout(timer);
+    if(!root.isConnected||!isTodayPage())return;
+    const now=Date.now(),deadlines=[];
+    for(const section of sections){
+      const type=section.dataset.todayTaskType;
+      const items=activeTasks(type,now).sort((a,b)=>Number(a.completedAt!==null)-Number(b.completedAt!==null)||
+        (a.completedAt??a.createdAt)-(b.completedAt??b.createdAt));
+      const list=section.querySelector('.today-task-items');
+      const active=list.contains(document.activeElement)?document.activeElement:null;
+      const editing=section.dataset.editTask;
+      if(editing&&!items.some(item=>item.id===editing)){
+        edit(section);
+        section.querySelector('.today-task-status').textContent='這個項目已移除。';
+      }
+      const markup=items.length?'<ul class="memo-checklist">'+items.map(item=>{
+        const done=item.completedAt!==null;
+        if(done)deadlines.push(item.completedAt+todayTaskLifetime);
+        return '<li class="memo-row'+(done?' is-done':'')+'" data-today-task="'+esc(item.id)+'">'+
+          '<button type="button" class="memo-check" data-task-action="toggle" aria-label="完成：'+esc(item.text)+'" aria-pressed="'+done+'"><span aria-hidden="true">'+(done?'✓':'')+'</span></button>'+
+          '<button type="button" class="memo-item-text" data-task-action="edit" aria-label="編輯：'+esc(item.text)+'">'+esc(item.text)+'</button>'+
+          '<button type="button" class="memo-delete" data-task-action="delete" aria-label="刪除：'+esc(item.text)+'">刪除</button></li>';
+      }).join('')+'</ul>':'<p class="memo-empty">'+(type==='daily'?'今天沒有每日作業。':'目前沒有待辦事項。')+'</p>';
+      if(list.dataset.rendered!==markup){
+        list.dataset.rendered=markup;
+        list.innerHTML=markup;
+        if(active){
+          const row=list.querySelector('[data-today-task="'+active.closest('li').dataset.todayTask+'"]');
+          (row?.querySelector('[data-task-action="'+active.dataset.taskAction+'"]')||section.querySelector('input')).focus({preventScroll:true});
+        }
+      }
+    }
+    if(deadlines.length)timer=setTimeout(refresh,Math.max(0,Math.min(...deadlines)-now));
+  }
+  function save(section,action,fields){
+    const now=Date.now(),type=section.dataset.todayTaskType;
+    const status=section.querySelector('.today-task-status');
+    if(fields.id&&!activeTasks(type,now).some(item=>item.id===fields.id)){
+      refresh();
+      status.textContent='這個項目已移除。';
+      return false;
+    }
+    const date=type==='daily'&&['check','uncheck'].includes(action)?localDateKey(new Date(now)):undefined;
+    const saved=studyRoom.changeTodayTask(type,action,{...fields,date,at:now});
+    if(!saved)status.textContent='無法儲存，請重試。';
+    return saved;
+  }
+  root.addEventListener('submit',event=>{
+    event.preventDefault();
+    const form=event.target,section=form.closest('[data-today-task-type]');
+    const input=form.querySelector('input'),text=input.value.trim();
+    const status=section.querySelector('.today-task-status');
+    if(!text){status.textContent='請輸入項目名稱。';input.focus();return;}
+    const id=section.dataset.editTask||undefined;
+    if(save(section,id?'edit':'create',{id,text})){
+      edit(section);
+      input.focus();
+    }
+  });
+  root.addEventListener('click',event=>{
+    const button=event.target.closest('[data-task-action]');
+    if(!button)return;
+    const section=button.closest('[data-today-task-type]'),action=button.dataset.taskAction;
+    const input=section.querySelector('input');
+    if(action==='cancel'){edit(section);input.focus();return;}
+    const id=button.closest('[data-today-task]').dataset.todayTask;
+    const item=activeTasks(section.dataset.todayTaskType,Date.now()).find(item=>item.id===id);
+    if(!item){refresh();return;}
+    if(action==='edit'){edit(section,item);input.focus();return;}
+    if(action==='toggle'){save(section,item.completedAt===null?'check':'uncheck',{id});return;}
+    const type=section.dataset.todayTaskType,owner=ownerEpoch;
+    showConfirm(type==='daily'?'刪除每日作業':'刪除待辦事項',
+      '確定刪除「'+item.text+'」？'+(type==='daily'?'之後每天都會移除。':''),
+      ()=>{if(owner===ownerEpoch&&root.isConnected)save(section,'delete',{id});});
+  });
+  window.addEventListener('pageshow',()=>{
+    refreshWeekProgressClock();
+    refresh();
+  });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+  return {
+    root,refresh,
+    reset(){
+      ownerEpoch++;
+      if(['刪除每日作業','刪除待辦事項'].includes($id('confirm-title').textContent))hideConfirm();
+      sections.forEach(section=>edit(section));
+    },
+    mount(focus){
+      const slot=$id('today-tasks-slot');
+      if(slot&&root.parentElement!==slot)slot.append(root);
+      if(focus?.isConnected)focus.focus({preventScroll:true});
+      refresh();
+    }
+  };
+})();
+todayTaskView.mount();
 
 globalSearch=(()=>{
   const dialog=$id('global-search-dialog'),input=$id('global-search-query');
