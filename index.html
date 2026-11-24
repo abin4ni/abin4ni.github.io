@@ -4078,6 +4078,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 #panel-r .study-brief-go{max-width:100%;white-space:normal;}
 #panel-r .study-brief-card--paper{align-items:center;flex-wrap:wrap;}
+#panel-r .study-brief-card + .study-brief-card--review{margin-block-start:var(--sp-2);}
 .study-brief-card--paper .study-brief-text{flex:1 1 min(100%,12rem);gap:4px;}
 .study-brief-paper-context{font-size:var(--ui-caption);color:var(--text-2);overflow-wrap:anywhere;}
 .study-brief-paper-progress{font-variant-numeric:tabular-nums;color:var(--text-2);}
@@ -5562,7 +5563,9 @@ function addCourse(event){
     if(cards.length) cards[cards.length-1].classList.add('new-card');
   });
   if(calendarCourseFormsMoved){
-    if(repeatAfterCreate){$id('day-schedule-course').value=id;syncScheduleFields();$id('day-repeat-details').open=true;}
+    $id('day-schedule-course').value=id;
+    syncScheduleFields();
+    if(repeatAfterCreate)$id('day-repeat-details').open=true;
     openPhoneCourse('schedule');
   }else if(repeatAfterCreate)openPhoneCourse('repeat',id);
   toast(`已新增「${name}」（${total} 堂）`,'success');
@@ -6657,6 +6660,7 @@ function dayPanelDate(){
 }
 function setWidePage(page){
   const wide=wideMedia.matches;
+  if(wide&&page!=='study'&&!$id('study-room').hidden)$id('study-room').dispatchEvent(new Event('study-review-pause'));
   const onCalendar=page==='calendar';
   const onToday=wide&&page==='today';
   const wasToday=!wideToday.hidden;
@@ -7013,6 +7017,7 @@ window.addEventListener('resize',()=>{
 });
 function mobileTab(tab,dayMode='today'){
   if(!isMobile())return;
+  if(tab!=='study'&&!$id('study-room').hidden)$id('study-room').dispatchEvent(new Event('study-review-pause'));
   if(tab!=='cal'){
     closeCalendarMore();
     cancelCalendarSchedule();
@@ -8518,7 +8523,8 @@ function studyExamHTML(brief){
 function studyBriefHTML(){
   if(!isTodayPage())return '';
   const brief=studyRoom.todayBrief(todayLessonSubjectNames());
-  const draft=brief.paperDraft;
+  const draft=brief.paperDraft,review=studyRoom.todayReviewBrief();
+  const hasPrimary=Boolean(draft||brief.subject);
   const paperCard=draft?`<div class="study-brief-card study-brief-card--paper">
     <div class="study-brief-text"><span class="study-brief-subject">${esc(draft.title)}</span>
       <span class="study-brief-paper-context">${esc(draft.context)}</span><span class="study-brief-meta study-brief-paper-progress" role="status">${esc(draft.progress)}</span></div>
@@ -8527,10 +8533,16 @@ function studyBriefHTML(){
   return `
     <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
       <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
-      ${paperCard||`<div class="study-brief-card">
+      ${paperCard||(review&&brief.empty?'':`<div class="study-brief-card">
         <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
         ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
-      </div>`}
+      </div>`)}
+      ${review?`<div class="study-brief-card study-brief-card--paper study-brief-card--review">
+        <div class="study-brief-text"><span class="study-brief-subject">${esc(review.title)}</span>
+          <span class="study-brief-paper-context">${esc(review.context)}</span>
+          <span class="study-brief-meta">${esc(review.position)}</span></div>
+        <button type="button" class="btn ${hasPrimary?'btn-sand':'btn-primary'} study-brief-go" id="study-brief-review-resume">繼續檢討</button>
+      </div>`:''}
       <div class="day-study-options">${studyDueHTML(brief)}${studyExamHTML(brief)}</div>
     </section>`;
 }
@@ -8561,7 +8573,7 @@ function refreshStudyBrief(){
     const exam=examRows.find(row=>row.dataset.studyExam===focusedExam);
     const examAction=['[data-study-exam-scope-practice]','[data-study-exam-practice]'].find(selector=>focus.matches(selector));
     const examFocus=exam&&((examAction&&exam.querySelector(examAction))||exam.querySelector('summary'));
-    (restored||examFocus||(focus.id==='study-exams-title'&&$id('study-exams-title'))||$id('study-brief-paper-resume')||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
+    (restored||examFocus||(focus.id==='study-exams-title'&&$id('study-exams-title'))||(focus.id==='study-brief-review-resume'&&$id(focus.id))||$id('study-brief-paper-resume')||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
   }
 }
 function openTodayPractice(){
@@ -8586,6 +8598,7 @@ $id('day-events').addEventListener('click',event=>{
   const examButton=event.target.closest('[data-study-exam-practice]');
   const scopeButton=event.target.closest('[data-study-exam-scope-practice]');
   if(paperButton)studyRoom.resumeTodayPaper(paperButton.dataset.round);
+  else if(event.target.closest('#study-brief-review-resume'))studyRoom.resumeTodayReview();
   else if(scopeButton)studyRoom.startExamScope(scopeButton.dataset.studyExamScopePractice);
   else if(examButton)studyRoom.openExamChapter(examButton.dataset.studyExamPractice);
   else if(dueButton)studyRoom.startWeakBrief(todayLessonSubjectNames(),'today',dueButton.dataset.studyDue);
@@ -9721,7 +9734,7 @@ const studyRoom=(()=>{
   if(session?.paperId&&!data.papers?.some(p=>p.id===session.paperId))session=null;
   let screen=session?(session.index===session.queue.length?'results':'session'):'home';
   let filters={subject:'',chapter:''};
-  let knowledgeQuery='';
+  let knowledgeQuery='',practiceSource=null,examRestartFrom=null;
   let from='library',editing=null,subjectHub='home',chapterEdit=null;
   let setupMode='practice',weakOnly=false,examSetup=false;
   let homeMode='knowledge',knowledgeSubject='',paperSubject='',paperSubjectRef='',paperId=null,editingPaper=null;
@@ -9767,9 +9780,11 @@ const studyRoom=(()=>{
   function go(next){
     const returningHome=next==='home'&&screen!=='home';
     if(next!=='setup')examSetup=false;
+    if(next!=='paper-exam-setup')examRestartFrom=null;
     if(next==='session'){paperResultRound=null;paperReviewReturn=null;}
     screen=next;
     render();
+    if(!root.hidden&&['results','paper-review-detail'].includes(screen))trackPaperReview(paperResultRound);
     const subject=homeMode==='papers'?paperSubject:knowledgeSubject;
     const card=returningHome&&[...root.querySelectorAll('#study-home-cards [data-subject]')]
       .find(button=>homeMode==='papers'?button.dataset.paperSubject===paperSubjectRef:button.dataset.subject===subject);
@@ -10119,7 +10134,7 @@ const studyRoom=(()=>{
     const rule=paperDraft?paperDraft.scoring:p.scoring;
     const checkpoint=readPaperReview(p.id);
     const position=checkpoint?.position;
-    const selected=position?.id&&availableReviewQuestion(checkpoint.round,position.id);
+    const selected=position?.id&&position.view!=='list'&&availableReviewQuestion(checkpoint.round,position.id);
     const review=checkpoint?action(selected?'繼續檢討'+esc(paperReviewLabel(selected)):'查看本次檢討','paper-review-resume'):'';
     draw(esc(paperTitle(p)),'<div class="study-surface"><div class="paper-overview"><p class="study-meta">'+items.length+' 題</p>'+
       '<details id="paper-actions-menu"><summary aria-label="更多試卷選項" title="更多試卷選項">⋯</summary>'+
@@ -10779,6 +10794,8 @@ const batchDialog=$id('study-batch');
   }
   function configurePractice(source,fromExam=false){
     examSetup=fromExam;
+    practiceSource=!fromExam&&['library','weak','subject'].includes(screen)?
+      {screen,filters:{...filters},query:knowledgeQuery,scroll:reviewScrollPositions().map(([,top])=>top)}:null;
     weakOnly=source==='setup-weak';
     if(source==='setup')filters.chapter='';
     setupMode='practice';
@@ -10791,9 +10808,9 @@ const batchDialog=$id('study-batch');
       '<fieldset class="study-modes"><legend class="study-meta">練習方式</legend><div class="study-mode-options">'+
       ['cards','practice'].map((m,i)=>'<label><input type="radio" name="mode" value="'+m+'"'+(m===setupMode?' checked':'')+'>'+['字卡複習','互動練習'][i]+'</label>').join('')+
       '</div></fieldset><p class="study-meta">'+(available?'可練習 '+available+' 題':'沒有符合的知識點。')+
-      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>',examSetup?'today-back':true);
+      '</p><div class="study-actions"><button class="btn btn-primary"'+(available?'':' disabled')+'>開始</button></div></form>',examSetup?'today-back':practiceSource?'library-return':true);
   }
-  function start(ids,mode,extra,{shuffle=true}={}){
+  function start(ids,mode,extra,{shuffle=true,restartFrom=null}={}){
     if(!parkPaperDraft())return false;
     const queue=[...ids];
     if(shuffle){
@@ -10807,7 +10824,8 @@ const batchDialog=$id('study-batch');
     if(session.mockExam&&!session.paperReview)session.paperReview=queue.map(id=>paperReviewItem(point(id)));
     const roundOperation=session.mockExam?.startedAt?mockDraftOperation(session):
       account&&session.origin==='today'?createTodayRound():null;
-    if(!persist(null,null,roundOperation)){
+    const operations=restartFrom?[mockDraftOperation(restartFrom,{discarded:true}),roundOperation]:roundOperation;
+    if(!persist(null,null,operations)){
       session=previous;
       return false;
     }
@@ -11068,13 +11086,12 @@ const batchDialog=$id('study-batch');
     const round=savedMockExam(paperId);
     if(!round||round.paperResultId!==id)return;
     if(round.mockExam.deadline&&Date.now()>=round.mockExam.deadline){resumePaperDraft(round);return;}
-    flushExamDraft();
-    const previous=session;
-    if(session?.paperResultId===id)session=null;
-    if(!persist(null,null,mockDraftOperation(round,{discarded:true}))){session=previous;return;}
     const p=paper(paperId);
-    if(p&&round.paperPractice)startPaperRound(p,null,true);
-    else go('paper-exam-setup');
+    if(p&&round.paperPractice)startPaperRound(p,null,true,Date.now(),round);
+    else{
+      examRestartFrom=id;
+      go('paper-exam-setup');
+    }
   }
   function confirmPaperMode(label,p,proceed){
     if(!session||session.mockExam||roundComplete(session)){proceed();return;}
@@ -11082,16 +11099,16 @@ const batchDialog=$id('study-batch');
     showConfirm(label,'開始後會取代目前練習的未送出進度。已送出的作答紀錄會保留。',
       ()=>{if(session===previous&&account===owner&&(!p||paper(p.id)))proceed();},'繼續','btn-primary','取消');
   }
-  function startPaperRound(p,deadline=null,practice=false,startedAt=Date.now()){
+  function startPaperRound(p,deadline=null,practice=false,startedAt=Date.now(),restartFrom=null){
     return startPaperAttempt(paperItems(p.id).map(q=>q.id),{
       paperId:p.id,subject:p.subject,scoring:p.scoring?{...p.scoring}:null,paperPractice:practice
-    },{deadline,startedAt});
+    },{deadline,startedAt,restartFrom});
   }
-  function startPaperAttempt(ids,details,{deadline=null,startedAt=Date.now(),shuffle=false,draft}={}){
+  function startPaperAttempt(ids,details,{deadline=null,startedAt=Date.now(),shuffle=false,draft,restartFrom=null}={}){
     if(!ids.length)return false;
     const {answers={},marked={}}=draft||{};
     return start(ids,'practice',{paperId:'',...details,
-      mockExam:{answers,marked,startedAt,deadline,updatedAt:startedAt}},{shuffle});
+      mockExam:{answers,marked,startedAt,deadline,updatedAt:startedAt}},{shuffle,restartFrom});
   }
   function resumeLegacyPaperPractice(round){
     const submitted=new Set(round.results.map(result=>result.id));
@@ -11445,7 +11462,7 @@ const batchDialog=$id('study-batch');
         body+='<div class="study-actions">'+action(final?(session.paperId?'交卷':'查看結果'):'下一題','next',true)+'</div>';
       }
     }
-    draw(cards?'字卡複習':session.paperId||session.paperMix?'考古題練習':'互動練習','<div class="study-surface">'+body+'</div>');
+    draw(cards?'字卡複習':session.paperId||session.paperMix?'考古題練習':'互動練習','<div class="study-surface">'+body+'</div>',session.libraryReturn?'library-return':true);
     if(examMapDialog.open){examMapTrigger=$id('paper-exam-progress');updatePaperQuestionMap();}
   }
 
@@ -11499,7 +11516,78 @@ const batchDialog=$id('study-batch');
     try{return JSON.parse(localStorage.getItem(paperReviewPositionKey(round)));}catch{return null;}
   }
   function savePaperReviewPosition(round,position){
-    try{localStorage.setItem(paperReviewPositionKey(round),JSON.stringify(position));}catch{}
+    try{
+      const completed=position.completed||readPaperReviewPosition(round)?.completed;
+      localStorage.setItem(paperReviewPositionKey(round),JSON.stringify({...position,...(completed?{completed:true}:{})}));
+    }catch{}
+  }
+  function paperReviewPointerKey(){
+    return key+':paper-review-active:'+JSON.stringify(account?.uid??null);
+  }
+  function readPaperReviewPointer(){
+    try{return JSON.parse(localStorage.getItem(paperReviewPointerKey()));}catch{return null;}
+  }
+  function trackPaperReview(round){
+    if(!round||!paper(round.paperId)||readPaperReviewPosition(round)?.completed)return;
+    const pointer={paperId:round.paperId,roundId:round.paperResultId||'legacy'};
+    const previous=readPaperReviewPointer();
+    if(previous?.paperId===pointer.paperId&&previous.roundId===pointer.roundId)return;
+    try{localStorage.setItem(paperReviewPointerKey(),JSON.stringify(pointer));}catch{return;}
+    briefChanged();
+  }
+  function todayReviewCheckpoint(){
+    const pointer=readPaperReviewPointer();
+    if(!pointer||!paper(pointer.paperId))return null;
+    const round=completedPaperRounds(pointer.paperId).find(item=>(item.paperResultId||'legacy')===pointer.roundId);
+    const position=round&&readPaperReviewPosition(round);
+    return round&&!position?.completed?{round,position}:null;
+  }
+  function todayReviewBrief(){
+    const checkpoint=todayReviewCheckpoint();
+    if(!checkpoint)return null;
+    const {round,position}=checkpoint,p=paper(round.paperId);
+    const row=position?.id&&availableReviewQuestion(round,position.id);
+    return {title:paperSchool(p),context:p.year+' 年度 · '+p.subject,
+      position:row?'上次查看：'+paperReviewLabel(row):'停在檢討清單'};
+  }
+  function openPaperReview(checkpoint,openSavedDetail=true){
+    const {round,position}=checkpoint;
+    if(paperResultRound!==round)rememberPaperReview();
+    paperId=round.paperId;
+    paperResultRound=round;
+    paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:
+      paperResultRows(round).some(row=>row.kind==='incorrect')?'incorrect':'all';
+    const detail=openSavedDetail&&position?.view!=='list'&&position?.id&&availableReviewQuestion(round,position.id);
+    paperReviewReturn=detail?{id:detail.id,scroll:position.scroll}:null;
+    go(detail?'paper-review-detail':'results');
+    restoreReviewScroll(position?.scroll,!!detail);
+    rememberPaperReview();
+  }
+  function resumeTodayReview(){
+    const checkpoint=todayReviewCheckpoint();
+    if(!checkpoint){briefChanged();return;}
+    openTodayPractice();
+    openPaperReview(checkpoint);
+  }
+  function finishPaperReview(){
+    const round=paperResultRound;
+    if(!round||!paper(round.paperId))return;
+    rememberPaperReview();
+    savePaperReviewPosition(round,{...readPaperReviewPosition(round),completed:true});
+    if(!readPaperReviewPosition(round)?.completed){toast('無法儲存檢討狀態，請再試一次。','warn');return;}
+    const pointer=readPaperReviewPointer();
+    if(pointer?.paperId===round.paperId&&pointer.roundId===(round.paperResultId||'legacy')){
+      try{localStorage.removeItem(paperReviewPointerKey());}catch{}
+    }
+    const scroll=reviewScrollPositions().map(([,top])=>top);
+    render();
+    restoreReviewScroll(scroll);
+    $id('study-heading').focus({preventScroll:true});
+    briefChanged();
+    toast('已完成檢討','success');
+  }
+  function paperReviewFinishAction(round){
+    return paper(round.paperId)&&!readPaperReviewPosition(round)?.completed?action('完成檢討','paper-review-finish'):'';
   }
   function localPaperReview(id){
     try{return JSON.parse(localStorage.getItem(paperReviewStorage(id)));}catch{return null;}
@@ -11626,22 +11714,22 @@ const batchDialog=$id('study-batch');
       else if(item.top<bounds.top)list.scrollTop-=bounds.top-item.top;
       scroll[3]=list.scrollTop;
     }
-    savePaperReviewPosition(paperResultRound,{...paperReviewReturn,filter:paperResultFilter});
+    savePaperReviewPosition(paperResultRound,{...paperReviewReturn,view:'detail',filter:paperResultFilter});
+    briefChanged();
   }
   function rememberPaperReview(){
     if(!paperResultRound||!root.getClientRects().length||!['results','paper-review-detail'].includes(screen))return;
     const previous=readPaperReviewPosition(paperResultRound);
-    if(screen==='results'&&previous?.id)return;
     const scroll=reviewScrollPositions().map(([,top])=>top);
     if(paperReviewReturn?.scroll)scroll.splice(0,3,...paperReviewReturn.scroll.slice(0,3));
-    else if(previous?.scroll)scroll[3]=previous.scroll[3];
-    const position={id:paperReviewReturn?.id||previous?.id,filter:paperResultFilter,scroll};
+    const position={id:paperReviewReturn?.id||previous?.id,view:paperReviewReturn?'detail':'list',filter:paperResultFilter,scroll};
     if(JSON.stringify(position)!==JSON.stringify(previous))savePaperReviewPosition(paperResultRound,position);
   }
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState==='hidden')rememberPaperReview();
   });
   window.addEventListener('pagehide',rememberPaperReview);
+  root.addEventListener('study-review-pause',rememberPaperReview);
   function paperResultListPanel(rows,className=''){
     return '<section class="study-surface paper-result '+className+'" aria-labelledby="paper-result-title"><h3 id="paper-result-title">逐題檢討</h3>'+
       '<div class="study-mode-options paper-result-filters" data-pill-key="review:'+esc(paperResultRound?.paperResultId||'legacy')+'" role="group" aria-label="篩選作答狀態">'+
@@ -11701,7 +11789,7 @@ const batchDialog=$id('study-batch');
         '<div><dt>'+paperResultLabels[key]+'</dt><dd>'+count+'</dd></div>').join('')+'</dl>'+
       (pending&&!round.scoring?'<p class="study-meta">'+(round.mockExam?pending+' 題待補正解，暫待判分。':'未作答含 '+pending+' 題尚未補正解')+'</p>':'')+
       (ungraded?'<p class="study-meta">'+ungraded+' 題已作答，請在檢討時自行核對。</p>':'')+
-      '<div class="study-actions">'+(round.reviewRetry?action('返回原次檢討','paper-retry-source',true):'')+
+      '<div class="study-actions">'+(round.reviewRetry?action('返回原次檢討','paper-retry-source',true):'')+paperReviewFinishAction(round)+
       action(currentPaper?'返回試卷':round.wrongBook?'返回錯題本':'返回混合刷題',back,!retryCount&&!round.reviewRetry)+
       (retryCount?action((currentPaper?'重練本卷錯題':'重練錯題')+'（'+retryCount+' 題）','retry',!round.reviewRetry):'')+'</div></div>'+
       paperResultListPanel(rows)+
@@ -11735,7 +11823,8 @@ const batchDialog=$id('study-batch');
       '<div class="paper-review-saved"><h3>詳解</h3><p class="study-copy" id="paper-review-explanation">'+esc(live?.explanation||'尚無詳解')+'</p></div>'+
       (q?'<details class="study-supplements paper-review-original"><summary>查看完整題目與選項</summary>'+
       questionContext(q)+'<h3>題目</h3><p class="study-copy">'+esc(q.question)+'</p>'+choiceList(q)+'</details>':
-      '<p class="study-meta">原題已移除，這筆交卷未保存題目內容。</p>')+'</section></div>','paper-review-back');
+      '<p class="study-meta">原題已移除，這筆交卷未保存題目內容。</p>')+
+      '<div class="study-actions">'+paperReviewFinishAction(round)+'</div></section></div>','paper-review-back');
     renderPaperResultList(rows);
   }
   function retryQuestionIds(round=session){
@@ -11768,13 +11857,15 @@ const batchDialog=$id('study-batch');
     const canReturnToday=session?.origin==='today'||Boolean(session?.returnMode);
     if(session?.mode==='cards'){
       draw('字卡複習完成','<div class="study-surface"><p>已瀏覽 '+session.queue.length+' 張字卡。</p>'+
-        '<div class="study-actions">'+(canReturnToday?action('返回今日','today-back',true):'')+'</div></div>');
+        '<div class="study-actions">'+(session.libraryReturn?action('返回'+(session.libraryReturn.screen==='library'?'知識庫':session.libraryReturn.screen==='weak'?'待加強':'科目'),'library-return',true):
+          canReturnToday?action('返回今日','today-back',true):'')+'</div></div>');
       return;
     }
     const retryCount=retryQuestionIds().length;
     const fromToday=session?.origin==='today';
     const earlier=previousRounds();
-    const back=canReturnToday?action(fromToday?'回到今日':'返回今日','today-back',!retryCount):
+    const back=session?.libraryReturn?action('返回'+(session.libraryReturn.screen==='library'?'知識庫':session.libraryReturn.screen==='weak'?'待加強':'科目'),'library-return',!retryCount):
+      canReturnToday?action(fromToday?'回到今日':'返回今日','today-back',!retryCount):
       session?.wrongBook?action('返回錯題本','paper-wrong-return',!retryCount):
       session?.paperMix?action('返回混合刷題','paper-mix-return',!retryCount):action(subjectNames().includes(roundSubject())?'返回科目':'返回學習室','subject-back',!retryCount);
     draw('練習結果','<div class="study-surface">'+
@@ -11847,7 +11938,7 @@ const batchDialog=$id('study-batch');
       start(ids,'practice',{
         ...(previous.paperId?{paperReview:paperReviewEntries(previous).filter(entry=>ids.includes(entry.id)).map(({marked,...entry})=>entry)}:{}),
         origin,returnMode,paperId:previous.paperId,paperMix:previous.paperMix,wrongBook:previous.wrongBook,mixedSubject:previous.mixedSubject,mixedArchive:previous.mixedArchive,subject:previous.subject||roundSubject(),previousResults:[...previousRounds(previous),previous.results],
-        ...(roundId?{roundId,retryOf}:{}),
+        ...(roundId?{roundId,retryOf}:{}),...(previous.libraryReturn?{libraryReturn:previous.libraryReturn}:{}),
       },{shuffle:false});
     }catch{
       toast('無法開始重練，請再試一次。','warn');
@@ -12030,15 +12121,9 @@ const batchDialog=$id('study-batch');
       const history=act!=='paper-review-resume';
       const selectedRound=history&&completedPaperRounds(paperId).find(round=>(round.paperResultId||'legacy')===button.dataset.round);
       const checkpoint=history?(selectedRound&&{round:selectedRound,position:readPaperReviewPosition(selectedRound)}):readPaperReview(paperId);
-      if(!checkpoint)return;
-      paperResultRound=checkpoint.round;
-      const position=checkpoint.position;
-      paperResultFilter=Object.hasOwn(paperResultFilters,position?.filter)?position.filter:
-        history&&paperResultRows(checkpoint.round).some(row=>row.kind==='incorrect')?'incorrect':'all';
-      const selected=!history&&position?.id&&availableReviewQuestion(paperResultRound,position.id);
-      paperReviewReturn=selected?{id:selected.id,scroll:position.scroll}:null;
-      go(selected?'paper-review-detail':'results');
-      restoreReviewScroll(position?.scroll,!!selected);
+      if(checkpoint)openPaperReview(checkpoint,!history);
+    }else if(act==='paper-review-finish'){
+      finishPaperReview();
     }else if(act==='paper-review-filter'&&paperResultRound&&['results','paper-review-detail'].includes(screen)){
       paperResultFilter=button.dataset.paperResultFilter;
       for(const option of root.querySelectorAll('[data-paper-result-filter]'))option.setAttribute('aria-pressed',String(option===button));
@@ -12048,7 +12133,7 @@ const batchDialog=$id('study-batch');
       const position=paperReviewReturn||{id:previous?.id};
       if(screen==='results')position.scroll=reviewScrollPositions().map(([,top])=>top);
       else if(position.scroll)position.scroll[3]=0;
-      savePaperReviewPosition(paperResultRound,{...position,filter:paperResultFilter});
+      savePaperReviewPosition(paperResultRound,{...position,view:screen==='results'?'list':'detail',filter:paperResultFilter});
     }else if(act==='paper-review-detail'&&paperResultRound&&['results','paper-review-detail'].includes(screen)){
       choosePaperReview(button.dataset.paperResultQuestion);
     }else if(act==='paper-review-back'){
@@ -12061,6 +12146,7 @@ const batchDialog=$id('study-batch');
         (row||$id('study-heading')).focus({preventScroll:true});
         restoreReviewScroll(previous.scroll);
       }
+      rememberPaperReview();
     }else if(act==='paper-question-detail')go('paper-question');
     else if(act==='paper-collect-back')go(collectBack);
     else if(act==='paper-question-copy'){
@@ -12234,6 +12320,14 @@ const batchDialog=$id('study-batch');
       configurePractice(act);
     }else if(act==='today-back'){
       returnToTodayPracticeDay();
+    }else if(act==='library-return'){
+      const source=screen==='setup'?practiceSource:session?.libraryReturn;
+      if(source&&['library','weak','subject'].includes(source.screen)&&subjectNames().includes(source.filters?.subject)){
+        filters={...source.filters};
+        knowledgeQuery=source.query||'';
+        go(source.screen);
+        restoreReviewScroll(source.scroll);
+      }else go('home');
     }else if(act==='subject-back'){
       const subject=roundSubject();
       filters={subject:subjectNames().includes(subject)?subject:'',chapter:''};
@@ -12268,7 +12362,10 @@ const batchDialog=$id('study-batch');
       const p=paper(paperId);
       if(p)confirmPaperMode('開始模擬考',p,()=>{
         const startedAt=Date.now();
-        startPaperRound(p,timed?startedAt+durationMs:null,false,startedAt);
+        const old=examRestartFrom&&savedMockExam(p.id,round=>round.paperResultId===examRestartFrom);
+        if(examRestartFrom&&!old){go('paper');return;}
+        if(old?.mockExam.deadline&&startedAt>=old.mockExam.deadline){resumePaperDraft(old);return;}
+        startPaperRound(p,timed?startedAt+durationMs:null,false,startedAt,old);
       });
     }else if(form.id==='paper-explanation-form'){
       const q=data.paperQuestions?.find(q=>q.id===form.dataset.question);
@@ -12378,7 +12475,7 @@ const batchDialog=$id('study-batch');
         }
       }
       const ids=filtered(weakOnly).map(p=>p.id);
-      if(ids.length)start(ids,values.get('mode'),{subject:filters.subject,...(examSetup?{returnMode:'today'}:{})});
+      if(ids.length)start(ids,values.get('mode'),{subject:filters.subject,...(examSetup?{returnMode:'today'}:practiceSource?{libraryReturn:practiceSource}:{})});
     }else if(form.id==='study-answer-form'&&session?.phase==='question'){
       const answer=values.get('answer').trim();
       if(!answer){form.querySelector('.study-error').textContent='請輸入答案，或直接看參考答案。';return;}
@@ -12576,7 +12673,7 @@ const batchDialog=$id('study-batch');
         const refs=new Map();
         learningJournal.project(journal,refs);
         const changes=learningJournal.changes(lastSaved,next,answer,move,refs);
-        if(roundOperation)changes.push(roundOperation);
+        if(roundOperation)changes.push(...(Array.isArray(roundOperation)?roundOperation:[roundOperation]));
         for(const {opId,...op} of changes){
           const id=opId||newPointId();
           if(!Object.hasOwn(journal,id))journal[id]={...op,clock:++clock};
@@ -12589,7 +12686,7 @@ const batchDialog=$id('study-batch');
       projectAccount(account,refs);
       const scoring=Array.isArray(answer)?answer:answer&&{...answer,roundId:session?.roundId};
       const changes=learningJournal.changes(lastSaved,next,scoring,move,refs);
-      if(roundOperation)changes.push(roundOperation);
+      if(roundOperation)changes.push(...(Array.isArray(roundOperation)?roundOperation:[roundOperation]));
       if(changes.length)appendLearning(account,changes);
       else storeAccount(account);
       next=projectAccount(account);
@@ -12788,6 +12885,7 @@ const batchDialog=$id('study-batch');
     paperReviewReturn=null;
     filters={subject:'',chapter:''};
     knowledgeQuery='';
+    practiceSource=null;examRestartFrom=null;
     wrongSchool='';wrongYear='';
     screen='home';
     if(!uid){
@@ -12858,6 +12956,8 @@ const batchDialog=$id('study-batch');
   return {
     valid,
     todayBrief,
+    todayReviewBrief,
+    resumeTodayReview,
     resumeTodayPaper,
     upcomingExams,
     examLibrary,
