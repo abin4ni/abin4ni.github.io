@@ -1072,8 +1072,9 @@ body{
 .memo-form-actions{display:flex;flex-wrap:wrap;gap:8px;}
 #today-task-lists [hidden]{display:none;}
 .today-task-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-block-end:var(--sp-3);}
-#today-task-tabs{flex-wrap:nowrap;max-inline-size:100%;overflow-x:auto;scrollbar-width:none;}
-#today-task-tabs button{flex:none;min-height:44px;white-space:nowrap;}
+#today-task-tabs{display:grid;grid-template-columns:repeat(2,minmax(max-content,1fr));flex:none;max-inline-size:100%;overflow-x:auto;scrollbar-width:none;border-radius:var(--r-pill);}
+#today-task-tabs .vt-btn{min-height:44px;padding:0 12px;border:0;box-shadow:none;text-decoration:none;white-space:nowrap;}
+#today-task-tabs .vt-btn:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-3px;}
 #today-task-add{display:grid;place-items:center;flex:none;min-width:44px;min-height:44px;padding:0;font-size:1.3rem;}
 .today-task-completed{margin-block-start:var(--sp-3);}
 #today-task-lists .today-task-completed h4{margin:0 0 var(--sp-1);color:var(--text-2);}
@@ -1081,24 +1082,18 @@ body{
 .today-task-annotation{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--text-2);font-size:var(--ui-caption);}
 #today-task-lists .memo-row.is-done .memo-item-text{text-decoration:none;}
 .today-task-item.is-done .today-task-name{text-decoration:line-through;text-decoration-color:var(--text-3);}
-.today-task-section{min-width:0;padding:var(--sp-3);background:var(--card);border:1px solid var(--border-lt);border-radius:var(--r-md);}
+.today-task-section{min-width:0;padding:var(--sp-3);background:var(--card);border:1px solid var(--border-lt);border-radius:var(--r-sm);}
 .today-task-section :is(h3,.memo-checklist){margin-block:0 var(--sp-2);}
 .today-task-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:start;}
 .today-task-form input,.today-task-form .btn{min-height:44px;}
+.today-task-form{margin-block-end:var(--sp-2);}
+.today-task-form[data-quick-add]{grid-template-columns:minmax(0,1fr);}
+.today-task-form[data-quick-add] button{display:none;}
+.today-task-form input{scroll-margin-block:12px;}
 .today-task-form [hidden]{display:none;}
 .today-task-form input{min-width:0;width:100%;}
 .today-task-status{margin:var(--sp-2) 0 0;color:var(--danger-c);font-size:var(--ui-caption);}
 .today-task-status:empty{display:none;}
-#today-focus{margin-block:0 var(--sp-4);}
-.today-focus-list{display:grid;list-style:none;padding:0;margin:0;}
-.today-focus-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;align-items:center;}
-.today-focus-row+.today-focus-row{border-block-start:1px solid var(--border-lt);}
-.today-focus-open{display:grid;gap:2px;text-align:start;min-height:44px;padding:5px 2px;border:0;background:transparent;color:var(--text);overflow-wrap:anywhere;}
-.today-focus-open:not(:disabled){cursor:pointer;}
-.today-focus-open:not(:disabled):hover{background:var(--accent-tint);}
-.today-focus-row.is-done .today-focus-open{color:var(--text-2);}
-.today-focus-row .btn,[data-focus-toggle]{min-height:44px;}
-[data-focus-toggle][aria-pressed=true]{background:var(--selection-fill);color:var(--text);}
 .today-task-item.memo-row{grid-template-columns:44px minmax(0,1fr) auto;}
 .today-task-buttons{display:flex;flex-wrap:wrap;justify-content:end;max-width:7em;}
 .today-task-section .memo-row>button:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-2px;}
@@ -3907,7 +3902,7 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   stroke-linejoin:round;
 }
 #panel-r .day-lesson .day-lesson-remove {color:var(--danger-c);}
-#panel-r .day-lesson :is(.done-check,.day-lesson-remove,[data-day-practice],[data-plan-chapter],[data-focus-toggle]) {position:relative;z-index:2;}
+#panel-r .day-lesson :is(.done-check,.day-lesson-remove,[data-day-practice] ,[data-plan-chapter]) {position:relative;z-index:2;}
 #panel-r .day-lesson-actions[hidden] {display:none;}
 #panel-r .day-lesson-actions .act-btn {min-height:44px;min-width:44px;}
 #panel-r .day-lesson-chapter {margin-inline-end:auto;align-self:center;overflow-wrap:anywhere;}
@@ -4302,14 +4297,16 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   #panel-r[data-mobile-day=today] .day-card.day-lesson{padding-block:0;}
   #panel-r[data-mobile-day=today] .day-lesson-actions .act-btn{padding-block:0;}
 }
-@media (min-width:900px){
+@media (min-width:800px){
   #wide-today:not([hidden]){width:min(100%,1120px);}
   #wide-today .day-panel-shell{
     display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
-    grid-template-areas:"lessons review" "notes review" "stats review";
+    grid-template-areas:"lessons tasks" "review notes" "review stats";
+    grid-template-rows:auto auto 1fr;
     align-items:start;
   }
-  #wide-today .day-panel-main{grid-area:lessons;}
+  #wide-today .day-panel-main{grid-area:lessons;min-width:0;}
+  #wide-today #today-tasks-slot{grid-area:tasks;min-width:0;}
   #wide-today .today-review-column{grid-area:review;}
   #wide-today .day-panel-notes{grid-area:notes;}
   #wide-today .day-panel-meta{grid-area:stats;}
@@ -5537,7 +5534,6 @@ window.onFirebaseLogin=function(user){
   window._fb.listenCloud(user.uid,remoteData=>{
     scheduleSearchLoading=false;
     globalSearch?.refresh();
-    refreshTodayFocus();
     if(!remoteData){
       // 雲端還沒有資料（第一次登入）：把本機資料上傳
       if(S.courses.length){
@@ -5557,7 +5553,6 @@ window.onFirebaseLogin=function(user){
   },()=>{
     scheduleSearchLoading=false;
     globalSearch?.refresh();
-    refreshTodayFocus();
   });
 };
 window.onFirebaseLogout=function(){
@@ -8980,7 +8975,7 @@ function reviewScheduleHTML(date=null){
       <div class="study-brief-text"><strong class="study-brief-subject">${esc(info?.title||item.title)}</strong>
         <span class="study-brief-meta">${esc(item.date)} · ${state}${!item.done&&!info?.count?' · '+(info?.waiting?'載入中':info?'目前沒有可練題目':'來源已無法使用'):''}</span></div>
       <div class="planned-review-actions">${!item.done&&info?.count?`<button type="button" class="btn btn-primary" data-review-start="${esc(item.id)}">${studyRoom.plannedReviewActive(item)?'繼續':'開始'}</button>`:''}
-        ${!item.done?`<button type="button" class="btn btn-sand" data-review-edit="${esc(item.id)}">查看或改期</button>`:''}${!date?todayFocusToggle('plan',item.id):''}</div>
+        ${!item.done?`<button type="button" class="btn btn-sand" data-review-edit="${esc(item.id)}">查看或改期</button>`:''}</div>
     </div>`;
   }).join('')}</div>`;
 }
@@ -9069,13 +9064,12 @@ $id('review-plan-cancel-item').addEventListener('click',()=>finishReviewPlan(tru
 $id('review-plan-complete').addEventListener('click',()=>finishReviewPlan(false));
 
 function lessonChapterActions(lesson){
-  const pin=isTodayPage()?todayFocusToggle('lesson',lesson.id):'';
-  if(!lesson.chapterLink)return pin;
+  if(!lesson.chapterLink)return '';
   const linked=studyRoom.lessonChapter(lesson.chapterLink);
   const label=linked?.name?'章節：'+linked.name:linked?.waiting?'章節載入中':'章節無法使用，請在編輯課堂重新選擇';
   return `<span class="study-meta day-lesson-chapter">${esc(label)}</span>
     ${linked?.name?`<button type="button" class="act-btn" data-plan-chapter="${esc(lesson.id)}" aria-haspopup="dialog">安排複習</button>`:''}
-    ${isTodayPage()&&linked?.count?`<button type="button" class="act-btn" data-day-practice="${esc(lesson.id)}">練習本章</button>`:''}${pin}`;
+    ${isTodayPage()&&linked?.count?`<button type="button" class="act-btn" data-day-practice="${esc(lesson.id)}">練習本章</button>`:''}`;
 }
 function refreshLessonChapterActions(){
   const lessons=new Map((S.calendar[dayPanelDate()]||[]).map(lesson=>[lesson.id,lesson]));
@@ -9090,7 +9084,7 @@ function refreshLessonChapterActions(){
     slot.innerHTML=wanted;
     slot.hidden=!wanted;
     if(hadFocus)([...slot.querySelectorAll('button')].find(button=>button.dataset.planChapter===active.dataset.planChapter&&
-      button.dataset.dayPractice===active.dataset.dayPractice&&button.dataset.focusRef===active.dataset.focusRef)||
+      button.dataset.dayPractice===active.dataset.dayPractice)||
       slot.closest('.day-lesson').querySelector('[data-day-edit]')).focus({preventScroll:true});
   }
 }
@@ -9175,7 +9169,6 @@ function studyBriefHTML(){
   if(!isTodayPage())return '';
   const brief=studyRoom.todayBrief(todayLessonSubjectNames());
   const draft=brief.paperDraft,review=studyRoom.todayReviewBrief();
-  const focusPractice=!draft&&studyRoom.todayFocusPractice();
   const hasPrimary=Boolean(draft||brief.subject);
   const paperCard=draft?`<div class="study-brief-card study-brief-card--paper">
     <div class="study-brief-text"><span class="study-brief-subject">${esc(draft.title)}</span>
@@ -9185,7 +9178,6 @@ function studyBriefHTML(){
   return `
     <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
       <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
-      ${focusPractice?todayFocusToggle('practice',focusPractice.ref):''}
       ${paperCard||(review&&brief.empty?'':`<div class="study-brief-card">
         <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
         ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
@@ -9229,7 +9221,6 @@ function refreshStudyBrief(){
     const examFocus=exam&&((examAction&&exam.querySelector(examAction))||exam.querySelector('summary'));
     (restored||examFocus||(focus.id==='study-exams-title'&&$id('study-exams-title'))||(focus.id==='study-brief-review-resume'&&$id(focus.id))||$id('study-brief-paper-resume')||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
   }
-  refreshTodayFocus();
 }
 let weeklyReviewExpanded=false;
 function refreshWeeklyReview(){
@@ -9374,13 +9365,13 @@ function renderDayPanel(){
   </details>`:'';
 
   const taskFocus=todayTaskView?.root.contains(document.activeElement)?document.activeElement:null;
-  el.innerHTML=`${onToday?'<section id="today-focus" class="today-task-section" aria-labelledby="today-focus-title"><h3 class="day-panel-title" id="today-focus-title" tabindex="-1">今日重點</h3><div id="today-focus-items"></div><p id="today-focus-message" class="today-task-status" role="status"></p></section>':''}
-  <div class="day-panel-shell">
+  el.innerHTML=`  <div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
       <div id="day-planned-reviews"></div>
-    </section>${onToday?`<div class="today-review-column">
+    </section>${onToday?`<section id="today-tasks-slot" class="day-panel-section" aria-labelledby="today-tasks-title"><h3 class="day-panel-title" id="today-tasks-title">任務清單</h3></section>
+    <div class="today-review-column">
       <div class="study-brief-slot" id="study-brief-slot"></div>
       <section class="day-panel-section">
         <details class="study-due-list" id="today-weekly-review" ${weeklyReviewExpanded?'open':''}>
@@ -9388,7 +9379,6 @@ function renderDayPanel(){
           <div class="today-weekly-content" id="today-weekly-content"></div>
         </details>
       </section>
-      <div id="today-tasks-slot"></div>
     </div>`:''}
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">提醒事項</h3>
@@ -10133,18 +10123,6 @@ const learningJournal=(()=>{
       new Set(value.ref.split(',')).size===value.ref.split(',').length;
     return ['lesson','plan'].includes(value.type)&&value.ref.length>0&&value.ref.length<=150;
   }
-  function projectTodayFocus(entries){
-    const dates={};
-    for(const [,op] of entries){
-      if(op.kind!=='today-focus')continue;
-      const {date,action,type,ref}=op.value;
-      const list=dates[date]??=[];
-      const index=list.findIndex(pin=>pin.type===type&&pin.ref===ref);
-      if(action==='remove'&&index>=0)list.splice(index,1);
-      if(action==='add'&&index<0&&list.length<3)list.push({type,ref});
-    }
-    return dates;
-  }
   function projectTodayTasks(entries){
     const events=entries.filter(([,op])=>op.kind==='today-task');
     const items=new Map();
@@ -10173,6 +10151,7 @@ const learningJournal=(()=>{
   function valid(op,id){
     if(!op||!kinds.has(op.kind)||!Number.isSafeInteger(op.clock)||op.clock<0||!text(op.target))return false;
     const value=op.value;
+    // Legacy focus operations remain readable and replayable for old backups and outboxes.
     if(op.kind==='today-focus')return validTodayFocus(op.target,value,id);
     if(op.kind==='today-task')return validTodayTask(op.target,value)&&
       (id===undefined||(value.action==='create')===(id===op.target));
@@ -10328,7 +10307,6 @@ const learningJournal=(()=>{
         [target,value]=value;
         if(!round?.queue.includes(target)||round.results.has(target))continue;
         round.results.set(target,value);
-        if(validDay(op.day)&&(!round.lastAnsweredDay||op.day>round.lastAnsweredDay))round.lastAnsweredDay=op.day;
       }
       if(value!=='viewed'){
         answered.add(target);
@@ -10355,12 +10333,6 @@ const learningJournal=(()=>{
       kept.push({explanation:'',accepted:[],...value});
     }
     const progress=Object.fromEntries(kept.filter(p=>baseline.has(p.id)).map(p=>[p.id,baseline.get(p.id)]));
-    const known=new Set(kept.map(point=>point.id));
-    const todayPracticeDone=[...rounds.values()].flatMap(round=>{
-      const live=round.queue.filter(id=>known.has(id));
-      return round.lastAnsweredDay&&live.length&&live.every(id=>round.results.has(id))?
-        [{date:round.lastAnsweredDay,ref:[...round.queue].sort().join(','),subject:round.subject}]:[];
-    });
     const lastRound=[...rounds.values()].at(-1);
     const todayRound=lastRound&&{id:lastRound.id,subject:lastRound.subject,queue:lastRound.queue,
       results:lastRound.queue.filter(id=>lastRound.results.has(id)).map(id=>({id,outcome:lastRound.results.get(id)}))};
@@ -10381,8 +10353,7 @@ const learningJournal=(()=>{
     const paperLastGraded=Object.fromEntries(keptPaperQuestions.filter(p=>lastGraded.has(p.id)).map(p=>[p.id,lastGraded.get(p.id)]));
     for(const id of examSubmissions.keys())examDrafts.delete(id);
     for(const id of examDiscarded)examDrafts.delete(id);
-    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examDiscarded:[...examDiscarded],examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],todayTasks:projectTodayTasks(ordered),todayFocus:projectTodayFocus(ordered),
-      todayPracticeDone,
+    return {version:1,points:kept,progress,review,paperLastGraded,examDrafts:Object.fromEntries(examDrafts),examDiscarded:[...examDiscarded],examSubmissions:Object.fromEntries(examSubmissions),papers:[...papers.values()],paperSubjects:[...paperSubjects.values()],paperQuestions:keptPaperQuestions,paperProgress,chapterRefs:Object.fromEntries(refs),answered:kept.filter(p=>answered.has(p.id)).map(p=>p.id),catalog:[...catalog.values()],todayTasks:projectTodayTasks(ordered),
       ...(todayRound?{todayRound,todayRetries}:{})};
   }
   function changes(before,after,answer,move,refs=new Map()){
@@ -10524,8 +10495,8 @@ const studyRoom=(()=>{
     const answered=projection?.answered??Object.keys(saved.progress).filter(id=>saved.progress[id].streak>0);
     const restored={...saved,review:projection?.review??{},paperLastGraded:projection?.paperLastGraded??{},examDrafts:projection?.examDrafts??{},examDiscarded:projection?.examDiscarded??[],examSubmissions:projection?.examSubmissions??{},chapterRefs:projection?.chapterRefs??{},answered};
     restored.todayTasks=projection?.todayTasks??[];
-    restored.todayFocus=projection?.todayFocus??{};
-    restored.todayPracticeDone=projection?.todayPracticeDone??[];
+    delete restored.todayFocus;
+    delete restored.todayPracticeDone;
     // Old clients can export a raw paper alongside its delete operation.
     const deleted=new Set(Object.values(saved.syncJournal||{}).filter(op=>op.kind==='delete').map(op=>op.target));
     if(deleted.size){
@@ -11968,34 +11939,6 @@ const batchDialog=$id('study-batch');
   function waitingForToday(){
     return account&&!account.ready&&!account.failure&&navigator.onLine;
   }
-  function todayFocusPractice(){
-    if(waitingForToday())return null;
-    const round=resumableToday();
-    const source=round||(!unfinishedOtherPractice()&&recommendedToday(todayLessonSubjectNames()));
-    if(!source)return null;
-    return {ref:[...(round?currentTodayRound().queue:source.ids)].sort().join(',')};
-  }
-  function resolveFocusPractice(ref,date){
-    const round=resumableToday();
-    const activeRef=round&&[...currentTodayRound().queue].sort().join(',');
-    if(activeRef===ref)return {title:round.subject+' · 今日複習',open:()=>startWeakBrief(todayLessonSubjectNames(),'today')};
-    const done=data.todayPracticeDone?.find(item=>item.ref===ref&&item.date===date);
-    if(done)return {title:done.subject+' · 今日複習',done:true};
-    const ids=ref.split(','),points=ids.map(point);
-    if(points.some(item=>!item))return {title:'今日複習',notice:waitingForToday()?'資料載入中':'複習項目已失效'};
-    const subjects=new Set(points.map(item=>item.subject));
-    const subject=subjects.size===1?points[0].subject:'多科複習';
-    const title=subject+' · 今日複習';
-    if(waitingForToday())return {title,notice:'資料載入中'};
-    if(round||unfinishedOtherPractice())return {title,notice:'請先完成進行中的練習'};
-    return {title,open:()=>{
-      if(todayFocusPractice()?.ref===ref)return startWeakBrief(todayLessonSubjectNames(),'today');
-      const due=dueToday().filter(item=>ids.includes(item.id)).map(item=>item.id);
-      const queue=[...new Set([...due,...ids])];
-      openTodayPractice();
-      return start(queue,'practice',{origin:'today',subject,returnMode:'today'},{shuffle:false});
-    }};
-  }
   function todayBrief(todayNames){
     const due=dueToday();
     const draft=latestTodayPaper();
@@ -12060,7 +12003,6 @@ const batchDialog=$id('study-batch');
     refreshWeeklyReview();
     refreshLessonChapterActions();
     refreshDayReviewPlans();
-    refreshTodayFocus();
   }
   function record(outcome){
     if(!session||!['question','grade'].includes(session.phase))return;
@@ -14235,10 +14177,7 @@ const batchDialog=$id('study-batch');
       try{
         const tasks=localStorage.getItem(key+'-claim')?{}:guestTaskOps();
         const snapshot=mergeGuestTasks(data,tasks);
-        const {todayTasks,todayFocus}=learningJournal.project(tasks);
-        const stored=event.key===key&&JSON.parse(localStorage.getItem(key)||'null');
-        const todayPracticeDone=stored?.data?.syncJournal?learningJournal.project(stored.data.syncJournal).todayPracticeDone:snapshot.todayPracticeDone;
-        data={...snapshot,todayTasks,todayFocus,todayPracticeDone};
+        data={...snapshot,todayTasks:learningJournal.project(tasks).todayTasks};
         lastSaved=structuredClone(data);
         todayTaskView?.refresh();
       }catch{}
@@ -14269,17 +14208,6 @@ const batchDialog=$id('study-batch');
     valid,
     todayBrief,
     todayTasks:()=>data.todayTasks||[],
-    todayFocus:date=>data.todayFocus?.[date]||[],
-    todayFocusPractice,
-    resolveFocusPractice,
-    changeTodayFocus(date,changes){
-      try{if(!account&&localStorage.getItem(key+'-claim'))return false;}catch{return false;}
-      const ops=changes.map(value=>{
-        const target=newPointId();
-        return {kind:'today-focus',target,opId:target,value:{...value,date}};
-      });
-      return ops.every(op=>learningJournal.valid({...op,clock:0},op.opId))&&persist(null,null,ops.length===1?ops[0]:ops);
-    },
     changeTodayTask(type,action,{id,text,date,at}){
       if(!account){
         try{
@@ -14363,7 +14291,7 @@ todayTaskView=(()=>{
   root.id='today-task-lists';
   root.className='today-task-section';
   root.innerHTML='<div class="today-task-toolbar"><div id="today-task-tabs" class="study-mode-options" role="group" aria-label="任務清單">'+
-    groups.map(([type,title])=>'<button type="button" data-task-tab="'+type+'" aria-pressed="'+(type==='daily')+
+    groups.map(([type,title])=>'<button type="button" class="vt-btn" data-task-tab="'+type+'" aria-pressed="'+(type==='daily')+
       '" aria-controls="today-task-panel-'+type+'">'+title+'</button>').join('')+
     '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業">＋</button></div>'+
     groups.map(([type,title,placeholder])=>'<section id="today-task-panel-'+type+'" data-today-task-type="'+type+'" aria-label="'+title+'"'+
@@ -14374,6 +14302,64 @@ todayTaskView=(()=>{
   const sections=[...root.querySelectorAll('[data-today-task-type]')],add=root.querySelector('#today-task-add');
   const tabs=[...root.querySelectorAll('[data-task-tab]')];
   let timer,ownerEpoch=0,selected='daily';
+  const dailyPanel=sections[0],dailyForm=dailyPanel.querySelector('form'),dailyInput=dailyForm.querySelector('input');
+  let quickAdd=false,composing=false,imeEnter=false,blurPending=false,pointerId=null,blurTimer,pendingEdit=null;
+  function commitQuickAdd(restoreFocus=false){
+    if(!quickAdd||composing)return false;
+    const text=dailyInput.value.trim();
+    if(text&&!save(dailyPanel,'create',{text}))return false;
+    const target=pendingEdit;
+    edit(dailyPanel);
+    const item=target&&editableTask('daily',target.id,Date.now());
+    if(item)edit(dailyPanel,true,{...item,date:target.date});
+    else if(restoreFocus)add.focus({preventScroll:true});
+    return true;
+  }
+  function scheduleQuickBlur(delay=0){
+    clearTimeout(blurTimer);
+    if(!blurPending||composing||pointerId!==null)return;
+    blurTimer=setTimeout(()=>{
+      if(!blurPending||document.activeElement===dailyInput&&!pendingEdit)return;
+      blurPending=false;
+      commitQuickAdd();
+    },delay);
+  }
+  dailyInput.addEventListener('focus',()=>{blurPending=false;});
+  dailyInput.addEventListener('blur',()=>{
+    if(!quickAdd)return;
+    blurPending=true;
+    scheduleQuickBlur();
+  });
+  function suppressImeEnter(){
+    imeEnter=true;
+    setTimeout(()=>{imeEnter=false;},0);
+  }
+  dailyInput.addEventListener('keyup',event=>{
+    if(event.key==='Enter'&&!event.isComposing&&!composing)imeEnter=false;
+  });
+  dailyInput.addEventListener('compositionstart',()=>{composing=true;});
+  dailyInput.addEventListener('compositionend',()=>{
+    composing=false;
+    suppressImeEnter();
+    scheduleQuickBlur();
+  });
+  document.addEventListener('pointerdown',event=>{
+    if(quickAdd&&document.activeElement===dailyInput&&event.target!==dailyInput)pointerId=event.pointerId;
+  },true);
+  for(const type of ['pointerup','pointercancel'])document.addEventListener(type,event=>{
+    if(pointerId!==event.pointerId)return;
+    pointerId=null;
+    scheduleQuickBlur(type==='pointerup'?220:0);
+  },true);
+  function finishQuickPointer(){
+    pointerId=null;
+    scheduleQuickBlur();
+  }
+  document.addEventListener('click',finishQuickPointer,true);
+  window.addEventListener('blur',finishQuickPointer);
+  window.visualViewport?.addEventListener('resize',()=>{
+    if(quickAdd&&document.activeElement===dailyInput)dailyInput.scrollIntoView({block:'nearest'});
+  });
   function select(type){
     if(type===selected)return;
     selected=type;
@@ -14401,13 +14387,21 @@ todayTaskView=(()=>{
     section.dataset.editTask=item?.id||'';
     section.dataset.editDate=item?.date||'';
     form.hidden=!show;
+    if(section===dailyPanel){
+      quickAdd=show&&!item;
+      blurPending=false;composing=false;imeEnter=false;pointerId=null;pendingEdit=null;
+      clearTimeout(blurTimer);
+      form.toggleAttribute('data-quick-add',quickAdd);
+      input.required=!quickAdd;
+      input.enterKeyHint=quickAdd?'done':'enter';
+    }
     input.value=item?.text||'';
     input.setAttribute('aria-label',(item?'編輯':'新增')+title);
     form.querySelector('.btn-primary').textContent=item?'儲存':'新增';
     section.querySelector('.today-task-status').textContent='';
     if(show)input.focus();
   }
-  function rowHTML(item,type,today){
+  function rowHTML(item,type){
     const done=item.completedAt!==null;
     const date=done?(item.date||localDateKey(new Date(item.completedAt))):'';
     const annotation=(type==='daily'?'<span>↻ 每天</span>':'')+(date?'<time datetime="'+esc(date)+'">'+esc(fmtDate(date))+'</time>':'');
@@ -14417,7 +14411,7 @@ todayTaskView=(()=>{
       '<button type="button" class="memo-item-text" data-task-action="edit" aria-label="編輯：'+esc(item.text)+'">'+
       '<span class="today-task-name">'+esc(item.text)+'</span>'+
       (annotation?'<span class="today-task-annotation">'+annotation+'</span>':'')+'</button>'+
-      '<div class="today-task-buttons">'+(type==='todo'||item.date===today?todayFocusToggle(type,item.id):'')+
+      '<div class="today-task-buttons">'+
       '<button type="button" class="memo-delete" data-task-action="delete" aria-label="刪除：'+esc(item.text)+'">刪除</button></div></li>';
   }
   function refresh(){
@@ -14437,7 +14431,7 @@ todayTaskView=(()=>{
         edit(section);
         section.querySelector('.today-task-status').textContent='這個項目已移除。';
       }
-      const rows=entries=>'<ul class="memo-checklist">'+entries.map(item=>rowHTML(item,type,today)).join('')+'</ul>';
+      const rows=entries=>'<ul class="memo-checklist">'+entries.map(item=>rowHTML(item,type)).join('')+'</ul>';
       const markup=(pending.length?rows(pending):'<p class="memo-empty">'+
         (type==='daily'?'今天沒有未完成的每日作業。':'目前沒有未完成的待辦事項。')+'</p>')+
         (completed.length?'<div class="today-task-completed"><h4>已完成</h4>'+rows(completed)+'</div>':'');
@@ -14447,13 +14441,12 @@ todayTaskView=(()=>{
         if(previous){
           const id=previous.dataset.todayTask,date=previous.dataset.taskDate;
           const row=findRow(section,id,date)||(type==='daily'?findRow(section,id,today):null);
-          const selector=focus.hasAttribute('data-focus-toggle')?'[data-focus-toggle]':'[data-task-action="'+focus.dataset.taskAction+'"]';
+          const selector='[data-task-action="'+focus.dataset.taskAction+'"]';
           (row?.querySelector(selector)||row?.querySelector('.memo-check')||add).focus({preventScroll:true});
         }
       }
     }
     if(deadlines.length)timer=setTimeout(refresh,Math.max(0,Math.min(...deadlines)-now));
-    refreshTodayFocus();
   }
   function getTask(section,id,date,now){
     const type=section.dataset.todayTaskType,items=activeTasks(type,now);
@@ -14479,6 +14472,10 @@ todayTaskView=(()=>{
   root.addEventListener('submit',event=>{
     event.preventDefault();
     const form=event.target,section=form.closest('[data-today-task-type]');
+    if(form===dailyForm&&quickAdd){
+      if(!imeEnter)commitQuickAdd(true);
+      return;
+    }
     const input=form.querySelector('input'),text=input.value.trim();
     if(!text){section.querySelector('.today-task-status').textContent='請輸入項目名稱。';input.focus();return;}
     const id=section.dataset.editTask||undefined,date=section.dataset.editDate;
@@ -14489,6 +14486,18 @@ todayTaskView=(()=>{
     }
   });
   root.addEventListener('keydown',event=>{
+    if(event.target===dailyInput&&quickAdd){
+      const ime=composing||event.isComposing||event.keyCode===229;
+      if(event.key==='Enter'){
+        if(ime||imeEnter)suppressImeEnter();
+        else{event.preventDefault();commitQuickAdd(true);}
+      }else if(event.key==='Escape'&&!ime){
+        event.preventDefault();
+        edit(dailyPanel);
+        add.focus({preventScroll:true});
+      }
+      return;
+    }
     if(!event.target.dataset.taskTab||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
     event.preventDefault();
     const next=event.key==='Home'?tabs[0]:event.key==='End'?tabs.at(-1):tabs.find(tab=>tab!==event.target);
@@ -14502,7 +14511,11 @@ todayTaskView=(()=>{
     if(!button)return;
     const action=button.dataset.taskAction;
     const section=button.closest('[data-today-task-type]')||sections.find(item=>item.dataset.todayTaskType===selected);
-    if(action==='add'){edit(section,true);return;}
+    if(action==='add'){
+      if(section===dailyPanel&&quickAdd)dailyInput.focus();
+      else edit(section,true);
+      return;
+    }
     if(action==='cancel'){
       const row=findRow(section,section.dataset.editTask,section.dataset.editDate);
       edit(section);
@@ -14512,7 +14525,14 @@ todayTaskView=(()=>{
     const {todayTask:id,taskDate:date}=button.closest('[data-today-task]').dataset;
     const item=getTask(section,id,date,Date.now());
     if(!item){refresh();return;}
-    if(action==='edit'){edit(section,true,item);return;}
+    if(action==='edit'){
+      if(section===dailyPanel&&quickAdd){
+        pendingEdit={id,date};
+        if(composing){blurPending=true;return;}
+        commitQuickAdd();
+      }else edit(section,true,item);
+      return;
+    }
     if(action==='toggle'){save(section,item.completedAt===null?'check':'uncheck',{id,date});return;}
     const type=section.dataset.todayTaskType,owner=ownerEpoch;
     showConfirm(type==='daily'?'刪除每日作業':'刪除待辦事項',
@@ -14526,14 +14546,6 @@ todayTaskView=(()=>{
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
   return {
     root,refresh,activeTasks,
-    open(type,id){
-      select(type);
-      refresh();
-      const section=sections.find(section=>section.dataset.todayTaskType===type);
-      const row=findRow(section,id,type==='daily'?localDateKey():'');
-      row?.querySelector('.memo-check').focus({preventScroll:true});
-      row?.scrollIntoView({block:'nearest'});
-    },
     reset(){
       ownerEpoch++;
       select('daily');
@@ -14551,92 +14563,7 @@ todayTaskView=(()=>{
     }
   };
 })();
-function todayFocusToggle(type,ref){
-  return '<button type="button" class="btn btn-sand" data-focus-toggle="'+esc(type)+'" data-focus-ref="'+esc(ref)+'" aria-pressed="false">加入重點</button>';
-}
-const todayFocusLabels={lesson:'今日課程',daily:'每日作業',todo:'待辦清單',practice:'今日備考',plan:'複習安排'};
 todayTaskView.mount();
-function resolveTodayFocus({type,ref},date,now){
-  if((type==='lesson'||type==='plan')&&scheduleSearchLoading)return {title:todayFocusLabels[type],notice:'資料載入中',loading:true};
-  if(type==='lesson'){
-    const lesson=S.calendar[date]?.find(item=>item.id===ref),subject=lesson&&course(lesson.courseId);
-    if(!subject)return null;
-    const number=scheduledLessonNumbers([subject]).get(lesson);
-    return {title:subject.name+' · 第 '+number+' 堂',done:lesson.done,open:()=>openDayEdit(date,ref)};
-  }
-  if(type==='daily'||type==='todo'){
-    const item=todayTaskView.activeTasks(type,now).find(task=>task.id===ref);
-    if(!item)return null;
-    return {title:item.text,done:item.completedAt!==null,open:()=>todayTaskView.open(type,ref)};
-  }
-  if(type==='plan'){
-    const item=S.reviewPlans.find(plan=>plan.id===ref);
-    if(!item)return null;
-    const info=studyRoom.plannedReviewInfo(item.source);
-    return {title:info?.title||item.title,done:item.done,open:!item.done&&info?.count&&item.date<=date?
-      ()=>studyRoom.startPlannedReview(item):null,notice:!item.done&&(info?.waiting?'資料載入中':item.date>date?'複習已改期':!info?.count?'複習項目已失效':'')};
-  }
-  return studyRoom.resolveFocusPractice(ref,date);
-}
-function refreshTodayFocus(){
-  const slot=$id('today-focus-items');
-  if(!slot||!todayTaskView||!isTodayPage())return;
-  const date=dayPanelDate(),now=Date.now(),items=studyRoom.todayFocus(date);
-  const rows=items.flatMap(pin=>{
-    const source=resolveTodayFocus(pin,date,now);
-    if(!source)return [];
-    const label=todayFocusLabels[pin.type],status=source.done?'已完成':source.notice;
-    return ['<li class="today-focus-row'+(source.done?' is-done':'')+'">'+
-      '<button type="button" class="today-focus-open" data-focus-open="'+pin.type+'" data-focus-ref="'+esc(pin.ref)+'"'+(source.open?'':' disabled')+'>'+
-      '<span>'+ (source.done?'<span aria-hidden="true">✓ </span>':'')+esc(source.title)+'</span><small>'+label+(status?' · '+esc(status):'')+'</small></button>'+
-      '<button type="button" class="btn btn-sand" data-focus-toggle="'+pin.type+'" data-focus-ref="'+esc(pin.ref)+'" aria-label="移除重點：'+esc(source.title)+'">移除</button></li>'];
-  });
-  const markup=rows.length?'<ol class="today-focus-list">'+rows.join('')+'</ol>':
-    '<p class="memo-empty">從課堂、作業、待辦或備考選擇「加入重點」。</p>';
-  if(slot.focusMarkup!==markup){
-    const active=slot.contains(document.activeElement)?document.activeElement:null;
-    slot.focusMarkup=markup;
-    slot.innerHTML=markup;
-    if(active){
-      const selector=active.hasAttribute('data-focus-open')?'[data-focus-open]':'[data-focus-toggle]';
-      const replacement=[...slot.querySelectorAll(selector)].find(button=>button.dataset.focusRef===active.dataset.focusRef&&
-        (button.dataset.focusOpen||button.dataset.focusToggle)===(active.dataset.focusOpen||active.dataset.focusToggle));
-      (replacement&&!replacement.disabled?replacement:$id('today-focus-title')).focus({preventScroll:true});
-    }
-  }
-  for(const button of $id('day-events').querySelectorAll('[aria-pressed][data-focus-toggle]')){
-    const pinned=items.some(pin=>pin.type===button.dataset.focusToggle&&pin.ref===button.dataset.focusRef);
-    button.setAttribute('aria-pressed',String(pinned));
-    button.textContent=pinned?'已加入重點':'加入重點';
-  }
-}
-$id('day-events').addEventListener('click',event=>{
-  const button=event.target.closest('[data-focus-toggle],[data-focus-open]');
-  if(!button||!isTodayPage())return;
-  const date=dayPanelDate(),now=Date.now();
-  const pin={type:button.dataset.focusToggle||button.dataset.focusOpen,ref:button.dataset.focusRef};
-  const source=resolveTodayFocus(pin,date,now);
-  const status=$id('today-focus-message');
-  if(button.dataset.focusOpen){
-    if(source?.open)source.open();
-    else{
-      refreshTodayFocus();
-      status.textContent='這個項目已無法開啟。';
-    }
-    return;
-  }
-  const current=studyRoom.todayFocus(date);
-  const pinned=current.some(item=>item.type===pin.type&&item.ref===pin.ref);
-  const stale=current.filter(item=>!resolveTodayFocus(item,date,now));
-  if(!pinned&&current.length-stale.length>=3){
-    status.textContent='最多可加入 3 項，請先移除一項。';
-    $id('today-focus-title').scrollIntoView({block:'nearest'});
-    return;
-  }
-  if(!pinned&&(!source||source.loading))return;
-  const changes=pinned?[{...pin,action:'remove'}]:[...stale.map(item=>({...item,action:'remove'})),{...pin,action:'add'}];
-  status.textContent=studyRoom.changeTodayFocus(date,changes)?'':'無法儲存重點，請重試。';
-});
 
 globalSearch=(()=>{
   const dialog=$id('global-search-dialog'),input=$id('global-search-query');
