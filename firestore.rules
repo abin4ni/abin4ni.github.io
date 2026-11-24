@@ -33,6 +33,21 @@ service cloud.firestore {
             ))
           );
       }
+      function validTodayFocus(opId) {
+        let record = request.resource.data;
+        let focus = record.value;
+        return record.target == opId && focus is map
+          && focus.keys().hasAll(['date', 'action', 'type', 'ref'])
+          && focus.keys().hasOnly(['date', 'action', 'type', 'ref'])
+          && focus.date is string && focus.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+          && focus.action in ['add', 'remove']
+          && focus.ref is string
+          && (
+            (focus.type in ['daily', 'todo'] && focus.ref.matches('k-[a-f0-9]{32}'))
+            || (focus.type in ['lesson', 'plan'] && focus.ref.size() > 0 && focus.ref.size() <= 150)
+            || (focus.type == 'practice' && focus.ref.matches('k-[a-f0-9]{32}(,k-[a-f0-9]{32}){0,4}'))
+          );
+      }
       allow read: if owner();
       allow create: if owner()
         && opId.matches('k-[a-f0-9]{32}')
@@ -42,7 +57,8 @@ service cloud.firestore {
             || (request.resource.data.kind in ['answer', 'today-answer']
                 && request.resource.data.day is string
                 && request.resource.data.day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')))
-        && request.resource.data.kind in ['point', 'delete', 'subject', 'chapter', 'move', 'baseline', 'answer', 'today-round', 'today-answer', 'paper', 'paper-question', 'paper-subject', 'exam-draft', 'exam-submit', 'today-task']
+        && request.resource.data.kind in ['point', 'delete', 'subject', 'chapter', 'move', 'baseline', 'answer', 'today-round', 'today-answer', 'paper', 'paper-question', 'paper-subject', 'exam-draft', 'exam-submit', 'today-task', 'today-focus']
+        && (request.resource.data.kind != 'today-focus' || validTodayFocus(opId))
         && (request.resource.data.kind != 'today-task' || validTodayTask(opId))
         && (!(request.resource.data.kind in ['exam-draft', 'exam-submit'])
             || (request.resource.data.target.matches('k-[a-f0-9]{32}')
