@@ -1564,6 +1564,13 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
 /* 今日備考 */
 .study-brief-summary{margin:0 0 10px;}
 .study-brief-slot{display:contents;}
+.today-review-column{display:grid;align-content:start;gap:var(--sp-4);min-width:0;}
+.today-weekly-heading{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding-inline-start:4px;}
+.today-weekly-content{display:grid;gap:var(--sp-2);}
+.today-weekly-content :is(p,ul){margin:0;}
+.today-weekly-content ul{list-style:none;padding:0;display:grid;gap:8px;}
+.today-weekly-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;}
+.today-weekly-round .study-brief-go{white-space:normal;}
 .study-brief-card{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:12px 14px;
     background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);}
   .study-brief-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto;}
@@ -4132,7 +4139,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     align-items:start;
   }
   #wide-today .day-panel-main{grid-area:lessons;}
-  #wide-today .study-brief{grid-area:review;}
+  #wide-today .today-review-column{grid-area:review;}
   #wide-today .day-panel-notes{grid-area:notes;}
   #wide-today .day-panel-meta{grid-area:stats;}
 }
@@ -4548,14 +4555,14 @@ onAuthStateChanged(auth,user=>{
       </div>
       <div class="wide-cal-tools phone-cal-summary">
         <div class="wide-week">
-          <span>本週進度 · <b id="wide-week-count"></b></span>
+          <span><span id="wide-week-label">本週進度</span> · <b id="wide-week-count"></b></span>
           <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
         </div>
         <div class="wide-tools calendar-add-tools">
           <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
         <div class="phone-week">
-          <span>本週進度 · <b id="phone-week-count"></b></span>
+          <span><span id="phone-week-label">本週進度</span> · <b id="phone-week-count"></b></span>
           <progress id="phone-week-progress" max="100" value="0" aria-label="本週課堂完成進度"></progress>
         </div>
         <div class="calendar-summary-options">
@@ -4578,7 +4585,7 @@ onAuthStateChanged(auth,user=>{
             </div>
         <details class="week-progress" id="week-progress">
           <summary id="week-progress-summary">
-            <span class="week-progress-heading"><strong>本週進度</strong><span class="week-progress-range" id="week-progress-range"></span></span>
+            <span class="week-progress-heading"><strong id="week-progress-label">本週進度</strong><span class="week-progress-range" id="week-progress-range"></span></span>
             <span class="week-progress-metric"><span>完成／已排</span><b id="week-progress-count"></b></span>
             <span class="week-progress-metric" id="week-progress-overdue-label"><span>過期未完成</span><b id="week-progress-overdue"></b></span>
             <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
@@ -7060,7 +7067,10 @@ function cancelCalendarSchedule(){
   renderTodo();renderCalendar();
 }
 function openCalendarSchedule(event){
-  beginCalendarSchedule(S.selectedDate||localDateKey(),event?.currentTarget||document.activeElement,false);
+  const today=localDateKey();
+  const inWeek=date=>date&&date>=S.weekStart&&date<=addDays(S.weekStart,6);
+  const date=S.view==='week'&&!inWeek(S.selectedDate)?(inWeek(today)?today:S.weekStart):S.selectedDate||today;
+  beginCalendarSchedule(date,event?.currentTarget||document.activeElement,false);
 }
 function renderMobileSchedule(){
   const el=$id('mobile-schedule'),selected=course(S.tapCourseId);
@@ -7550,26 +7560,30 @@ function renderCalendarProgress(){
   renderMakeupList(localToday);
 }
 
+function calendarWeekSummary(start){
+  const end=addDays(start,6);
+  const entries=[];
+  let completed=0;
+  for(let offset=0;offset<7;offset++){
+    const date=addDays(start,offset);
+    for(const lesson of S.calendar[date]||[]){
+      entries.push({date,lesson});
+      if(lesson.done)completed++;
+    }
+  }
+  return {start,end,entries,completed,scheduled:entries.length};
+}
+
 function renderWeekProgress(localToday){
-  const monday=weekStartOf(localToday,1);
-  const sunday=addDays(monday,6);
+  const currentStart=weekStartOf(localToday);
+  const {start,end,entries,completed,scheduled}=calendarWeekSummary(S.view==='week'?S.weekStart:currentStart);
   const dateLabel=(date,includeYear)=>{
     const [year,month,day]=date.split('-').map(Number);
     return (includeYear?year+'/':'')+month+'/'+day;
   };
-  let scheduled=0, completed=0, overdue=0;
-  const pending=[];
-  for(let offset=0;offset<7;offset++){
-    const date=addDays(monday,offset);
-    for(const lesson of S.calendar[date]||[]){
-      scheduled++;
-      if(lesson.done){completed++;continue;}
-      if(!isMobile())continue;
-      const late=date<localToday;
-      if(late)overdue++;
-      pending.push({date,time:lesson.time||'',name:course(lesson.courseId)?.name||'未知課程',late});
-    }
-  }
+  const label=start===currentStart?'本週進度':'該週進度';
+  for(const id of ['wide-week-label','phone-week-label','week-progress-label'])$id(id).textContent=label;
+  for(const id of ['wide-week-track','phone-week-progress'])$id(id).setAttribute('aria-label',label+'（課堂）');
   const percentage=scheduled?Math.round(completed/scheduled*100):0;
   $id('wide-week-count').textContent=completed+'／'+scheduled+' 堂';
   $id('wide-week-track').setAttribute('aria-valuenow',percentage);
@@ -7578,15 +7592,20 @@ function renderWeekProgress(localToday){
   $id('phone-week-count').textContent=completed+'／'+scheduled+' 堂';
   $id('phone-week-progress').value=percentage;
   if(!isMobile())return;
+  const pending=entries.filter(({lesson})=>!lesson.done).map(({date,lesson})=>({
+    date,time:lessonTimeLabel(lesson),name:course(lesson.courseId)?.name||'未知課程',late:date<localToday,
+  }));
+  const overdue=pending.filter(row=>row.late).length;
   pending.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'24:00').localeCompare(b.time||'24:00'));
   document.getElementById('week-progress-range').textContent=
-    dateLabel(monday,true)+'–'+dateLabel(sunday,monday.slice(0,4)!==sunday.slice(0,4));
+    dateLabel(start,true)+'–'+dateLabel(end,start.slice(0,4)!==end.slice(0,4));
   document.getElementById('week-progress-count').textContent=completed+'／'+scheduled+' 堂';
   document.getElementById('week-progress-overdue').textContent=overdue+' 堂';
   document.getElementById('week-progress-overdue-label').classList.toggle('is-overdue',overdue>0);
   const empty=document.getElementById('week-progress-empty');
   empty.hidden=pending.length>0;
-  empty.textContent=scheduled?'本週已排課堂皆已完成。':'本週尚無已排課堂。';
+  const period=start===currentStart?'本週':'該週';
+  empty.textContent=scheduled?period+'已排課堂皆已完成。':period+'尚無已排課堂。';
   const rows=pending.map(({date,time,name,late})=>{
     const [,month,day]=date.split('-').map(Number);
     return `<li><button type="button" class="week-progress-item" data-week-date="${date}">
@@ -7698,6 +7717,7 @@ let progressClockDate=localDateKey();
 function refreshWeekProgressClock(){
   clearTimeout(weekProgressRollover);
   renderCalendarProgress();
+  refreshWeeklyReview();
   const nextDay=new Date();
   const localToday=localDateKey(nextDay);
   if(localToday!==progressClockDate){
@@ -8605,6 +8625,46 @@ function refreshStudyBrief(){
     (restored||examFocus||(focus.id==='study-exams-title'&&$id('study-exams-title'))||(focus.id==='study-brief-review-resume'&&$id(focus.id))||$id('study-brief-paper-resume')||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
   }
 }
+let weeklyReviewExpanded=false;
+function refreshWeeklyReview(){
+  const slot=$id('today-weekly-content');
+  if(!slot||!isTodayPage())return;
+  const {start,end,completed,scheduled}=calendarWeekSummary(weekStartOf(localDateKey()));
+  const {submitted,pending,recent}=studyRoom.weeklyPaperReview(start,end);
+  const shortDate=date=>date.split('-').map(Number).slice(1).join('/');
+  const sameYear=start.slice(0,4)===end.slice(0,4);
+  $id('today-weekly-range').textContent=(sameYear?shortDate(start):start)+'–'+(sameYear?shortDate(end):end);
+  const makeup=Number(makeupCount.textContent);
+  const rounds=pending.length?pending:recent?[recent]:[];
+  const wanted=`<div class="today-weekly-actions">
+    <button type="button" class="btn btn-sand" id="today-weekly-lessons" aria-label="開啟本週行事曆，完成 ${completed}／${scheduled} 堂">已完成 ${completed}／${scheduled} 堂</button>
+    ${makeup?'<button type="button" class="btn btn-sand" id="today-weekly-makeup" aria-haspopup="dialog" aria-controls="makeup-dialog">待補課 '+makeup+' 堂</button>':''}
+  </div>
+  <p class="study-brief-meta"><span id="today-weekly-papers">已交整卷 ${submitted} 份</span> · <span id="today-weekly-pending">待檢討 ${pending.length} 份</span></p>
+  ${rounds.length?`<ul>${rounds.map(row=>`<li class="study-brief-card today-weekly-round">
+    <div class="study-brief-text"><span class="study-brief-subject">${esc(row.title)}</span><span class="study-brief-meta">${esc(row.context)} · ${esc(row.date)}</span></div>
+    <button type="button" class="btn btn-sand study-brief-go" data-weekly-review-paper="${esc(row.paperId)}" data-weekly-review-round="${esc(row.roundId)}">${pending.length?'開啟檢討':'查看檢討'}</button>
+  </li>`).join('')}</ul>`:''}`;
+  if(slot.weeklyMarkup===wanted)return;
+  const focus=document.activeElement,hadFocus=slot.contains(focus);
+  slot.innerHTML=wanted;
+  slot.weeklyMarkup=wanted;
+  if(hadFocus){
+    const action=focus.id?$id(focus.id):[...slot.querySelectorAll('[data-weekly-review-round]')].find(button=>
+      button.dataset.weeklyReviewRound===focus.dataset.weeklyReviewRound&&button.dataset.weeklyReviewPaper===focus.dataset.weeklyReviewPaper);
+    (action||$id('today-weekly-summary')).focus({preventScroll:true});
+  }
+}
+function openTodayCalendarWeek(){
+  const date=localDateKey();
+  if(isMobile())mobileTab('cal');
+  else setWidePage('calendar');
+  S.view='week';
+  S.weekStart=weekStartOf(date);
+  S.selectedDate=date;
+  render();
+  $id('cal-title').focus();
+}
 function openTodayPractice(){
   if(isMobile())mobileTab('study');
   else setWidePage('study');
@@ -8616,6 +8676,7 @@ function returnToTodayPracticeDay(){
 }
 $id('day-label').tabIndex=-1;
 $id('day-events').addEventListener('toggle',event=>{
+  if(event.target.id==='today-weekly-review')weeklyReviewExpanded=event.target.open;
   if(event.target.id==='study-due-list')studyDueExpanded=event.target.open;
   if(event.target.id==='study-exams')studyExamsExpanded=event.target.open;
   const exam=event.target.dataset?.studyExam;
@@ -8626,7 +8687,11 @@ $id('day-events').addEventListener('click',event=>{
   const dueButton=event.target.closest('[data-study-due]');
   const examButton=event.target.closest('[data-study-exam-practice]');
   const scopeButton=event.target.closest('[data-study-exam-scope-practice]');
-  if(paperButton)studyRoom.resumeTodayPaper(paperButton.dataset.round);
+  const weekly=event.target.closest('[data-weekly-review-round]');
+  if(event.target.closest('#today-weekly-lessons'))openTodayCalendarWeek();
+  else if(event.target.closest('#today-weekly-makeup'))openMakeupList(()=>($id('today-weekly-makeup')||$id('today-weekly-summary')).focus({preventScroll:true}));
+  else if(weekly)studyRoom.openWeeklyPaperReview(weekly.dataset.weeklyReviewPaper,weekly.dataset.weeklyReviewRound);
+  else if(paperButton)studyRoom.resumeTodayPaper(paperButton.dataset.round);
   else if(event.target.closest('#study-brief-review-resume'))studyRoom.resumeTodayReview();
   else if(scopeButton)studyRoom.startExamScope(scopeButton.dataset.studyExamScopePractice);
   else if(examButton)studyRoom.openExamChapter(examButton.dataset.studyExamPractice);
@@ -8690,6 +8755,8 @@ function renderDayPanel(){
     if(subject)(lesson.done?completed:pending).push(renderDayLesson(lesson,subject,numbers.get(lesson)));
   }
   const keepExpanded=el.dataset.renderedDate===date&&el.querySelector('.day-completed')?.open;
+  const weekly=$id('today-weekly-review');
+  if(weekly)weeklyReviewExpanded=weekly.open;
   el.dataset.renderedDate=date;
   const status=pending.length?'':`<p class="day-list-status">${completed.length?'當天課程已全部完成。':onToday?'今天還沒有課堂。':'這天還沒有課堂。'}</p>`;
   const doneSection=completed.length?`<details class="day-completed" ${keepExpanded?'open':''}>
@@ -8701,7 +8768,15 @@ function renderDayPanel(){
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
-    </section><div class="study-brief-slot" id="study-brief-slot"></div>
+    </section>${onToday?`<div class="today-review-column">
+      <div class="study-brief-slot" id="study-brief-slot"></div>
+      <section class="day-panel-section">
+        <details class="study-due-list" id="today-weekly-review" ${weeklyReviewExpanded?'open':''}>
+          <summary id="today-weekly-summary"><span class="today-weekly-heading"><strong class="day-panel-title">本週回顧</strong><span class="study-brief-meta" id="today-weekly-range"></span></span></summary>
+          <div class="today-weekly-content" id="today-weekly-content"></div>
+        </details>
+      </section>
+    </div>`:''}
     <section class="day-panel-section day-panel-notes">
       <h3 class="day-panel-title">提醒事項</h3>
       <div id="day-course-memos"></div>
@@ -8717,6 +8792,7 @@ function renderDayPanel(){
   </div>`;
   renderDayMemo();
   refreshStudyBrief();
+  refreshWeeklyReview();
 }
 
 const ghost=document.getElementById('drag-ghost');
@@ -11025,7 +11101,8 @@ const batchDialog=$id('study-batch');
   }
   function briefChanged(){
     scheduleParkedPaperExpiry();
-    if(typeof refreshStudyBrief==='function')refreshStudyBrief();
+    refreshStudyBrief();
+    refreshWeeklyReview();
   }
   function record(outcome){
     if(!session||!['question','grade'].includes(session.phase))return;
@@ -11628,6 +11705,38 @@ const batchDialog=$id('study-batch');
     go(detail?'paper-review-detail':'results');
     restoreReviewScroll(position?.scroll,!!detail);
     rememberPaperReview();
+  }
+  function weeklyPaperReview(start,end){
+    const dated=[],undated=[];
+    for(const p of data.papers||[]){
+      for(const round of completedPaperRounds(p.id)){
+        if(!isFullPaperAttempt(round)){
+          if(!round.mockExam&&!round.paperRetry&&!round.reviewRetry&&!round.paperMix)undated.push({p,round});
+          continue;
+        }
+        const finished=round.mockExam.finishedAt;
+        if(Number.isFinite(finished)&&!Number.isNaN(new Date(finished).getTime()))dated.push({p,round,finished});
+        else undated.push({p,round});
+      }
+    }
+    dated.sort((a,b)=>b.finished-a.finished);
+    const submitted=dated.filter(({finished})=>{
+      const day=localDateKey(new Date(finished));
+      return day>=start&&day<=end;
+    });
+    const entry=({p,round,finished})=>({
+      paperId:p.id,roundId:round.paperResultId||'legacy',title:paperSchool(p),
+      context:p.year+' 年度 · '+p.subject,date:finished===undefined?'交卷日期未記錄':examDate(round),
+    });
+    const pending=submitted.filter(({round})=>!readPaperReviewPosition(round)?.completed).map(entry);
+    const recent=submitted[0]||dated[0]||undated[0];
+    return {submitted:submitted.length,pending,recent:recent?entry(recent):null};
+  }
+  function openWeeklyPaperReview(id,roundId){
+    const round=completedPaperRounds(id).find(item=>(item.paperResultId||'legacy')===roundId);
+    if(!round){refreshWeeklyReview();return;}
+    openTodayPractice();
+    openPaperReview({round,position:readPaperReviewPosition(round)});
   }
   function resumeTodayReview(){
     const checkpoint=todayReviewCheckpoint();
@@ -13026,6 +13135,8 @@ const batchDialog=$id('study-batch');
     valid,
     todayBrief,
     todayReviewBrief,
+    weeklyPaperReview,
+    openWeeklyPaperReview,
     resumeTodayReview,
     resumeTodayPaper,
     upcomingExams,
