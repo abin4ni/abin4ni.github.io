@@ -3379,8 +3379,8 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-paper-questions li{padding-block:6px;white-space:pre-wrap;overflow-wrap:anywhere;}
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before{
   inset:0 auto auto 0;
-  width:var(--ipad-pill-width,var(--pill-width));height:var(--pill-height);
-  transform:translate3d(var(--ipad-pill-x,var(--pill-x)),calc(var(--pill-y) - var(--ipad-pill-lift,0px)),0);
+  width:var(--nav-drag-width,var(--pill-width));height:var(--pill-height);
+  transform:translate3d(var(--nav-drag-x,var(--pill-x)),calc(var(--pill-y) - var(--nav-drag-lift,0px)),0);
   transition:none;
 }
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{
@@ -3448,7 +3448,7 @@ body { font-size: var(--ui-body); line-height: var(--ui-body-leading); }
 #panel-cal .view-toggle .vt-btn.active { font-weight: 650; }
 :is(.wide-tabs,.bottom-nav,.account-theme) button { font-weight: 650; }
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before {
-  transition: var(--ipad-pill-transition, transform var(--ui-pause) var(--ui-motion),
+  transition: var(--nav-drag-transition, transform var(--ui-pause) var(--ui-motion),
     width var(--ui-pause) var(--ui-motion), height var(--ui-pause) var(--ui-motion));
 }
 
@@ -4474,42 +4474,42 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   }
 }
 </style>
-<style id="ipad-nav-pill-trial">
-.wide-tabs[data-ipad-pill] > button {
+<style id="touch-nav-pill-trial">
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] > button {
   touch-action:pan-y;
   touch-action:pan-y pinch-zoom;
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
 }
-.wide-tabs[data-ipad-pill] {
-  --ipad-pill-transition:none;
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+  --nav-drag-transition:none;
 }
 @supports (color:color-mix(in srgb,white,transparent)) {
-  .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
     --segment-fill:color-mix(in srgb,var(--nav-sel) 68%,transparent);
     --nav-pill-glint:rgba(255,250,242,.82);
-    --ipad-pill-reflection:rgba(205,159,112,.20);
+    --nav-drag-reflection:rgba(205,159,112,.20);
     --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),inset 0 1px 0 var(--nav-glass-rim),
       inset 0 -2px 3px var(--nav-glass-edge),0 3px 11px var(--nav-pill-shadow);
   }
-  :root[data-theme=dark] .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
+  :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
     --nav-pill-glint:rgba(255,255,255,.30);
-    --ipad-pill-reflection:rgba(217,218,220,.13);
+    --nav-drag-reflection:rgba(217,218,220,.13);
   }
-  .wide-tabs[data-ipad-pill][data-ipad-pill-raised]::before {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
     background-image:linear-gradient(153deg,var(--nav-pill-glint),transparent 55%),
-      linear-gradient(0deg,var(--ipad-pill-reflection),transparent 38%);
+      linear-gradient(0deg,var(--nav-drag-reflection),transparent 38%);
     -webkit-backdrop-filter:blur(8px) saturate(125%);
     backdrop-filter:blur(8px) saturate(125%);
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
-  .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
     --segment-fill:var(--nav-sel);
     --nav-pill-shadow-layer:initial;
   }
-  .wide-tabs[data-ipad-pill][data-ipad-pill-raised]::before {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
     background-image:none;
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
@@ -10272,25 +10272,37 @@ function init(){
   mountWideLayout();
   refreshWeekProgressClock();
   checkIOSInstall();
-  const tabletTouch=matchMedia('(min-width:768px) and (min-height:481px) and (pointer:coarse) and (hover:none)');
-  function enableTabletNav() {
-    const platform=document.documentElement;
-    if(ipadNavPill||platform.hasAttribute('data-phone-touch'))return;
-    if(!platform.hasAttribute('data-ipad')&&!tabletTouch.matches)return;
-    ipadNavPill=mountIPadNavPill(document.querySelector('.wide-tabs'));
-    tabletTouch.removeEventListener('change',enableTabletNav);
-  }
-  tabletTouch.addEventListener('change',enableTabletNav);
-  enableTabletNav();
+  mountTouchNavPills();
 
 }
 
-let ipadNavPill;
-function mountIPadNavPill(group) {
+const touchNavPills=new Map();
+function mountTouchNavPills() {
+  const platform=document.documentElement;
+  const isPhone=platform.hasAttribute('data-phone-touch');
+  const isTablet=platform.hasAttribute('data-ipad');
+  const phoneTouch=matchMedia('(max-width:767px) and (pointer:coarse) and (hover:none)');
+  const tabletTouch=matchMedia('(min-width:768px) and (min-height:481px) and (pointer:coarse) and (hover:none)');
+  const bottomNav=document.querySelector('.bottom-nav');
+  const topNav=document.querySelector('.wide-tabs');
+
+  function enable(group) {
+    if(!touchNavPills.has(group))touchNavPills.set(group,mountTouchNavPill(group));
+  }
+  function update() {
+    if(isPhone||!isTablet&&phoneTouch.matches)enable(bottomNav);
+    if(isTablet||!isPhone&&tabletTouch.matches)enable(topNav);
+  }
+  phoneTouch.addEventListener('change',update);
+  tabletTouch.addEventListener('change',update);
+  update();
+}
+
+function mountTouchNavPill(group) {
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
-  const tabs=[...group.querySelectorAll('[data-wide-page-button]')];
+  const tabs=[...group.querySelectorAll(':scope > button')];
   const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
-  const properties=['--ipad-pill-x','--ipad-pill-width','--ipad-pill-lift'];
+  const properties=['--nav-drag-x','--nav-drag-width','--nav-drag-lift'];
   const threshold=6;
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
   let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0;
@@ -10306,7 +10318,7 @@ function mountIPadNavPill(group) {
     group.style.setProperty(properties[0],(left+Math.min(stretch,0))+'px');
     group.style.setProperty(properties[1],(width+Math.abs(stretch))+'px');
     group.style.setProperty(properties[2],lift+'px');
-    group.toggleAttribute('data-ipad-pill-raised',lift>0.3);
+    group.toggleAttribute('data-touch-nav-pill-raised',lift>0.3);
   }
 
   function resetPresentation() {
@@ -10314,7 +10326,7 @@ function mountIPadNavPill(group) {
     position=target?.slice();
     velocity=[0,0,0,0];
     properties.forEach(property=>group.style.removeProperty(property));
-    group.removeAttribute('data-ipad-pill-raised');
+    group.removeAttribute('data-touch-nav-pill-raised');
   }
 
   function tick(now) {
@@ -10364,7 +10376,7 @@ function mountIPadNavPill(group) {
     // as well as the selected button's hit area, without adding an overlay.
     const bounds=group.getBoundingClientRect();
     const [left,width,stretch,lift]=position;
-    const x=touch.clientX-bounds.left,y=touch.clientY-bounds.top;
+    const x=touch.clientX-bounds.left-group.clientLeft,y=touch.clientY-bounds.top-group.clientTop;
     const top=selected.offsetTop-lift;
     return x>=left+Math.min(stretch,0)&&x<=left+width+Math.max(stretch,0)&&
       y>=top&&y<=top+selected.offsetHeight;
@@ -10461,8 +10473,8 @@ function mountIPadNavPill(group) {
 
   const selected=active();
   if(selected?.offsetWidth)align([selected.offsetLeft,selected.offsetTop,selected.offsetWidth],false);
-  group.setAttribute('data-ipad-pill','');
-  return {group,align};
+  group.setAttribute('data-touch-nav-pill','');
+  return {align};
 }
 
 const pillMotion=(()=>{
@@ -10491,7 +10503,7 @@ const pillMotion=(()=>{
     group.setAttribute('data-pill-ready','');
     ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,values[i]+'px'));
     state.geometry=values;
-    if(ipadNavPill?.group===group)ipadNavPill.align(values,animate);
+    touchNavPills.get(group)?.align(values,animate);
   }
   function capture(root){
     const previous=new Map();
