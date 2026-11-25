@@ -4484,33 +4484,52 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
   --nav-drag-transition:none;
+  --nav-drag-glint:rgba(255,250,242,.56);
+  --nav-drag-reflection:rgba(205,159,112,.12);
+  --nav-drag-rim:rgba(255,250,242,.86);
+  --nav-drag-shadow:0 2px 5px var(--nav-pill-shadow);
+  --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),
+    inset 0 1px 0 var(--nav-drag-rim),var(--nav-drag-shadow);
+}
+:root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+  --nav-drag-glint:rgba(255,255,255,.15);
+  --nav-drag-reflection:rgba(217,218,220,.07);
+  --nav-drag-rim:rgba(255,255,255,.25);
+}
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
+  background-color:var(--segment-fill);
+  background-image:linear-gradient(180deg,var(--nav-drag-glint),transparent 56%,var(--nav-drag-reflection));
+}
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  --nav-drag-glint:rgba(255,250,242,.84);
+  --nav-drag-reflection:rgba(205,159,112,.22);
+  --nav-drag-rim:var(--nav-glass-rim);
+  --nav-drag-shadow:0 4px 12px var(--nav-pill-shadow);
+}
+:root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  --nav-drag-glint:rgba(255,255,255,.27);
+  --nav-drag-reflection:rgba(217,218,220,.13);
+  --nav-drag-rim:var(--nav-glass-rim);
 }
 @supports (color:color-mix(in srgb,white,transparent)) {
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
     --segment-fill:color-mix(in srgb,var(--nav-sel) 68%,transparent);
-    --nav-pill-glint:rgba(255,250,242,.82);
-    --nav-drag-reflection:rgba(205,159,112,.20);
-    --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),inset 0 1px 0 var(--nav-glass-rim),
-      inset 0 -2px 3px var(--nav-glass-edge),0 3px 11px var(--nav-pill-shadow);
-  }
-  :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-    --nav-pill-glint:rgba(255,255,255,.30);
-    --nav-drag-reflection:rgba(217,218,220,.13);
   }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    background-image:linear-gradient(153deg,var(--nav-pill-glint),transparent 55%),
-      linear-gradient(0deg,var(--nav-drag-reflection),transparent 38%);
     -webkit-backdrop-filter:blur(8px) saturate(125%);
     backdrop-filter:blur(8px) saturate(125%);
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill],
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
     --segment-fill:var(--nav-sel);
     --nav-pill-shadow-layer:initial;
   }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
     background-image:none;
+  }
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
   }
@@ -10313,10 +10332,16 @@ function mountTouchNavPill(group) {
     frame=0;
   }
 
-  function paint() {
+  function paintedBounds() {
     const [left,width,stretch,lift]=position;
-    group.style.setProperty(properties[0],(left+Math.min(stretch,0))+'px');
-    group.style.setProperty(properties[1],(width+Math.abs(stretch))+'px');
+    const extension=Math.max(0,stretch);
+    return [left-extension/2,width+extension,lift];
+  }
+
+  function paint() {
+    const [left,width,lift]=paintedBounds();
+    group.style.setProperty(properties[0],left+'px');
+    group.style.setProperty(properties[1],width+'px');
     group.style.setProperty(properties[2],lift+'px');
     group.toggleAttribute('data-touch-nav-pill-raised',lift>0.3);
   }
@@ -10334,7 +10359,7 @@ function mountTouchNavPill(group) {
     lastFrame=now;
     while(remaining>0) {
       const dt=Math.min(remaining,1/120);
-      const shapeStretch=clamp(velocity[0]/105,-8,8);
+      const shapeStretch=Math.min(8,Math.abs(velocity[0])/105);
       const shapeLift=Math.min(4,Math.max(Math.abs(velocity[0])/240,Math.abs(target[0]-position[0])/22));
       const desired=[target[0],target[1],shapeStretch,shapeLift];
       for(let i=0;i<4;i++) {
@@ -10375,11 +10400,10 @@ function mountTouchNavPill(group) {
     // A moving pill can be painted over another tab. Use the painted bounds
     // as well as the selected button's hit area, without adding an overlay.
     const bounds=group.getBoundingClientRect();
-    const [left,width,stretch,lift]=position;
+    const [left,width,lift]=paintedBounds();
     const x=touch.clientX-bounds.left-group.clientLeft,y=touch.clientY-bounds.top-group.clientTop;
     const top=selected.offsetTop-lift;
-    return x>=left+Math.min(stretch,0)&&x<=left+width+Math.max(stretch,0)&&
-      y>=top&&y<=top+selected.offsetHeight;
+    return x>=left&&x<=left+width&&y>=top&&y<=top+selected.offsetHeight;
   }
 
   // Touch events stay on the original nav target as the finger crosses labels.
@@ -10403,7 +10427,7 @@ function mountTouchNavPill(group) {
     const dx=touch.clientX-gesture.x;
     const first=tabs[0],last=tabs[tabs.length-1];
     const left=clamp(gesture.start+dx,first.offsetLeft,last.offsetLeft+last.offsetWidth-position[1]);
-    const stretch=reducedMotion.matches?0:clamp(gesture.stretch+(left-gesture.start)/8,-10,10);
+    const stretch=reducedMotion.matches?0:Math.min(10,Math.max(0,gesture.stretch)+Math.abs(left-gesture.start)/8);
     position=[left,position[1],stretch,reducedMotion.matches?0:4];
     paint();
   }
@@ -10435,7 +10459,8 @@ function mountTouchNavPill(group) {
       follow(touch);
       const bounds=group.getBoundingClientRect();
       if(touch.clientX>=bounds.left&&touch.clientX<=bounds.right&&touch.clientY>=bounds.top&&touch.clientY<=bounds.bottom) {
-        const center=position[0]+position[1]/2;
+        const [left,width]=paintedBounds();
+        const center=left+width/2;
         const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
         const selected=active();
         const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,selected);
