@@ -3526,7 +3526,7 @@ body { font-size: var(--ui-body); line-height: var(--ui-body-leading); }
 
 #account-toggle { background: var(--sunken); border: 1px solid var(--border-lt); }
 :is(.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before {
-  background: var(--segment-fill);
+  background-color: var(--segment-fill);
 }
 
 /* A popover opens toward its trigger. Native dialogs keep their focus and dismissal. */
@@ -3599,7 +3599,7 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   transition-timing-function: var(--pill-motion);
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before {
-  box-shadow: inset 0 0 0 1px var(--segment-border);
+  box-shadow:var(--nav-pill-shadow-layer,inset 0 0 0 1px var(--segment-border));
 }
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button {
   color: var(--segment-text);
@@ -4421,6 +4421,58 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   filter:none;box-shadow:inset 0 1px 2px var(--border-strong),inset 0 -1px 0 var(--nav-glass-sheen);
 }
 .bottom-nav>.bn-btn:active :is(.bn-icon,.bn-label){opacity:1;}
+</style>
+<style id="nav-glass-plus">
+:is(.wide-tabs,.bottom-nav){
+  --nav-glass-tint:rgba(255,250,242,.72);
+  --nav-glass-rim:rgba(255,255,255,.94);
+  --nav-glass-sheen:rgba(255,255,255,.34);
+  --nav-glass-edge:rgba(89,57,35,.23);
+  --nav-pill-glint:rgba(255,250,242,.46);
+  --nav-pill-shadow:rgba(59,36,24,.20);
+}
+:root[data-theme=dark] :is(.wide-tabs,.bottom-nav){
+  --nav-glass-tint:rgba(32,34,38,.83);
+  --nav-glass-rim:rgba(255,255,255,.52);
+  --nav-glass-sheen:rgba(255,255,255,.04);
+  --nav-glass-edge:rgba(217,218,220,.28);
+  --nav-pill-glint:rgba(255,255,255,.12);
+  --nav-pill-shadow:rgba(8,9,11,.36);
+}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  :is(.wide-tabs,.bottom-nav)::after{
+    -webkit-backdrop-filter:blur(15px) saturate(112%);
+    backdrop-filter:blur(15px) saturate(112%);
+    box-shadow:inset 0 1px 0 var(--nav-glass-rim),inset 0 0 0 1px var(--nav-glass-edge),
+      inset 0 -2px 3px var(--nav-pill-shadow);
+  }
+  :is(.wide-tabs,.bottom-nav){
+    --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),0 2px 5px var(--nav-pill-shadow);
+  }
+  :is(.wide-tabs,.bottom-nav)::before{
+    background-image:linear-gradient(var(--nav-pill-glint),transparent 68%);
+  }
+  @media(max-width:767px){
+    /* Keep the existing end-of-scroll clearance inside the Today scroller. */
+    html:not([data-keyboard-viewport]) .app-shell:has(#panel-r.mob-active[data-mobile-day=today]):not(:has(#today-task-lists input:focus)){
+      padding-block-end:0;
+    }
+    html:not([data-keyboard-viewport]) #panel-r.mob-active[data-mobile-day=today]:not(:has(#today-task-lists input:focus)){
+      padding-block-end:calc(var(--sp-6) + var(--bot-h));
+      scroll-padding-block-end:var(--bot-h);
+    }
+  }
+}
+@media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active){
+  :is(.wide-tabs,.bottom-nav){--nav-pill-shadow-layer:initial;}
+  :is(.wide-tabs,.bottom-nav)::after{
+    -webkit-backdrop-filter:none;backdrop-filter:none;
+    box-shadow:inset 0 0 0 1px var(--border-lt);
+  }
+  :is(.wide-tabs,.bottom-nav)::before{
+    background-image:none;
+  }
+}
 </style>
 <!-- Firebase SDK -->
 <script type="module">
