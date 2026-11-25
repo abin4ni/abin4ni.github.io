@@ -2886,6 +2886,19 @@ html[data-ipad]::-webkit-scrollbar,html[data-ipad] *::-webkit-scrollbar{display:
 .local-dialog::backdrop{background:var(--scrim);}
 .local-dialog h2{font-size:1.25rem;line-height:1.25;}
 .local-dialog [hidden]{display:none!important;}
+html[data-keyboard-viewport] .local-dialog[data-app-dialog]{
+  --keyboard-dialog-top-gap:max(8px,env(safe-area-inset-top));
+  inset-block:calc(var(--keyboard-viewport-top) + var(--keyboard-dialog-top-gap)) auto;
+  margin-block:0;max-height:calc(var(--keyboard-viewport-height) - var(--keyboard-dialog-top-gap) - 8px);
+}
+html[data-keyboard-viewport] #wide-today:not([hidden]){
+  padding-block-end:calc(var(--ui-inset) + var(--keyboard-viewport-cover));
+}
+@media(max-width:767px){
+  html[data-keyboard-viewport] #panel-r[data-mobile-day=today]{
+    padding-block-end:calc(28px + var(--keyboard-viewport-cover));
+  }
+}
 #cal-title{font:inherit;color:inherit;line-height:inherit;border:0;background:none;text-align:left;cursor:pointer;min-height:44px;}
 #calendar-jump-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;}
 #calendar-jump-form label{min-width:0;}
@@ -7191,6 +7204,42 @@ document.addEventListener('click',event=>{
 function bindWideDialog(dialog,dismiss){
   dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});
   dialog.addEventListener('keydown',event=>event.stopPropagation());
+}
+
+if(window.visualViewport){
+  const viewport=window.visualViewport;
+  const html=document.documentElement;
+  let frame=0,lastHeight=viewport.height;
+  function fitKeyboardViewport(){
+    frame=0;
+    const height=viewport.height,resized=height!==lastHeight;
+    lastHeight=height;
+    // During typing, mobile browsers may resize only the visual viewport.
+    const covered=viewport.scale===1&&html.clientHeight-height>100;
+    html.toggleAttribute('data-keyboard-viewport',covered);
+    if(viewport.scale!==1||!covered&&!resized)return;
+    const top=viewport.offsetTop;
+    const bottom=top+height;
+    if(covered){
+      html.style.setProperty('--keyboard-viewport-top',top+'px');
+      html.style.setProperty('--keyboard-viewport-height',height+'px');
+      html.style.setProperty('--keyboard-viewport-cover',Math.max(0,html.clientHeight-bottom)+'px');
+    }
+    const field=document.activeElement;
+    if(!field?.matches('textarea:not([readonly]),input:not([readonly]):is(:not([type]),[type=text],[type=search],[type=number])'))return;
+    if(!field.closest('.local-dialog,#today-task-lists'))return;
+    let scroller=field.parentElement;
+    while(scroller&&!/auto|scroll/.test(getComputedStyle(scroller).overflowY))scroller=scroller.parentElement;
+    if(!scroller)return;
+    const r=field.getBoundingClientRect(),area=scroller.getBoundingClientRect(),gap=8;
+    const first=Math.max(area.top,top)+gap,last=Math.min(area.bottom,bottom)-gap;
+    if(r.top<first||r.height>last-first)scroller.scrollTop+=r.top-first;
+    else if(r.bottom>last)scroller.scrollTop+=r.bottom-last;
+  }
+  const refreshKeyboardViewport=()=>{if(!frame)frame=requestAnimationFrame(fitKeyboardViewport);};
+  viewport.addEventListener('resize',refreshKeyboardViewport);
+  viewport.addEventListener('scroll',refreshKeyboardViewport);
+  document.addEventListener('focusin',refreshKeyboardViewport);
 }
 
 function closeWideExam(){
@@ -11768,7 +11817,10 @@ const batchDialog=$id('study-batch');
     }
     batchSaving=false;
     closeBatch();
-    if(targetPaper)go('paper');
+    if(targetPaper){
+      go('paper');
+      root.querySelector('[data-study-action=paper-batch]')?.focus({preventScroll:true});
+    }
     else{filters={subject,chapter};go('library');}
     toast('已匯入 '+points.length+' 題','success');
   });
@@ -14691,11 +14743,6 @@ todayTaskView=(()=>{
   }
   document.addEventListener('click',finishQuickPointer,true);
   window.addEventListener('blur',finishQuickPointer);
-  window.visualViewport?.addEventListener('resize',()=>{
-    for(const {input} of quickAdds.values()){
-      if(document.activeElement===input)input.scrollIntoView({block:'nearest'});
-    }
-  });
   function select(type){
     if(type===selected)return;
     selected=type;
