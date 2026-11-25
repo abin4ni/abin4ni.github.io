@@ -3609,12 +3609,12 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   color: var(--segment-selected);
 }
 @media(hover:hover){
-  :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme):not([data-touch-nav-pill]) button:not([aria-current=page],[aria-pressed=true]):hover{
+  :is(#panel-cal .view-toggle,.account-theme):not([data-touch-nav-pill]) button:not([aria-current=page],[aria-pressed=true]):hover{
     color:var(--text);background-color:var(--segment-press);text-decoration:none;
   }
   .wide-tabs button[aria-current=page]:hover{color:var(--text);text-decoration:none;}
 }
-:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme):not([data-touch-nav-pill]) button:active {
+:is(#panel-cal .view-toggle,.account-theme):not([data-touch-nav-pill]) button:active {
   background-color: var(--segment-press);
   color: var(--text);
 }
@@ -4385,19 +4385,19 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 /* Keep the material behind the original selection, controls and focus rings. */
 :is(.wide-tabs,.bottom-nav){
   --nav-glass-solid:var(--sunken);
-  --nav-glass-tint:rgba(247,238,226,.84);
-  --nav-glass-rim:rgba(255,255,255,.72);
-  --nav-glass-sheen:rgba(255,255,255,.18);
+  --nav-glass-tint:rgba(250,242,231,.42);
+  --nav-glass-rim:rgba(255,255,255,.88);
+  --nav-glass-sheen:rgba(255,255,255,.32);
   background:transparent;
 }
 .bottom-nav{
   --nav-glass-solid:var(--nav-bg);
-  --nav-glass-tint:rgba(255,250,242,.85);
+  --nav-glass-tint:rgba(255,250,242,.44);
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav){
-  --nav-glass-tint:rgba(51,54,59,.93);
-  --nav-glass-rim:rgba(255,255,255,.25);
-  --nav-glass-sheen:rgba(255,255,255,.05);
+  --nav-glass-tint:rgba(42,45,52,.48);
+  --nav-glass-rim:rgba(236,241,250,.38);
+  --nav-glass-sheen:rgba(255,255,255,.11);
 }
 :is(.wide-tabs,.bottom-nav)::after{
   content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
@@ -4406,9 +4406,12 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   :is(.wide-tabs,.bottom-nav)::after{
-    background:linear-gradient(145deg,var(--nav-glass-sheen),transparent 62%),var(--nav-glass-tint);
-    -webkit-backdrop-filter:blur(10px) saturate(105%);
-    backdrop-filter:blur(10px) saturate(105%);
+    background:linear-gradient(155deg,var(--nav-glass-sheen) 0%,rgba(255,255,255,.04) 40%,transparent 68%,rgba(255,248,238,.16) 100%),var(--nav-glass-tint);
+    -webkit-backdrop-filter:blur(12px) saturate(140%);
+    backdrop-filter:blur(12px) saturate(140%);
+  }
+  :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)::after{
+    background:linear-gradient(155deg,var(--nav-glass-sheen) 0%,rgba(255,255,255,.02) 42%,transparent 70%,rgba(215,222,236,.07) 100%),var(--nav-glass-tint);
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active){
@@ -4424,27 +4427,86 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 </style>
 <style id="nav-glass-plus">
 :is(.wide-tabs,.bottom-nav){
-  --nav-glass-tint:rgba(255,250,242,.72);
-  --nav-glass-rim:rgba(255,255,255,.94);
-  --nav-glass-sheen:rgba(255,255,255,.34);
-  --nav-glass-edge:rgba(89,57,35,.23);
-  --nav-pill-glint:rgba(255,250,242,.46);
-  --nav-pill-shadow:rgba(59,36,24,.20);
+  background:transparent !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  --nav-glass-tint:rgba(255,250,242,.20);
+  --nav-glass-rim:rgba(255,255,255,.96);
+  --nav-glass-sheen:rgba(255,255,255,.32);
+  --nav-glass-edge:rgba(115,74,46,.22);
+  --nav-glass-bounce:rgba(255,248,236,.56);
+  --nav-glass-drop:0 8px 24px rgba(59,36,24,.11),0 2px 6px rgba(59,36,24,.08);
+  --nav-pill-glint:rgba(255,253,249,.62);
+  --nav-pill-shadow:rgba(59,36,24,.16);
+}
+/* Mobile bottom nav uses a lighter translucent dock so strong convex lens optics stay on .wide-tabs only. */
+.bottom-nav{
+  --nav-glass-tint:rgba(255,250,242,.38);
+  --nav-glass-rim:rgba(255,255,255,.84);
+  --nav-glass-sheen:rgba(255,255,255,.20);
+  --nav-glass-edge:rgba(115,74,46,.15);
+  --nav-glass-bounce:rgba(255,248,236,.32);
+  --nav-glass-drop:0 6px 18px rgba(59,36,24,.08),0 1px 4px rgba(59,36,24,.05);
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav){
-  --nav-glass-tint:rgba(32,34,38,.83);
-  --nav-glass-rim:rgba(255,255,255,.52);
-  --nav-glass-sheen:rgba(255,255,255,.04);
-  --nav-glass-edge:rgba(217,218,220,.28);
-  --nav-pill-glint:rgba(255,255,255,.12);
-  --nav-pill-shadow:rgba(8,9,11,.36);
+  --nav-glass-tint:rgba(34,37,44,.28);
+  --nav-glass-rim:rgba(244,248,255,.46);
+  --nav-glass-sheen:rgba(255,255,255,.12);
+  --nav-glass-edge:rgba(218,226,240,.24);
+  --nav-glass-bounce:rgba(206,216,236,.18);
+  --nav-glass-drop:0 10px 28px rgba(0,0,0,.36),0 2px 8px rgba(0,0,0,.24);
+  --nav-pill-glint:rgba(240,244,252,.18);
+  --nav-pill-shadow:rgba(6,8,12,.34);
+}
+:root[data-theme=dark] .bottom-nav{
+  --nav-glass-tint:rgba(38,41,48,.46);
+  --nav-glass-rim:rgba(244,248,255,.32);
+  --nav-glass-sheen:rgba(255,255,255,.08);
+  --nav-glass-edge:rgba(218,226,240,.16);
+  --nav-glass-bounce:rgba(206,216,236,.10);
+  --nav-glass-drop:0 6px 20px rgba(0,0,0,.28),0 1px 4px rgba(0,0,0,.18);
 }
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
-  :is(.wide-tabs,.bottom-nav)::after{
-    -webkit-backdrop-filter:blur(15px) saturate(112%);
-    backdrop-filter:blur(15px) saturate(112%);
-    box-shadow:inset 0 1px 0 var(--nav-glass-rim),inset 0 0 0 1px var(--nav-glass-edge),
-      inset 0 -2px 3px var(--nav-pill-shadow);
+  @media(min-width:768px){
+    /* Keep .app-header off the backdrop-filter chain so .wide-tabs refracts scrolling content directly. */
+    .app-header{
+      background:transparent;
+      -webkit-backdrop-filter:none;
+      backdrop-filter:none;
+    }
+    .app-header::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:-1;
+      pointer-events:none;
+      background:linear-gradient(to bottom,rgba(242,232,218,.44) 0%,rgba(242,232,218,.22) 100%);
+      -webkit-backdrop-filter:blur(6px) saturate(125%);
+      backdrop-filter:blur(6px) saturate(125%);
+    }
+    :root[data-theme=dark] .app-header::before{
+      background:linear-gradient(to bottom,rgba(36,38,43,.50) 0%,rgba(36,38,43,.28) 100%);
+    }
+  }
+  .bottom-nav{
+    border-color:transparent;
+    box-shadow:var(--nav-glass-drop);
+  }
+  .wide-tabs::after{
+    background:linear-gradient(160deg,var(--nav-glass-sheen) 0%,transparent 24%,transparent 76%,var(--nav-glass-bounce) 100%),var(--nav-glass-tint);
+    -webkit-backdrop-filter:blur(16px) saturate(180%);
+    backdrop-filter:blur(16px) saturate(180%);
+    box-shadow:inset 0 1.25px 0 var(--nav-glass-rim),
+      inset 0 -1px 0 var(--nav-glass-bounce),
+      inset 0 0 0 1px var(--nav-glass-edge);
+  }
+  .bottom-nav::after{
+    background:linear-gradient(165deg,var(--nav-glass-sheen) 0%,transparent 32%,transparent 78%,var(--nav-glass-bounce) 100%),var(--nav-glass-tint);
+    -webkit-backdrop-filter:blur(14px) saturate(145%);
+    backdrop-filter:blur(14px) saturate(145%);
+    box-shadow:inset 0 1px 0 var(--nav-glass-rim),
+      inset 0 -1px 0 var(--nav-glass-bounce),
+      inset 0 0 0 1px var(--nav-glass-edge);
   }
   :is(.wide-tabs,.bottom-nav){
     --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),0 2px 5px var(--nav-pill-shadow);
@@ -4453,11 +4515,12 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     background-image:linear-gradient(var(--nav-pill-glint),transparent 68%);
   }
   @media(max-width:767px){
-    /* Keep the existing end-of-scroll clearance inside the Today scroller. */
-    html:not([data-keyboard-viewport]) .app-shell:has(#panel-r.mob-active[data-mobile-day=today]):not(:has(#today-task-lists input:focus)){
+    /* Keep end-of-scroll clearance inside scrollable tabs so content passes behind the glass dock. */
+    html:not([data-keyboard-viewport]) .app-shell:has(:is(#panel-r,#panel-l).mob-active,#study-room:not([hidden])):not(:has(#today-task-lists input:focus)){
       padding-block-end:0;
     }
-    html:not([data-keyboard-viewport]) #panel-r.mob-active[data-mobile-day=today]:not(:has(#today-task-lists input:focus)){
+    html:not([data-keyboard-viewport]) :is(#panel-r,#panel-l).mob-active:not(:has(#today-task-lists input:focus)),
+    html:not([data-keyboard-viewport]) #study-room:not([hidden]){
       padding-block-end:calc(var(--sp-6) + var(--bot-h));
       scroll-padding-block-end:var(--bot-h);
     }
@@ -4465,7 +4528,13 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active){
   :is(.wide-tabs,.bottom-nav){--nav-pill-shadow-layer:initial;}
+  @media(min-width:768px){
+    .app-header{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none;}
+    .app-header::before{display:none;}
+  }
+  .bottom-nav{border-color:var(--border-lt);box-shadow:var(--shadow-md);}
   :is(.wide-tabs,.bottom-nav)::after{
+    background:var(--nav-glass-solid);
     -webkit-backdrop-filter:none;backdrop-filter:none;
     box-shadow:inset 0 0 0 1px var(--border-lt);
   }
@@ -4475,76 +4544,657 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 </style>
 <style id="touch-nav-pill-trial">
+:is(.wide-tabs,.bottom-nav) > button {
+  position:relative;
+  z-index:1;
+}
+:is(.wide-tabs,.bottom-nav) > button,
+:is(.wide-tabs,.bottom-nav) > button:is(:hover,:active,:focus,.active,[aria-current=page]),
+:is(.wide-tabs,.bottom-nav):not([data-touch-nav-pill]) > button:is(:hover,:active):not(:disabled) {
+  background:transparent !important;
+  background-color:transparent !important;
+  box-shadow:none !important;
+  filter:none !important;
+  transform:none !important;
+  text-decoration:none !important;
+  -webkit-tap-highlight-color:transparent;
+}
+:is(.wide-tabs,.bottom-nav) > button:active :is(.bn-icon,.bn-label) {
+  opacity:1 !important;
+}
+:is(.wide-tabs,.bottom-nav) > button[aria-current=page] {
+  color:var(--text);
+}
+@media (hover:hover) and (pointer:fine) {
+  :is(.wide-tabs,.bottom-nav) > button:not([aria-current=page]):hover {
+    color:var(--text);
+    text-decoration:none !important;
+  }
+}
+:is(.wide-tabs,.bottom-nav)::before {
+  z-index:0;
+}
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] > button {
   touch-action:pan-y;
   touch-action:pan-y pinch-zoom;
   -webkit-touch-callout:none;
   -webkit-user-select:none;
   user-select:none;
+  transform:none !important;
 }
-:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] > button:active:not(:disabled) {
-  filter:none;
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready]::before {
+  height:var(--nav-drag-height,var(--pill-height));
+  transform:translate3d(var(--nav-drag-x,var(--pill-x)),var(--nav-drag-y,var(--pill-y)),0);
+  will-change:transform,width,height;
 }
-:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+/* Beat ID-weighted base rules (#panel-cal .view-toggle) so .wide-tabs & .bottom-nav stay transparent and driven 100% by spring JS. */
+:is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready]::before,
+:is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready][data-pill-moving]::before {
+  background-color:transparent !important;
+  transition-property:box-shadow,filter !important;
+  transition-duration:150ms !important;
+  transition-timing-function:var(--ease-ios) !important;
+}
+/* .wide-tabs retains strong convex Liquid Glass lens optics. */
+.wide-tabs[data-touch-nav-pill] {
   --nav-drag-transition:none;
-  --nav-drag-glint:rgba(255,250,242,.56);
-  --nav-drag-reflection:rgba(205,159,112,.12);
-  --nav-drag-rim:rgba(255,250,242,.86);
-  --nav-drag-edge:rgba(113,75,47,.21);
-  --nav-drag-shadow:0 1px 3px var(--nav-pill-shadow);
+  --nav-drag-top:rgba(255,253,249,.34);
+  --nav-drag-mid:rgba(246,230,210,.15);
+  --nav-drag-bot:rgba(235,212,184,.24);
+  --nav-drag-specular:rgba(255,255,255,.94);
+  --nav-drag-caustic:rgba(214,166,118,.42);
+  --nav-drag-rim-tint:rgba(255,250,242,.34);
+  --nav-drag-rim:rgba(255,255,255,1);
+  --nav-drag-edge:rgba(138,86,52,.42);
+  --nav-drag-bottom-glint:rgba(188,134,88,.42);
+  --nav-drag-inner-glow:rgba(255,251,244,.44);
+  --nav-drag-edge-caustic:rgba(255,248,236,.52);
+  --nav-drag-shadow:0 3px 10px rgba(59,36,24,.14),0 0 0 .5px rgba(138,86,52,.12);
   --nav-pill-shadow-layer:inset 0 0 0 1px var(--nav-drag-edge),
-    inset 0 1px 0 var(--nav-drag-rim),var(--nav-drag-shadow);
+    inset 0 1.25px 0 var(--nav-drag-rim),
+    inset 0 -1px 0 var(--nav-drag-bottom-glint),
+    inset var(--nav-edge-shift,0px) 0 6px var(--nav-drag-edge-caustic),
+    inset 0 0 7px var(--nav-drag-inner-glow),
+    var(--nav-drag-shadow);
 }
-:root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
-  --nav-drag-color:#383b42;
-  --nav-drag-alpha:79%;
-  --nav-drag-glint:rgba(228,233,242,.08);
-  --nav-drag-reflection:rgba(217,218,220,.045);
-  --nav-drag-rim:rgba(222,228,239,.16);
-  --nav-drag-edge:rgba(191,199,214,.25);
+:root[data-theme=dark] .wide-tabs[data-touch-nav-pill] {
+  --nav-drag-top:rgba(124,132,148,.24);
+  --nav-drag-mid:rgba(74,79,90,.14);
+  --nav-drag-bot:rgba(58,63,74,.22);
+  --nav-drag-specular:rgba(255,255,255,.54);
+  --nav-drag-caustic:rgba(212,222,242,.26);
+  --nav-drag-rim-tint:rgba(226,234,248,.16);
+  --nav-drag-rim:rgba(246,249,255,.68);
+  --nav-drag-edge:rgba(218,226,242,.44);
+  --nav-drag-bottom-glint:rgba(204,214,234,.28);
+  --nav-drag-inner-glow:rgba(232,238,250,.18);
+  --nav-drag-edge-caustic:rgba(236,242,255,.28);
+  --nav-drag-shadow:0 3px 10px rgba(0,0,0,.36);
 }
-:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
-  background-color:var(--segment-fill);
-  background-image:linear-gradient(180deg,var(--nav-drag-glint),transparent 56%,var(--nav-drag-reflection));
+.wide-tabs[data-touch-nav-pill]::before {
+  background-color:transparent !important;
+  background-image:
+    radial-gradient(62% 88% at var(--nav-glint-x,50%) 0%,var(--nav-drag-specular) 0%,transparent 62%),
+    radial-gradient(56% 74% at calc(100% - var(--nav-glint-x,50%)) 100%,var(--nav-drag-caustic) 0%,transparent 60%),
+    radial-gradient(115% 135% at 50% 50%,transparent 56%,var(--nav-drag-rim-tint) 94%,var(--nav-drag-specular) 100%),
+    linear-gradient(var(--nav-glint-angle,168deg),var(--nav-drag-top) 0%,var(--nav-drag-mid) 50%,var(--nav-drag-bot) 100%);
 }
-:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-glint:rgba(255,250,242,.84);
-  --nav-drag-reflection:rgba(205,159,112,.22);
-  --nav-drag-rim:var(--nav-glass-rim);
-  --nav-drag-shadow:0 3px 8px var(--nav-pill-shadow);
+.wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  --nav-drag-top:rgba(255,253,248,.22);
+  --nav-drag-mid:rgba(245,228,206,.09);
+  --nav-drag-bot:rgba(232,202,168,.18);
+  --nav-drag-specular:rgba(255,255,255,.99);
+  --nav-drag-caustic:rgba(214,164,114,.58);
+  --nav-drag-rim-tint:rgba(255,252,246,.46);
+  --nav-drag-rim:rgba(255,255,255,1);
+  --nav-drag-edge:rgba(138,86,52,.52);
+  --nav-drag-bottom-glint:rgba(176,120,76,.50);
+  --nav-drag-inner-glow:rgba(255,250,242,.62);
+  --nav-drag-edge-caustic:rgba(255,252,244,.76);
+  --nav-drag-shadow:0 10px 26px rgba(59,36,24,.20),0 3px 8px rgba(59,36,24,.12);
+  --nav-pill-shadow-layer:inset 0 0 0 1.25px var(--nav-drag-edge),
+    inset 0 1.5px 0 var(--nav-drag-rim),
+    inset 0 -1.5px 0 var(--nav-drag-bottom-glint),
+    inset var(--nav-edge-shift,0px) 0 8px var(--nav-drag-edge-caustic),
+    inset 0 0 11px var(--nav-drag-inner-glow),
+    var(--nav-drag-shadow);
 }
-:root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-color:#4a4e58;
-  --nav-drag-alpha:46%;
-  --nav-drag-glint:rgba(224,231,244,.21);
-  --nav-drag-reflection:rgba(199,208,225,.11);
-  --nav-drag-rim:rgba(240,245,255,.82);
-  --nav-drag-edge:rgba(203,213,231,.57);
+:root[data-theme=dark] .wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  --nav-drag-top:rgba(146,154,172,.20);
+  --nav-drag-mid:rgba(86,92,106,.10);
+  --nav-drag-bot:rgba(68,74,88,.18);
+  --nav-drag-specular:rgba(255,255,255,.90);
+  --nav-drag-caustic:rgba(220,230,248,.44);
+  --nav-drag-rim-tint:rgba(234,240,252,.26);
+  --nav-drag-rim:rgba(250,252,255,.96);
+  --nav-drag-edge:rgba(232,238,250,.78);
+  --nav-drag-bottom-glint:rgba(218,226,242,.50);
+  --nav-drag-inner-glow:rgba(236,242,252,.30);
+  --nav-drag-edge-caustic:rgba(244,248,255,.52);
+  --nav-drag-shadow:0 10px 26px rgba(0,0,0,.52),0 3px 8px rgba(0,0,0,.30);
 }
-@supports (color:color-mix(in srgb,white,transparent)) {
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
-    --segment-fill:color-mix(in srgb,var(--nav-drag-color,var(--nav-sel)) var(--nav-drag-alpha,84%),transparent);
+/* .bottom-nav shares drag + spring physics but uses lighter glass without heavy convex magnification. */
+.bottom-nav[data-touch-nav-pill] {
+  --nav-drag-transition:none;
+  --nav-drag-top:rgba(255,253,249,.68);
+  --nav-drag-mid:rgba(246,232,214,.46);
+  --nav-drag-bot:rgba(236,216,192,.54);
+  --nav-drag-rim:rgba(255,255,255,.92);
+  --nav-drag-edge:rgba(138,86,52,.30);
+  --nav-drag-bottom-glint:rgba(188,134,88,.24);
+  --nav-drag-inner-glow:rgba(255,251,244,.28);
+  --nav-drag-shadow:0 2px 8px rgba(59,36,24,.10);
+  --nav-pill-shadow-layer:inset 0 0 0 1px var(--nav-drag-edge),
+    inset 0 1px 0 var(--nav-drag-rim),
+    inset 0 -1px 0 var(--nav-drag-bottom-glint),
+    inset 0 0 4px var(--nav-drag-inner-glow),
+    var(--nav-drag-shadow);
+}
+:root[data-theme=dark] .bottom-nav[data-touch-nav-pill] {
+  --nav-drag-top:rgba(104,110,124,.38);
+  --nav-drag-mid:rgba(68,72,82,.26);
+  --nav-drag-bot:rgba(54,58,68,.32);
+  --nav-drag-rim:rgba(244,248,255,.36);
+  --nav-drag-edge:rgba(214,222,238,.28);
+  --nav-drag-bottom-glint:rgba(200,210,230,.16);
+  --nav-drag-inner-glow:rgba(230,236,248,.10);
+  --nav-drag-shadow:0 2px 8px rgba(0,0,0,.28);
+}
+.bottom-nav[data-touch-nav-pill]::before {
+  background-color:transparent !important;
+  background-image:
+    radial-gradient(56% 78% at var(--nav-glint-x,50%) 0%,var(--nav-drag-rim) 0%,transparent 65%),
+    linear-gradient(var(--nav-glint-angle,172deg),var(--nav-drag-top) 0%,var(--nav-drag-mid) 52%,var(--nav-drag-bot) 100%);
+}
+.bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  --nav-drag-top:rgba(255,253,248,.60);
+  --nav-drag-mid:rgba(245,228,206,.38);
+  --nav-drag-bot:rgba(232,206,176,.46);
+  --nav-drag-rim:rgba(255,255,255,.98);
+  --nav-drag-edge:rgba(138,86,52,.42);
+  --nav-drag-bottom-glint:rgba(176,120,76,.34);
+  --nav-drag-inner-glow:rgba(255,250,242,.38);
+  --nav-drag-shadow:0 6px 16px rgba(59,36,24,.15),0 2px 5px rgba(59,36,24,.09);
+}
+:root[data-theme=dark] .bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  --nav-drag-top:rgba(124,132,148,.42);
+  --nav-drag-mid:rgba(82,88,100,.30);
+  --nav-drag-bot:rgba(64,70,82,.36);
+  --nav-drag-rim:rgba(250,252,255,.58);
+  --nav-drag-edge:rgba(228,234,248,.46);
+  --nav-drag-bottom-glint:rgba(210,220,238,.26);
+  --nav-drag-inner-glow:rgba(236,242,252,.16);
+  --nav-drag-shadow:0 6px 18px rgba(0,0,0,.38),0 2px 6px rgba(0,0,0,.22);
+}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))) {
+  .wide-tabs[data-touch-nav-pill]::before {
+    -webkit-backdrop-filter:blur(8px) saturate(195%) brightness(1.04) contrast(1.03);
+    backdrop-filter:blur(8px) saturate(195%) brightness(1.04) contrast(1.03);
   }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-    --segment-fill:color-mix(in srgb,var(--nav-drag-color,var(--nav-sel)) var(--nav-drag-alpha,58%),transparent);
+  :root[data-theme=dark] .wide-tabs[data-touch-nav-pill]::before {
+    -webkit-backdrop-filter:blur(8px) saturate(185%) brightness(1.14) contrast(1.04);
+    backdrop-filter:blur(8px) saturate(185%) brightness(1.14) contrast(1.04);
   }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    -webkit-backdrop-filter:blur(8px) saturate(125%);
-    backdrop-filter:blur(8px) saturate(125%);
+  .wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+    -webkit-backdrop-filter:blur(7px) saturate(215%) brightness(1.08) contrast(1.05);
+    backdrop-filter:blur(7px) saturate(215%) brightness(1.08) contrast(1.05);
+  }
+  :root[data-theme=dark] .wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+    -webkit-backdrop-filter:blur(7px) saturate(200%) brightness(1.22) contrast(1.06);
+    backdrop-filter:blur(7px) saturate(200%) brightness(1.22) contrast(1.06);
+  }
+  .bottom-nav[data-touch-nav-pill]::before {
+    -webkit-backdrop-filter:blur(6px) saturate(130%);
+    backdrop-filter:blur(6px) saturate(130%);
+  }
+  .bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+    -webkit-backdrop-filter:blur(6px) saturate(145%) brightness(1.02);
+    backdrop-filter:blur(6px) saturate(145%) brightness(1.02);
+  }
+  :root[data-theme=dark] .bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+    -webkit-backdrop-filter:blur(6px) saturate(140%) brightness(1.06);
+    backdrop-filter:blur(6px) saturate(140%) brightness(1.06);
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
+  :is(.wide-tabs,.bottom-nav) {
+    background:var(--nav-bg) !important;
+  }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill],
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
     --segment-fill:var(--nav-sel);
-    --nav-pill-shadow-layer:initial;
+    --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border);
   }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
-    background-image:none;
-  }
+  :is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready]::before,
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before,
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+    background-color:var(--nav-sel) !important;
+    background-image:none;
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  :is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready]::before,
+  :is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready][data-pill-moving]::before,
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
+    transition:none !important;
+  }
+}
+</style>
+<style id="studyos-motion-system">
+/* Centralized motion rhythm, curves and thin-glass secondary tokens. */
+:root {
+  --motion-press-dur:105ms;
+  --motion-release-dur:235ms;
+  --motion-spring:cubic-bezier(.22,1.24,.36,1);
+  --motion-ease:cubic-bezier(.2,.8,.25,1);
+  --motion-dialog-in:200ms;
+  --motion-dialog-out:145ms;
+  --press-scale-btn:.968;
+  --press-scale-card:.988;
+  --press-scale-option:.992;
+
+  --seg-dock-bg:rgba(235,224,210,.64);
+  --seg-dock-edge:rgba(138,86,52,.13);
+  --seg-dock-highlight:rgba(255,255,255,.60);
+  --seg-pill-bg:linear-gradient(180deg,rgba(255,253,249,.90) 0%,rgba(249,240,228,.78) 100%);
+  --seg-pill-rim:rgba(255,255,255,.94);
+  --seg-pill-edge:rgba(138,86,52,.24);
+  --seg-pill-shadow:0 1px 4px rgba(59,36,24,.10),0 0 0 .5px rgba(138,86,52,.08);
+}
+:root[data-theme=dark] {
+  --seg-dock-bg:rgba(48,50,57,.70);
+  --seg-dock-edge:rgba(255,255,255,.10);
+  --seg-dock-highlight:rgba(255,255,255,.09);
+  --seg-pill-bg:linear-gradient(180deg,rgba(88,92,102,.76) 0%,rgba(66,70,79,.66) 100%);
+  --seg-pill-rim:rgba(246,249,255,.26);
+  --seg-pill-edge:rgba(220,228,242,.24);
+  --seg-pill-shadow:0 2px 6px rgba(0,0,0,.28);
+}
+
+/* ── Secondary segmented controls: thin translucent dock + spring-driven pill, zero ghost fills ── */
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options) {
+  background:var(--seg-dock-bg) !important;
+  border-radius:var(--r-pill);
+  box-shadow:inset 0 0 0 1px var(--seg-dock-edge),inset 0 1px 0 var(--seg-dock-highlight);
+}
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
+  z-index:0 !important;
+  border-radius:var(--r-pill) !important;
+  background-color:transparent !important;
+  background-image:var(--seg-pill-bg) !important;
+  box-shadow:inset 0 0 0 1px var(--seg-pill-edge),inset 0 1px 0 var(--seg-pill-rim),var(--seg-pill-shadow) !important;
+}
+:is(#touch-nav-spec,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before,
+:is(#touch-nav-spec,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before {
+  inset:0 auto auto 0 !important;
+  width:var(--nav-drag-width,var(--pill-width)) !important;
+  height:var(--nav-drag-height,var(--pill-height)) !important;
+  transform:translate3d(var(--nav-drag-x,var(--pill-x)),var(--nav-drag-y,var(--pill-y)),0) !important;
+  transition:none !important;
+  will-change:transform,width,height;
+}
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button,label),
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button,label):is(:hover,:active,:focus,.active,[aria-pressed=true],:has(:checked)) {
+  position:relative;
+  z-index:1;
+  background:transparent !important;
+  background-color:transparent !important;
+  box-shadow:none !important;
+  filter:none !important;
+  transform:none !important;
+  text-decoration:none !important;
+  -webkit-tap-highlight-color:transparent;
+}
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button,label) {
+  border-radius:var(--r-pill);
+  color:var(--segment-text);
+  transition:color 150ms var(--motion-ease);
+}
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button[aria-pressed=true],button.active,label:has(:checked)) {
+  color:var(--segment-selected) !important;
+  font-weight:650;
+}
+@media (hover:hover) and (pointer:fine) {
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button,label):not([aria-pressed=true],.active,:has(:checked)):hover {
+    color:var(--text) !important;
+  }
+}
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > button:focus-visible,
+.study-mode-options > label:has(:focus-visible) {
+  outline:2px dashed var(--ui-focus);
+  outline-offset:-2px;
+}
+
+/* Alignment for labels, count badges and narrow viewports inside secondary segmented controls */
+#today-task-tabs {
+  align-items:stretch;
+  padding:3px;
+}
+#today-task-tabs .vt-btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1.2;
+}
+#study-room .study-home-modes,
+#study-room .paper-archive-modes {
+  align-items:stretch;
+  padding:3px;
+}
+#study-room .study-home-modes button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.38em;
+  min-height:44px;
+  line-height:1.2;
+}
+.paper-mode-count {
+  display:inline-grid;
+  place-items:center;
+  flex:none;
+  min-inline-size:2.2ch;
+  padding:1px .45em;
+  border-radius:var(--r-pill);
+  background:color-mix(in srgb,var(--surface) 76%,transparent);
+  border:1px solid var(--border-lt);
+  font-size:.8em;
+  line-height:1.35;
+  font-variant-numeric:tabular-nums;
+}
+:root[data-theme=dark] .paper-mode-count {
+  background:color-mix(in srgb,var(--bg) 56%,transparent);
+}
+@media (max-width:480px) {
+  #study-room .paper-archive-modes {
+    width:100%;
+  }
+  #study-room .paper-archive-modes button {
+    padding-inline:8px;
+    font-size:.875rem;
+    gap:.3em;
+  }
+}
+.paper-result-filters {
+  display:inline-flex;
+  flex-wrap:nowrap;
+  align-items:stretch;
+  gap:2px;
+  padding:3px;
+  max-width:100%;
+  overflow-x:auto;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:none;
+}
+.paper-result-filters .btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.35em;
+  flex:none;
+  min-height:40px;
+  padding:0 10px;
+  border:0;
+  line-height:1.2;
+  white-space:nowrap;
+}
+@media (pointer:coarse) {
+  .paper-result-filters .btn {
+    min-height:44px;
+  }
+}
+.paper-review-count {
+  flex:none;
+  font-size:.86em;
+  opacity:.84;
+  font-variant-numeric:tabular-nums;
+}
+.study-modes .study-mode-options label {
+  display:inline-flex;
+  align-items:center;
+  min-height:40px;
+  padding-inline:12px;
+}
+@media (pointer:coarse) {
+  .study-modes .study-mode-options label {
+    min-height:44px;
+  }
+}
+
+/* ── Unified tactile press + spring rebound on action buttons ── */
+:is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link) {
+  transition:transform var(--motion-release-dur) var(--motion-spring),
+    background-color 150ms var(--motion-ease),
+    border-color 150ms var(--motion-ease),
+    box-shadow 150ms var(--motion-ease),
+    color 140ms var(--motion-ease),
+    opacity 140ms var(--motion-ease),
+    filter 120ms var(--motion-ease);
+}
+:is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link):active:not(:disabled) {
+  transform:translate3d(0,1px,0) scale(var(--press-scale-btn)) !important;
+  filter:brightness(.96);
+  transition-duration:var(--motion-press-dur);
+  transition-timing-function:var(--motion-ease);
+}
+/* Ensure segmented control buttons never inherit .btn press scale or brightness darkening. */
+:is(#touch-nav-spec,.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button,label):active:not(:disabled) {
+  transform:none !important;
+  filter:none !important;
+}
+
+/* ── Interactive rows, cards & answer choices ── */
+:is(.wide-course-row,.course-card,.todo-card,.cal-cell:not(.empty),.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row:not(.is-static),.ed-row:not(.is-static)) {
+  transition:transform var(--motion-release-dur) var(--motion-spring),
+    background-color 150ms var(--motion-ease),
+    border-color 150ms var(--motion-ease),
+    box-shadow 150ms var(--motion-ease);
+}
+:is(.wide-course-row,.course-card,.todo-card,.cal-cell:not(.empty),.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row:not(.is-static),.ed-row:not(.is-static)):active:not(:disabled) {
+  transform:translate3d(0,1px,0) scale(var(--press-scale-card)) !important;
+  transition-duration:var(--motion-press-dur);
+  transition-timing-function:var(--motion-ease);
+}
+#panel-r .day-card.day-lesson {
+  transition:transform var(--motion-release-dur) var(--motion-spring),
+    background-color 150ms var(--motion-ease),
+    border-color 150ms var(--motion-ease);
+}
+#panel-r .day-card.day-lesson:has(.day-lesson-details:active) {
+  transform:translate3d(0,1px,0) scale(var(--press-scale-card));
+  transition-duration:var(--motion-press-dur);
+  transition-timing-function:var(--motion-ease);
+}
+#panel-r .day-lesson-details:active {
+  transform:none !important;
+}
+.past-answer-choices label {
+  cursor:pointer;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform var(--motion-release-dur) var(--motion-spring),
+    background-color 150ms var(--motion-ease),
+    box-shadow 150ms var(--motion-ease);
+}
+.past-answer-choices label:active {
+  transform:translate3d(0,1px,0) scale(var(--press-scale-option));
+  background:var(--segment-press);
+  transition-duration:var(--motion-press-dur);
+  transition-timing-function:var(--motion-ease);
+}
+.past-answer-choices label:has(:checked) {
+  background:var(--selection-fill);
+  color:var(--text);
+  box-shadow:inset 0 0 0 1.5px var(--selection-edge);
+}
+.past-answer-choices label:has(:checked) .paper-choice-code {
+  background:var(--accent-tint);
+  border-color:var(--selection-edge);
+  color:var(--accent-h);
+}
+.past-answer-choices label:has(:focus-visible) {
+  outline:2px dashed var(--ui-focus);
+  outline-offset:-2px;
+}
+
+/* ── Exam question map & mark contrast (light + dark) ── */
+:root[data-theme=dark] .paper-exam-grid .btn[data-answered=true]:not([aria-current]) {
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--selection-edge) 72%,transparent);
+}
+.paper-exam-grid .btn[aria-current="step"] {
+  background:var(--selection-fill);
+  color:var(--text);
+  box-shadow:inset 0 0 0 2px var(--selection-edge);
+  font-weight:700;
+}
+:is(.paper-exam-tools .btn,[data-study-action=paper-practice-mark])[aria-pressed=true] {
+  background:var(--selection-fill);
+  color:var(--text);
+  box-shadow:inset 0 0 0 1.5px var(--selection-edge);
+  font-weight:650;
+}
+.paper-exam-triangle {
+  color:var(--review-mark);
+  font-weight:700;
+}
+
+/* ── Dialogs, confirm overlay, popovers & mobile bottom sheets ── */
+#confirm-backdrop {
+  display:flex;
+  visibility:hidden;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--motion-dialog-out) var(--motion-ease),visibility 0s linear var(--motion-dialog-out);
+}
+#confirm-backdrop.open {
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+  transition:opacity var(--motion-dialog-in) var(--motion-ease),visibility 0s;
+}
+#confirm-dialog {
+  opacity:0;
+  transform:translate3d(0,10px,0) scale(.976);
+  transition:transform var(--motion-dialog-out) var(--motion-ease),opacity var(--motion-dialog-out) var(--motion-ease);
+}
+#confirm-backdrop.open #confirm-dialog {
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  transition:transform var(--motion-dialog-in) var(--motion-spring),opacity var(--motion-dialog-in) var(--motion-ease);
+}
+.modal-backdrop:not([style*="display:none"]) {
+  animation:studyos-fade-in 160ms var(--motion-ease) both;
+}
+.modal-backdrop:not([style*="display:none"]) .modal {
+  animation:studyos-sheet-in var(--motion-dialog-in) var(--motion-spring) both;
+}
+@keyframes studyos-sheet-in {
+  from { opacity:0; transform:translate3d(0,10px,0) scale(.976); }
+  to { opacity:1; transform:translate3d(0,0,0) scale(1); }
+}
+@keyframes studyos-mobile-sheet-in {
+  from { opacity:0; transform:translate3d(0,16px,0); }
+  to { opacity:1; transform:translate3d(0,0,0); }
+}
+@media (max-width:767px) {
+  #panel-r.mob-active[data-mobile-day=detail] {
+    animation:studyos-mobile-sheet-in var(--motion-dialog-in) var(--motion-spring) both;
+  }
+}
+@supports (transition-behavior:allow-discrete) {
+  dialog[data-app-dialog]:not(.wide-legacy) {
+    opacity:0;
+    transform:translate3d(0,10px,0) scale(.978);
+    transition:opacity var(--motion-dialog-out) var(--motion-ease),
+      transform var(--motion-dialog-out) var(--motion-ease),
+      overlay var(--motion-dialog-out) allow-discrete,
+      display var(--motion-dialog-out) allow-discrete;
+  }
+  dialog[data-app-dialog][open]:not(.wide-legacy) {
+    animation:none;
+    opacity:1;
+    transform:translate3d(0,0,0) scale(1);
+    transition:opacity var(--motion-dialog-in) var(--motion-ease),
+      transform var(--motion-dialog-in) var(--motion-spring),
+      overlay var(--motion-dialog-in) allow-discrete,
+      display var(--motion-dialog-in) allow-discrete;
+  }
+  @starting-style {
+    dialog[data-app-dialog][open]:not(.wide-legacy) {
+      opacity:0;
+      transform:translate3d(0,10px,0) scale(.978);
+    }
+  }
+  dialog[data-app-dialog]:not(.wide-legacy)::backdrop {
+    opacity:0;
+    transition:opacity var(--motion-dialog-out) var(--motion-ease),
+      overlay var(--motion-dialog-out) allow-discrete,
+      display var(--motion-dialog-out) allow-discrete;
+  }
+  dialog[data-app-dialog][open]:not(.wide-legacy)::backdrop {
+    animation:none;
+    opacity:1;
+    transition:opacity var(--motion-dialog-in) var(--motion-ease),
+      overlay var(--motion-dialog-in) allow-discrete,
+      display var(--motion-dialog-in) allow-discrete;
+  }
+  @starting-style {
+    dialog[data-app-dialog][open]:not(.wide-legacy)::backdrop {
+      opacity:0;
+    }
+  }
+  @media (max-width:767px) and (pointer:coarse), (orientation:landscape) and (max-height:480px) and (pointer:coarse) {
+    html:not([data-ipad]) #paper-exam-map-dialog {
+      transform:translate3d(0,22px,0);
+    }
+    html:not([data-ipad]) #paper-exam-map-dialog[open] {
+      transform:translate3d(0,0,0);
+    }
+    @starting-style {
+      html:not([data-ipad]) #paper-exam-map-dialog[open] {
+        opacity:0;
+        transform:translate3d(0,22px,0);
+      }
+    }
+  }
+}
+
+/* ── Accessibility: Reduced Transparency & Reduced Motion ── */
+@media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options) {
+    background:var(--sunken) !important;
+    box-shadow:inset 0 0 0 1px var(--border) !important;
+  }
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
+    background-image:none !important;
+    background-color:var(--segment-fill) !important;
+    box-shadow:inset 0 0 0 1px var(--segment-border) !important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
+    transition:none !important;
+  }
+  :is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link,.wide-course-row,.course-card,.todo-card,.cal-cell,.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row,.ed-row,#panel-r .day-card.day-lesson,.past-answer-choices label) {
+    transition:none !important;
+  }
+  :is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link,.wide-course-row,.course-card,.todo-card,.cal-cell,.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row,.ed-row,.past-answer-choices label):active:not(:disabled),
+  #panel-r .day-card.day-lesson:has(.day-lesson-details:active) {
+    transform:none !important;
+  }
+  #confirm-backdrop,
+  #confirm-dialog,
+  .modal-backdrop:not([style*="display:none"]),
+  .modal-backdrop:not([style*="display:none"]) .modal,
+  #panel-r.mob-active[data-mobile-day=detail],
+  dialog[data-app-dialog]:not(.wide-legacy),
+  dialog[data-app-dialog]:not(.wide-legacy)::backdrop {
+    animation:none !important;
+    transition:none !important;
+    transform:none !important;
   }
 }
 </style>
@@ -10310,61 +10960,93 @@ function init(){
 
 const touchNavPills=new Map();
 function mountTouchNavPills() {
-  const platform=document.documentElement;
-  const isPhone=platform.hasAttribute('data-phone-touch');
-  const isTablet=platform.hasAttribute('data-ipad');
-  const phoneTouch=matchMedia('(max-width:767px) and (pointer:coarse) and (hover:none)');
-  const tabletTouch=matchMedia('(min-width:768px) and (min-height:481px) and (pointer:coarse) and (hover:none)');
   const bottomNav=document.querySelector('.bottom-nav');
   const topNav=document.querySelector('.wide-tabs');
-
-  function enable(group) {
-    if(!touchNavPills.has(group))touchNavPills.set(group,mountTouchNavPill(group));
-  }
-  function update() {
-    if(isPhone||!isTablet&&phoneTouch.matches)enable(bottomNav);
-    if(isTablet||!isPhone&&tabletTouch.matches)enable(topNav);
-  }
-  phoneTouch.addEventListener('change',update);
-  tabletTouch.addEventListener('change',update);
-  update();
+  if(bottomNav&&!touchNavPills.has(bottomNav))touchNavPills.set(bottomNav,mountTouchNavPill(bottomNav));
+  if(topNav&&!touchNavPills.has(topNav))touchNavPills.set(topNav,mountTouchNavPill(topNav));
 }
 
 function mountTouchNavPill(group) {
+  const isBottomNav=group.classList.contains('bottom-nav');
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
   const tabs=[...group.querySelectorAll(':scope > button')];
   const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
-  const properties=['--nav-drag-x','--nav-drag-width','--nav-drag-lift'];
+  const properties=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height','--nav-glint-x','--nav-glint-angle','--nav-edge-shift'];
   const threshold=6;
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
-  let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0;
-  let gesture,blockClick=false;
+  const rubber=(over,dim)=>over===0?0:(Math.sign(over)*(Math.abs(over)*dim*0.35)/(dim+0.35*Math.abs(over)));
+  let target,position,velocity=[0,0,0,0,0,0],frame=0,dragFrame=0,lastFrame=0;
+  let gesture,blockClick=false,blockClickTimer=0;
 
   function freeze() {
     cancelAnimationFrame(frame);
     frame=0;
+    cancelAnimationFrame(dragFrame);
+    dragFrame=0;
   }
 
   function paintedBounds() {
-    const [left,width,stretch,lift]=position;
+    const [left,top,width,height,stretch,lift]=position;
     const extension=Math.max(0,stretch);
-    return [left-extension/2,width+extension,lift];
+    const l=Math.max(0,lift);
+    const cushionX=l*(isBottomNav?4:3.5);
+    const cushionY=l*(isBottomNav?3.6:2.8);
+    const liftOffset=l*(isBottomNav?2.5:1.9);
+    return [left-(extension+cushionX)/2,top-liftOffset,width+extension+cushionX,height+cushionY,l];
   }
 
   function paint() {
-    const [left,width,lift]=paintedBounds();
+    if(!position)return;
+    const [left,top,width,height,lift]=paintedBounds();
+    const groupWidth=Math.max(1,group.clientWidth);
+    const ratio=clamp((left+width/2)/groupWidth,0,1);
+    const vx=gesture?gesture.vx:velocity[0];
+    const tilt=reducedMotion.matches?0:clamp(vx/900,-1,1);
+    const glintX=clamp(50+(ratio-0.5)*56+tilt*18,12,88).toFixed(1)+'%';
+    const glintAngle=(168-tilt*14).toFixed(1)+'deg';
+    const edgeShift=reducedMotion.matches?'0px':clamp(vx/140,-3.5,3.5).toFixed(2)+'px';
     group.style.setProperty(properties[0],left+'px');
-    group.style.setProperty(properties[1],width+'px');
-    group.style.setProperty(properties[2],lift+'px');
-    group.toggleAttribute('data-touch-nav-pill-raised',lift>0.3);
+    group.style.setProperty(properties[1],top+'px');
+    group.style.setProperty(properties[2],width+'px');
+    group.style.setProperty(properties[3],height+'px');
+    group.style.setProperty(properties[4],glintX);
+    group.style.setProperty(properties[5],glintAngle);
+    group.style.setProperty(properties[6],edgeShift);
+    group.toggleAttribute('data-touch-nav-pill-raised',lift>0.08||Boolean(gesture));
   }
 
   function resetPresentation() {
     freeze();
     position=target?.slice();
-    velocity=[0,0,0,0];
+    velocity=[0,0,0,0,0,0];
     properties.forEach(property=>group.style.removeProperty(property));
     group.removeAttribute('data-touch-nav-pill-raised');
+    group.removeAttribute('data-pill-moving');
+  }
+
+  function stepDrag(now) {
+    if(!gesture||!position){dragFrame=0;return;}
+    const dt=clamp((now-lastFrame)/1000,0.001,0.032);
+    lastFrame=now;
+    if(now-gesture.lastTime>28){
+      gesture.vx*=Math.exp(-20*dt);
+      if(Math.abs(gesture.vx)<4)gesture.vx=0;
+    }
+    const desiredStretch=reducedMotion.matches?0:clamp(Math.abs(gesture.vx)/28,0,14);
+    const desiredLift=reducedMotion.matches?0:1;
+    // Elastic spring for horizontal stretch and glass lift while tracking finger 1:1
+    velocity[4]+=(360*(desiredStretch-position[4])-27*velocity[4])*dt;
+    position[4]+=velocity[4]*dt;
+    velocity[5]+=(520*(desiredLift-position[5])-32*velocity[5])*dt;
+    position[5]+=velocity[5]*dt;
+    paint();
+    dragFrame=requestAnimationFrame(stepDrag);
+  }
+
+  function startDragLoop() {
+    if(dragFrame)return;
+    lastFrame=performance.now();
+    dragFrame=requestAnimationFrame(stepDrag);
   }
 
   function tick(now) {
@@ -10372,16 +11054,20 @@ function mountTouchNavPill(group) {
     lastFrame=now;
     while(remaining>0) {
       const dt=Math.min(remaining,1/120);
-      const shapeStretch=Math.min(8,Math.abs(velocity[0])/105);
-      const shapeLift=Math.min(4,Math.max(Math.abs(velocity[0])/240,Math.abs(target[0]-position[0])/22));
-      const desired=[target[0],target[1],shapeStretch,shapeLift];
-      for(let i=0;i<4;i++) {
-        velocity[i]+=(460*(desired[i]-position[i])-39*velocity[i])*dt;
+      const shapeStretch=Math.min(13,Math.abs(velocity[0])/95);
+      const shapeLift=Math.min(0.85,Math.max(Math.abs(velocity[0])/420,Math.abs(target[0]-position[0])/65));
+      const desired=[target[0],target[1],target[2],target[3],shapeStretch,shapeLift];
+      const stiffness=[440,440,440,440,380,380];
+      const damping=[32,32,32,32,28,32];
+      for(let i=0;i<6;i++) {
+        velocity[i]+=(stiffness[i]*(desired[i]-position[i])-damping[i]*velocity[i])*dt;
         position[i]+=velocity[i]*dt;
       }
       remaining-=dt;
     }
-    if(position.every((value,i)=>Math.abs(value-target[i])<0.2&&Math.abs(velocity[i])<8)) {
+    const done=position.slice(0,5).every((v,i)=>Math.abs(v-target[i])<0.15&&Math.abs(velocity[i])<4)
+      &&Math.abs(position[5]-target[5])<0.02&&Math.abs(velocity[5])<0.15;
+    if(done) {
       resetPresentation();
       return;
     }
@@ -10390,6 +11076,8 @@ function mountTouchNavPill(group) {
   }
 
   function settle() {
+    cancelAnimationFrame(dragFrame);
+    dragFrame=0;
     if(!target||!position||reducedMotion.matches) {
       resetPresentation();
     }else if(!frame) {
@@ -10399,50 +11087,112 @@ function mountTouchNavPill(group) {
     }
   }
 
-  function align([left,,width],animate) {
-    target=[left,width,0,0];
-    gesture=null;
+  function align([left,top,width,height],animate) {
+    target=[left,top,width,height,0,0];
+    if(gesture)return;
     if(animate&&position)settle();
     else resetPresentation();
   }
 
+  function ensurePosition() {
+    if(position)return true;
+    const selected=active();
+    if(!selected||!selected.offsetWidth)return false;
+    target=[selected.offsetLeft,selected.offsetTop,selected.offsetWidth,selected.offsetHeight,0,0];
+    position=target.slice();
+    return true;
+  }
+
   function touchesPill(touch,hit) {
     const selected=active();
-    if(!selected||!position)return false;
+    if(!selected||!ensurePosition())return false;
     if(selected.contains(hit))return true;
     // A moving pill can be painted over another tab. Use the painted bounds
     // as well as the selected button's hit area, without adding an overlay.
     const bounds=group.getBoundingClientRect();
-    const [left,width,lift]=paintedBounds();
+    const [left,top,width,height]=paintedBounds();
     const x=touch.clientX-bounds.left-group.clientLeft,y=touch.clientY-bounds.top-group.clientTop;
-    const top=selected.offsetTop-lift;
-    return x>=left&&x<=left+width&&y>=top&&y<=top+selected.offsetHeight;
+    return x>=left&&x<=left+width&&y>=top&&y<=top+height;
   }
 
   // Touch events stay on the original nav target as the finger crosses labels.
   group.addEventListener('touchstart',event=>{
     if(event.touches.length!==1){cancelTouch();return;}
+    clearTimeout(blockClickTimer);
     blockClick=false;
     const touch=event.changedTouches[0];
     if(!touchesPill(touch,event.target))return;
-    gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,start:position[0],stretch:position[2],dragging:false};
     freeze();
-    velocity=[0,0,0,0];
-    if(!reducedMotion.matches)position[3]=4;
+    velocity=[0,0,0,0,velocity[4],velocity[5]];
+    gesture={
+      id:touch.identifier,
+      x:touch.clientX,
+      y:touch.clientY,
+      start:position[0],
+      lastX:touch.clientX,
+      lastTime:performance.now(),
+      vx:0,
+      dragging:false
+    };
+    if(!reducedMotion.matches)position[5]=Math.max(position[5],0.45);
     paint();
+    if(!reducedMotion.matches)startDragLoop();
   },{passive:true});
 
   function trackedTouch(event) {
     return Array.from(event.changedTouches).find(touch=>touch.identifier===gesture?.id);
   }
 
-  function follow(touch) {
-    const dx=touch.clientX-gesture.x;
+  function followClientX(clientX) {
+    const now=performance.now();
+    const dt=Math.max(0.004,(now-gesture.lastTime)/1000);
+    const instantVx=(clientX-gesture.lastX)/dt;
+    gesture.vx=gesture.vx*0.45+instantVx*0.55;
+    gesture.lastX=clientX;
+    gesture.lastTime=now;
+    const dx=clientX-gesture.x;
     const first=tabs[0],last=tabs[tabs.length-1];
-    const left=clamp(gesture.start+dx,first.offsetLeft,last.offsetLeft+last.offsetWidth-position[1]);
-    const stretch=reducedMotion.matches?0:Math.min(10,Math.max(0,gesture.stretch)+Math.abs(left-gesture.start)/8);
-    position=[left,position[1],stretch,reducedMotion.matches?0:4];
+    const minLeft=first.offsetLeft;
+    const maxLeft=last.offsetLeft+last.offsetWidth-position[2];
+    const raw=gesture.start+dx;
+    let left=clamp(raw,minLeft,maxLeft);
+    if(!reducedMotion.matches){
+      if(raw<minLeft)left=minLeft+clamp(rubber(raw-minLeft,24),-2.5,0);
+      else if(raw>maxLeft)left=maxLeft+clamp(rubber(raw-maxLeft,24),0,2.5);
+    }
+    position[0]=left;
+    if(reducedMotion.matches){position[4]=0;position[5]=0;}
     paint();
+  }
+
+  function follow(touch) {
+    followClientX(touch.clientX);
+  }
+
+  function commitDragRelease(clientX,clientY,wasDragging,releaseVx) {
+    if(wasDragging) {
+      const bounds=group.getBoundingClientRect();
+      const slop=44;
+      if(clientX>=bounds.left-slop&&clientX<=bounds.right+slop&&clientY>=bounds.top-slop&&clientY<=bounds.bottom+slop) {
+        const [left,,width]=paintedBounds();
+        const center=left+width/2;
+        const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
+        const selected=active();
+        const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,selected);
+        if(nearest!==selected){
+          target=[nearest.offsetLeft,nearest.offsetTop,nearest.offsetWidth,nearest.offsetHeight,0,0];
+          gesture=null;
+          nearest.click();
+        }
+      }
+    }
+    gesture=null;
+    if(wasDragging){
+      if(!reducedMotion.matches)velocity[0]=clamp(releaseVx,-1600,1600);
+      clearTimeout(blockClickTimer);
+      blockClickTimer=setTimeout(()=>{blockClick=false;},350);
+    }
+    settle();
   }
 
   group.addEventListener('touchmove',event=>{
@@ -10455,6 +11205,8 @@ function mountTouchNavPill(group) {
       blockClick=true;
       if(dy>=dx) {
         gesture=null;
+        clearTimeout(blockClickTimer);
+        blockClickTimer=setTimeout(()=>{blockClick=false;},350);
         settle();
         return;
       }
@@ -10467,37 +11219,80 @@ function mountTouchNavPill(group) {
   group.addEventListener('touchend',event=>{
     const touch=trackedTouch(event);
     if(!touch)return;
-    if(gesture.dragging) {
+    const wasDragging=gesture.dragging;
+    const releaseVx=gesture.vx;
+    if(wasDragging) {
       if(event.cancelable)event.preventDefault();
       follow(touch);
-      const bounds=group.getBoundingClientRect();
-      if(touch.clientX>=bounds.left&&touch.clientX<=bounds.right&&touch.clientY>=bounds.top&&touch.clientY<=bounds.bottom) {
-        const [left,width]=paintedBounds();
-        const center=left+width/2;
-        const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
-        const selected=active();
-        const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,selected);
-        if(nearest!==selected)nearest.click();
-      }
     }
-    gesture=null;
-    // The shared selection observer supplies the new target before the next frame.
-    settle();
+    commitDragRelease(touch.clientX,touch.clientY,wasDragging,releaseVx);
   },{passive:false});
 
   function cancelTouch() {
     if(!gesture)return;
     gesture=null;
     blockClick=true;
+    clearTimeout(blockClickTimer);
+    blockClickTimer=setTimeout(()=>{blockClick=false;},350);
     settle();
   }
   group.addEventListener('touchcancel',cancelTouch);
   group.addEventListener('contextmenu',event=>{if(gesture)event.preventDefault();});
-  group.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse')blockClick=false;});
+  group.addEventListener('pointerdown',event=>{
+    if(event.pointerType==='mouse')blockClick=false;
+    if(event.pointerType==='touch'||event.button!==0)return;
+    if(!touchesPill(event,event.target))return;
+    clearTimeout(blockClickTimer);
+    freeze();
+    velocity=[0,0,0,0,velocity[4],velocity[5]];
+    gesture={
+      id:'pointer:'+event.pointerId,
+      pointerId:event.pointerId,
+      x:event.clientX,
+      y:event.clientY,
+      start:position[0],
+      lastX:event.clientX,
+      lastTime:performance.now(),
+      vx:0,
+      dragging:false
+    };
+    if(!reducedMotion.matches)position[5]=Math.max(position[5],0.45);
+    paint();
+    if(!reducedMotion.matches)startDragLoop();
+  });
+  group.addEventListener('pointermove',event=>{
+    if(gesture?.id!=='pointer:'+event.pointerId)return;
+    if(!gesture.dragging){
+      const dx=Math.abs(event.clientX-gesture.x),dy=Math.abs(event.clientY-gesture.y);
+      if(Math.max(dx,dy)<threshold)return;
+      blockClick=true;
+      if(dy>=dx){cancelTouch();return;}
+      gesture.dragging=true;
+      try{group.setPointerCapture(event.pointerId);}catch{}
+    }
+    followClientX(event.clientX);
+  });
+  const endPointer=event=>{
+    if(gesture?.id!=='pointer:'+event.pointerId)return;
+    const wasDragging=gesture.dragging;
+    const releaseVx=gesture.vx;
+    if(wasDragging)followClientX(event.clientX);
+    try{if(group.hasPointerCapture(event.pointerId))group.releasePointerCapture(event.pointerId);}catch{}
+    commitDragRelease(event.clientX,event.clientY,wasDragging,releaseVx);
+  };
+  group.addEventListener('pointerup',endPointer);
+  window.addEventListener('pointerup',endPointer);
+  group.addEventListener('pointercancel',event=>{
+    if(gesture?.id==='pointer:'+event.pointerId)cancelTouch();
+  });
+  window.addEventListener('pointercancel',event=>{
+    if(gesture?.id==='pointer:'+event.pointerId)cancelTouch();
+  });
   group.addEventListener('click',event=>{
     if(!blockClick||!event.isTrusted||!event.detail)return;
     event.preventDefault();
     event.stopPropagation();
+    blockClick=false;
   },true);
 
   function resetGesture() {
@@ -10510,7 +11305,7 @@ function mountTouchNavPill(group) {
   window.addEventListener('resize',resetGesture);
 
   const selected=active();
-  if(selected?.offsetWidth)align([selected.offsetLeft,selected.offsetTop,selected.offsetWidth],false);
+  if(selected?.offsetWidth)align([selected.offsetLeft,selected.offsetTop,selected.offsetWidth,selected.offsetHeight],false);
   group.setAttribute('data-touch-nav-pill','');
   return {align};
 }
@@ -10518,6 +11313,71 @@ function mountTouchNavPill(group) {
 const pillMotion=(()=>{
   const selector='.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options';
   const mounted=new Map();
+  const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
+  const dragProps=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height'];
+  function createSegSpring(group){
+    let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0;
+    function paint(){
+      if(!position)return;
+      group.style.setProperty(dragProps[0],position[0]+'px');
+      group.style.setProperty(dragProps[1],position[1]+'px');
+      group.style.setProperty(dragProps[2],Math.max(1,position[2])+'px');
+      group.style.setProperty(dragProps[3],Math.max(1,position[3])+'px');
+    }
+    function reset(){
+      cancelAnimationFrame(frame);
+      frame=0;
+      position=target?.slice();
+      velocity=[0,0,0,0];
+      dragProps.forEach(prop=>group.style.removeProperty(prop));
+      group.removeAttribute('data-pill-moving');
+    }
+    function tick(now){
+      if(!target||!position||reducedMotion.matches){reset();return;}
+      let remaining=Math.min(0.035,Math.max(0,(now-lastFrame)/1000));
+      lastFrame=now;
+      while(remaining>0){
+        const dt=Math.min(remaining,1/120);
+        for(let i=0;i<4;i++){
+          velocity[i]+=(460*(target[i]-position[i])-29*velocity[i])*dt;
+          position[i]+=velocity[i]*dt;
+        }
+        remaining-=dt;
+      }
+      const done=position.every((v,i)=>Math.abs(v-target[i])<0.15&&Math.abs(velocity[i])<3.5);
+      if(done){reset();return;}
+      paint();
+      frame=requestAnimationFrame(tick);
+    }
+    return {
+      align(values,animate){
+        target=values.slice();
+        if(!animate||!position||reducedMotion.matches){
+          reset();
+          return;
+        }
+        paint();
+        if(!frame){
+          lastFrame=performance.now();
+          frame=requestAnimationFrame(tick);
+        }
+      },
+      seedVelocity(v){if(Array.isArray(v)&&v.length===4)velocity=v.slice();},
+      velocity(){return velocity.slice();},
+      destroy(){
+        cancelAnimationFrame(frame);
+        frame=0;
+        dragProps.forEach(prop=>group.style.removeProperty(prop));
+      }
+    };
+  }
+  reducedMotion.addEventListener('change',()=>{
+    if(!reducedMotion.matches)return;
+    for(const [group,state] of mounted){
+      group.removeAttribute('data-pill-moving');
+      if(state.geometry&&state.spring)state.spring.align(state.geometry,false);
+    }
+  });
   function update(group,animate){
     const state=mounted.get(group);
     const selected=group.querySelector('[aria-current=page],[aria-pressed=true],label:has(input:checked)');
@@ -10533,7 +11393,7 @@ const pillMotion=(()=>{
       values=values.map(value=>Math.round(value*10)/10);
     }
     if(!values[2]||!values[3]||values.every((value,i)=>value===state.geometry?.[i]))return;
-    // CSS retargets from the position and width currently being rendered.
+    // Spring retargets from the position and width currently being rendered.
     place(group,state,values,animate&&!!state.geometry);
   }
   function place(group,state,values,animate=false){
@@ -10541,7 +11401,9 @@ const pillMotion=(()=>{
     group.setAttribute('data-pill-ready','');
     ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,values[i]+'px'));
     state.geometry=values;
-    touchNavPills.get(group)?.align(values,animate);
+    const touchNav=touchNavPills.get(group);
+    if(touchNav)touchNav.align(values,animate);
+    else state.spring?.align(values,animate);
   }
   function capture(root){
     const previous=new Map();
@@ -10550,7 +11412,8 @@ const pillMotion=(()=>{
       const style=getComputedStyle(group,'::before'),matrix=new DOMMatrixReadOnly(style.transform);
       previous.set(group.dataset.pillKey,{
         geometry:[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],scroll:group.scrollLeft,
-        focused:group.contains(document.activeElement)
+        focused:group.contains(document.activeElement),
+        velocity:mounted.get(group)?.spring?.velocity()||null
       });
     }
     return previous;
@@ -10570,8 +11433,9 @@ const pillMotion=(()=>{
   return {
     capture,
     mount(root,previous){
-      for(const [group,{observer,options}] of mounted){
+      for(const [group,{observer,options,spring}] of mounted){
         if(group.isConnected)continue;
+        spring?.destroy();
         observer.disconnect();
         resize.unobserve(group);
         for(const option of options)resize.unobserve(option);
@@ -10588,16 +11452,16 @@ const pillMotion=(()=>{
           }
           update(group,records.some(record=>record.type==='attributes'));
         });
-        const state={observer,options,geometry:null};
+        const spring=touchNavPills.has(group)?null:createSegSpring(group);
+        const state={observer,options,geometry:null,spring};
         mounted.set(group,state);
         observer.observe(group,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
         group.addEventListener('change',()=>update(group,true));
         const prior=previous?.get(group.dataset.pillKey);
         if(prior&&group.offsetWidth){
           group.scrollLeft=prior.scroll;
-          place(group,state,prior.geometry);
-          // Give the rebuilt pseudo-element a rendered start before retargeting.
-          void getComputedStyle(group,'::before').transform;
+          place(group,state,prior.geometry,false);
+          if(prior.velocity&&spring)spring.seedVelocity(prior.velocity);
           update(group,true);
           if(prior.focused)group.querySelector('[aria-pressed=true]')?.focus({preventScroll:true});
         }else update(group,false);
@@ -11215,7 +12079,7 @@ const studyRoom=(()=>{
   }
   function subjectCards(){
     const resume=session&&session.index<session.queue.length;
-    draw('學習室','<div class="study-mode-options study-home-modes" role="group" aria-label="學習室模式">'+
+    draw('學習室','<div class="study-mode-options study-home-modes" data-pill-key="study-home" role="group" aria-label="學習室模式">'+
       [['knowledge','知識庫'],['papers','考古題']].map(([mode,label])=>
         '<button type="button" data-study-action="home-mode" data-mode="'+mode+'" aria-pressed="'+(mode===homeMode)+'">'+label+'</button>').join('')+
       '</div><div id="paper-home-tools" class="study-actions" '+(homeMode==='papers'?'':'hidden')+'>'+
