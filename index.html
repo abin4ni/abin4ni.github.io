@@ -4496,10 +4496,12 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     inset 0 1px 0 var(--nav-drag-rim),var(--nav-drag-shadow);
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
-  --nav-drag-glint:rgba(255,255,255,.15);
-  --nav-drag-reflection:rgba(217,218,220,.07);
-  --nav-drag-rim:rgba(255,255,255,.25);
-  --nav-drag-edge:rgba(217,218,220,.37);
+  --nav-drag-color:#383b42;
+  --nav-drag-alpha:79%;
+  --nav-drag-glint:rgba(228,233,242,.08);
+  --nav-drag-reflection:rgba(217,218,220,.045);
+  --nav-drag-rim:rgba(222,228,239,.16);
+  --nav-drag-edge:rgba(191,199,214,.25);
 }
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
   background-color:var(--segment-fill);
@@ -4512,16 +4514,19 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   --nav-drag-shadow:0 3px 8px var(--nav-pill-shadow);
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-glint:rgba(255,255,255,.27);
-  --nav-drag-reflection:rgba(217,218,220,.13);
-  --nav-drag-rim:var(--nav-glass-rim);
+  --nav-drag-color:#4a4e58;
+  --nav-drag-alpha:46%;
+  --nav-drag-glint:rgba(224,231,244,.21);
+  --nav-drag-reflection:rgba(199,208,225,.11);
+  --nav-drag-rim:rgba(240,245,255,.82);
+  --nav-drag-edge:rgba(203,213,231,.57);
 }
 @supports (color:color-mix(in srgb,white,transparent)) {
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
-    --segment-fill:color-mix(in srgb,var(--nav-sel) 84%,transparent);
+    --segment-fill:color-mix(in srgb,var(--nav-drag-color,var(--nav-sel)) var(--nav-drag-alpha,84%),transparent);
   }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-    --segment-fill:color-mix(in srgb,var(--nav-sel) 58%,transparent);
+    --segment-fill:color-mix(in srgb,var(--nav-drag-color,var(--nav-sel)) var(--nav-drag-alpha,58%),transparent);
   }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
     -webkit-backdrop-filter:blur(8px) saturate(125%);
