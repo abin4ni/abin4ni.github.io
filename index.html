@@ -2936,8 +2936,21 @@ html:is([data-ipad],[data-phone-touch]) #panel-cal .cal-nav button:not(.jump-tod
 }
 .picker-wheel-row[aria-selected=true]{background:var(--accent-tint);color:var(--accent-h);opacity:1;font-weight:700;}
 #lesson-time-form>label{display:block;margin:12px 0;}
-#lesson-time-input,#day-schedule-date{width:100%;}
-#calendar-schedule-panel #day-schedule-form{margin-top:0;}
+#lesson-time-input{width:100%;}
+#phone-course-dialog[data-calendar-schedule]{min-inline-size:0;}
+#calendar-schedule-panel,#day-schedule-form,.day-schedule-date-field{min-inline-size:0;max-inline-size:100%;}
+#calendar-schedule-panel #day-schedule-form:not([hidden]){display:grid;grid-template-columns:minmax(0,1fr);margin-top:0;}
+.day-schedule-date-field{position:relative;}
+#day-schedule-date{inline-size:100%;min-inline-size:0;max-inline-size:100%;}
+#day-schedule-date::-webkit-date-and-time-value{min-inline-size:0;overflow:hidden;text-overflow:ellipsis;}
+.day-schedule-date-icon{display:none;}
+@supports (-webkit-touch-callout:none){
+  #day-schedule-date{-webkit-appearance:none;appearance:none;padding-inline-end:2.5rem;}
+  .day-schedule-date-icon{
+    display:block;position:absolute;inset-inline-end:.75rem;inset-block-start:0;
+    width:1rem;height:var(--field-height);stroke:currentColor;fill:none;stroke-width:1.6;pointer-events:none;
+  }
+}
 #day-schedule-number{margin:0 0 10px;color:var(--text-2);font-size:var(--ui-caption);}
 #day-schedule-number:empty{display:none;}
 .schedule-conflicts{margin:8px 0;color:var(--text);font-size:var(--ui-caption);overflow-wrap:anywhere;}
@@ -4262,7 +4275,16 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .study-brief-card--paper .study-brief-go{margin-inline-start:auto;}
 #panel-r #study-exams-title{cursor:pointer;min-height:44px;align-content:center;}
 #panel-r #study-exams .study-exam-row{margin-block-start:var(--sp-2);}
-#panel-r[data-day-context=today] .day-panel-meta{order:0;}
+#today-lesson-progress{margin-block-end:var(--sp-3);max-inline-size:18rem;}
+#today-lesson-progress-text{color:var(--text-2);font-size:var(--ui-caption);font-variant-numeric:tabular-nums;}
+#today-lesson-progress-bar{
+  appearance:none;display:block;inline-size:100%;block-size:3px;margin-block-start:5px;
+  border:0;border-radius:var(--r-pill);background:var(--sunken);overflow:hidden;
+}
+#today-lesson-progress-bar[hidden]{display:none;}
+#today-lesson-progress-bar::-webkit-progress-bar{background:var(--sunken);}
+#today-lesson-progress-bar::-webkit-progress-value{background:var(--accent);border-radius:var(--r-pill);}
+#today-lesson-progress-bar::-moz-progress-bar{background:var(--accent);border-radius:var(--r-pill);}
 #panel-r[data-day-context=today] .day-panel-shell{gap:var(--sp-4);}
 #panel-r[data-day-context=today] .day-schedule-entry{margin-block-end:var(--sp-3);}
 #study-room .study-home-modes{
@@ -4301,15 +4323,13 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   #wide-today:not([hidden]){width:min(100%,1120px);}
   #wide-today .day-panel-shell{
     display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
-    grid-template-areas:"lessons tasks" "review notes" "review stats";
-    grid-template-rows:auto auto 1fr;
+    grid-template-areas:"lessons tasks" "review notes";
     align-items:start;
   }
   #wide-today .day-panel-main{grid-area:lessons;min-width:0;}
   #wide-today #today-tasks-slot{grid-area:tasks;min-width:0;}
   #wide-today .today-review-column{grid-area:review;}
   #wide-today .day-panel-notes{grid-area:notes;}
-  #wide-today .day-panel-meta{grid-area:stats;}
 }
 @media (min-width:1024px){
   body[data-wide-page=calendar] .layout:has(#calendar-day-slot:not([hidden])){
@@ -4796,6 +4816,10 @@ onAuthStateChanged(auth,user=>{
         <h2 id="day-label">選擇日期</h2>
         <button type="button" class="btn popup-close" aria-label="關閉日期詳情" id="day-panel-close" onclick="closeDayPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
       </div>
+      <div id="today-lesson-progress" hidden>
+        <p id="today-lesson-progress-text" role="status"></p>
+        <progress id="today-lesson-progress-bar" aria-label="今日課堂進度"></progress>
+      </div>
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
         <button type="button" class="btn btn-sand" id="global-search-day-return" hidden>返回搜尋</button>
@@ -4924,8 +4948,11 @@ onAuthStateChanged(auth,user=>{
       <label for="day-schedule-course">科目</label>
       <select id="day-schedule-course" required></select>
       <p id="day-schedule-number" role="status"></p>
-      <label for="day-schedule-date">日期</label>
-      <input type="date" id="day-schedule-date" required>
+      <label class="form-label" for="day-schedule-date">日期</label>
+      <div class="day-schedule-date-field">
+        <input type="date" id="day-schedule-date" required>
+        <svg class="day-schedule-date-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4m8-4v4"/></svg>
+      </div>
       <div id="day-time-slot"></div>
       <div id="day-schedule-conflicts" class="schedule-conflicts" aria-live="polite"></div>
       <div class="day-schedule-actions dialog-actions"><button type="submit" class="btn btn-primary" id="day-schedule-confirm">確認安排</button></div>
@@ -8493,6 +8520,9 @@ function syncScheduleFields(){
   if(dayScheduleDate)renderScheduleConflicts();
 }
 for(const id of ['day-schedule-course','day-schedule-date'])$id(id).addEventListener('change',syncScheduleFields);
+$id('day-schedule-date').addEventListener('click',event=>{
+  try{event.currentTarget.showPicker?.();}catch{/* The native date control still handles taps. */}
+});
 function refreshDayScheduleCourses(){
   const select=document.getElementById('day-schedule-course');
   const previous=repeatHost===phoneCourseDialog?repeatPreview.courseId:select.value;
@@ -9310,6 +9340,7 @@ function renderDayPanel(){
   const date=dayPanelDate(),onToday=isTodayPage();
   $id('global-search-day-return').hidden=onToday||!globalSearch?.fromLessonDate(date);
   $id('panel-r').dataset.dayContext=onToday?'today':'calendar';
+  $id('today-lesson-progress').hidden=!onToday||!date;
   syncTodayMakeupEntry();
   if(!date){
     label.textContent='選擇日期';
@@ -9345,6 +9376,14 @@ function renderDayPanel(){
   const dayTotal=allEvts.length;
   const dayDone=allEvts.filter(e=>e.done).length;
   const dayRate=dayTotal>0?Math.round(dayDone/dayTotal*100):0;
+  if(onToday){
+    const text=$id('today-lesson-progress-text'),bar=$id('today-lesson-progress-bar');
+    const label=dayTotal?'已完成 '+dayDone+'／'+dayTotal+' 堂':'今日未排課';
+    if(text.textContent!==label)text.textContent=label;
+    bar.hidden=!dayTotal;
+    bar.max=dayTotal||1;
+    bar.value=dayDone;
+  }
 
   const pending=[];
   const completed=[];
@@ -9384,14 +9423,14 @@ function renderDayPanel(){
       <h3 class="day-panel-title">提醒事項</h3>
       <div id="day-course-memos"></div>
     </section>
-    <section class="day-panel-section day-panel-meta">
+    ${onToday?'':`<section class="day-panel-section day-panel-meta">
       <h3 class="day-panel-title">完成狀態</h3>
       <div class="day-panel-stats">
         <div class="day-today-stat"><div class="dts-val">${dayTotal}</div><div class="dts-lbl">課堂</div></div>
         <div class="day-today-stat"><div class="dts-val day-completed-count">${dayDone}</div><div class="dts-lbl">完成</div></div>
         <div class="day-today-stat"><div class="dts-val day-progress-count">${dayRate}%</div><div class="dts-lbl">進度</div></div>
       </div>
-    </section>
+    </section>`}
   </div>`;
   renderDayMemo();
   refreshDayReviewPlans();
@@ -14296,75 +14335,105 @@ todayTaskView=(()=>{
     '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業">＋</button></div>'+
     groups.map(([type,title,placeholder])=>'<section id="today-task-panel-'+type+'" data-today-task-type="'+type+'" aria-label="'+title+'"'+
       (type==='daily'?'':' hidden')+'><form class="today-task-form" hidden>'+
-      '<input aria-label="新增'+title+'" type="text" maxlength="160" placeholder="'+placeholder+'" required>'+
-      '<button class="btn btn-primary">新增</button><button type="button" class="btn btn-sand" data-task-action="cancel">取消</button>'+
-      '</form><p class="today-task-status" role="status"></p><div class="today-task-items"></div></section>').join('');
+      '<input aria-label="新增'+title+'" aria-describedby="today-task-status-'+type+'" type="text" maxlength="160" placeholder="'+placeholder+'">'+
+      '<button class="btn btn-primary">儲存</button><button type="button" class="btn btn-sand" data-task-action="cancel">取消</button>'+
+      '</form><p class="today-task-status" id="today-task-status-'+type+'" role="status"></p><div class="today-task-items"></div></section>').join('');
   const sections=[...root.querySelectorAll('[data-today-task-type]')],add=root.querySelector('#today-task-add');
   const tabs=[...root.querySelectorAll('[data-task-tab]')];
   let timer,ownerEpoch=0,selected='daily';
-  const dailyPanel=sections[0],dailyForm=dailyPanel.querySelector('form'),dailyInput=dailyForm.querySelector('input');
-  let quickAdd=false,composing=false,imeEnter=false,blurPending=false,pointerId=null,blurTimer,pendingEdit=null;
-  function commitQuickAdd(restoreFocus=false){
-    if(!quickAdd||composing)return false;
-    const text=dailyInput.value.trim();
-    if(text&&!save(dailyPanel,'create',{text}))return false;
-    const target=pendingEdit;
-    edit(dailyPanel);
-    const item=target&&editableTask('daily',target.id,Date.now());
-    if(item)edit(dailyPanel,true,{...item,date:target.date});
-    else if(restoreFocus)add.focus({preventScroll:true});
-    return true;
+  // A pending blur belongs to the input that initiated it, even after a tab change.
+  const quickAdds=new Map();
+  function commitQuickAdd(draft,restoreFocus=false){
+    const {section,input}=draft;
+    if(quickAdds.get(section)!==draft||draft.composing)return;
+    clearTimeout(draft.blurTimer);
+    draft.blurPending=false;
+    const text=input.value.trim();
+    if(text&&!save(section,'create',{text})){
+      input.setAttribute('aria-invalid','true');
+      return;
+    }
+    const target=draft.pendingEdit;
+    edit(section);
+    const item=target&&!section.hidden&&editableTask(section.dataset.todayTaskType,target.id,Date.now());
+    if(item)edit(section,true,{...item,date:target.date});
+    else if(restoreFocus&&!section.hidden)add.focus({preventScroll:true});
   }
-  function scheduleQuickBlur(delay=0){
-    clearTimeout(blurTimer);
-    if(!blurPending||composing||pointerId!==null)return;
-    blurTimer=setTimeout(()=>{
-      if(!blurPending||document.activeElement===dailyInput&&!pendingEdit)return;
-      blurPending=false;
-      commitQuickAdd();
+  function scheduleQuickBlur(draft,delay=0){
+    clearTimeout(draft.blurTimer);
+    if(!draft.blurPending||draft.composing||draft.pointerId!==null)return;
+    draft.blurTimer=setTimeout(()=>{
+      if(document.activeElement!==draft.input||draft.pendingEdit)commitQuickAdd(draft);
     },delay);
   }
-  dailyInput.addEventListener('focus',()=>{blurPending=false;});
-  dailyInput.addEventListener('blur',()=>{
-    if(!quickAdd)return;
-    blurPending=true;
-    scheduleQuickBlur();
-  });
-  function suppressImeEnter(){
-    imeEnter=true;
-    setTimeout(()=>{imeEnter=false;},0);
+  function suppressImeEnter(draft){
+    draft.imeEnter=true;
+    clearTimeout(draft.imeTimer);
+    draft.imeTimer=setTimeout(()=>{draft.imeEnter=false;},0);
   }
-  dailyInput.addEventListener('keyup',event=>{
-    if(event.key==='Enter'&&!event.isComposing&&!composing)imeEnter=false;
-  });
-  dailyInput.addEventListener('compositionstart',()=>{composing=true;});
-  dailyInput.addEventListener('compositionend',()=>{
-    composing=false;
-    suppressImeEnter();
-    scheduleQuickBlur();
-  });
+  for(const section of sections){
+    const input=section.querySelector('form input');
+    input.addEventListener('focus',()=>{
+      const draft=quickAdds.get(section);
+      if(draft)draft.blurPending=false;
+    });
+    input.addEventListener('blur',()=>{
+      const draft=quickAdds.get(section);
+      if(!draft)return;
+      draft.blurPending=true;
+      scheduleQuickBlur(draft);
+    });
+    input.addEventListener('keyup',event=>{
+      const draft=quickAdds.get(section);
+      if(draft&&event.key==='Enter'&&!event.isComposing&&!draft.composing)draft.imeEnter=false;
+    });
+    input.addEventListener('compositionstart',()=>{
+      const draft=quickAdds.get(section);
+      if(draft)draft.composing=true;
+    });
+    input.addEventListener('compositionend',()=>{
+      const draft=quickAdds.get(section);
+      if(!draft)return;
+      draft.composing=false;
+      suppressImeEnter(draft);
+      scheduleQuickBlur(draft);
+    });
+  }
   document.addEventListener('pointerdown',event=>{
-    if(quickAdd&&document.activeElement===dailyInput&&event.target!==dailyInput)pointerId=event.pointerId;
+    for(const draft of quickAdds.values()){
+      if(document.activeElement===draft.input&&event.target!==draft.input)draft.pointerId=event.pointerId;
+    }
   },true);
   for(const type of ['pointerup','pointercancel'])document.addEventListener(type,event=>{
-    if(pointerId!==event.pointerId)return;
-    pointerId=null;
-    scheduleQuickBlur(type==='pointerup'?220:0);
+    for(const draft of quickAdds.values()){
+      if(draft.pointerId!==event.pointerId)continue;
+      draft.pointerId=null;
+      scheduleQuickBlur(draft,type==='pointerup'?220:0);
+    }
   },true);
   function finishQuickPointer(){
-    pointerId=null;
-    scheduleQuickBlur();
+    for(const draft of quickAdds.values()){
+      draft.pointerId=null;
+      scheduleQuickBlur(draft);
+    }
   }
   document.addEventListener('click',finishQuickPointer,true);
   window.addEventListener('blur',finishQuickPointer);
   window.visualViewport?.addEventListener('resize',()=>{
-    if(quickAdd&&document.activeElement===dailyInput)dailyInput.scrollIntoView({block:'nearest'});
+    for(const {input} of quickAdds.values()){
+      if(document.activeElement===input)input.scrollIntoView({block:'nearest'});
+    }
   });
   function select(type){
     if(type===selected)return;
     selected=type;
     for(const tab of tabs)tab.setAttribute('aria-pressed',String(tab.dataset.taskTab===type));
-    for(const section of sections)section.hidden=section.dataset.todayTaskType!==type;
+    for(const section of sections){
+      const hidden=section.dataset.todayTaskType!==type;
+      const input=quickAdds.get(section)?.input;
+      if(hidden&&input===document.activeElement)input.blur();
+      section.hidden=hidden;
+    }
     add.setAttribute('aria-label','新增'+groups.find(group=>group[0]===type)[1]);
   }
   function activeTasks(type,now){
@@ -14387,17 +14456,20 @@ todayTaskView=(()=>{
     section.dataset.editTask=item?.id||'';
     section.dataset.editDate=item?.date||'';
     form.hidden=!show;
-    if(section===dailyPanel){
-      quickAdd=show&&!item;
-      blurPending=false;composing=false;imeEnter=false;pointerId=null;pendingEdit=null;
-      clearTimeout(blurTimer);
-      form.toggleAttribute('data-quick-add',quickAdd);
-      input.required=!quickAdd;
-      input.enterKeyHint=quickAdd?'done':'enter';
+    const closing=quickAdds.get(section);
+    if(closing){
+      clearTimeout(closing.blurTimer);
+      clearTimeout(closing.imeTimer);
+      quickAdds.delete(section);
     }
+    const quickAdd=show&&!item;
+    if(quickAdd)quickAdds.set(section,{section,input,pointerId:null});
+    form.toggleAttribute('data-quick-add',quickAdd);
+    input.required=Boolean(item);
+    input.enterKeyHint=quickAdd?'done':'enter';
+    input.removeAttribute('aria-invalid');
     input.value=item?.text||'';
     input.setAttribute('aria-label',(item?'編輯':'新增')+title);
-    form.querySelector('.btn-primary').textContent=item?'儲存':'新增';
     section.querySelector('.today-task-status').textContent='';
     if(show)input.focus();
   }
@@ -14466,34 +14538,39 @@ todayTaskView=(()=>{
     }
     const day=type==='daily'&&toggling?date:undefined;
     const saved=studyRoom.changeTodayTask(type,action,{id,text,date:day,at:now});
-    status.textContent=saved?'':'無法儲存，請重試。';
+    status.textContent=saved?'':action==='create'
+      ?'無法儲存到本機，請檢查瀏覽器的儲存空間或其他分頁的登入狀態後重試。'
+      :'無法儲存，請重試。';
     return saved;
   }
   root.addEventListener('submit',event=>{
     event.preventDefault();
     const form=event.target,section=form.closest('[data-today-task-type]');
-    if(form===dailyForm&&quickAdd){
-      if(!imeEnter)commitQuickAdd(true);
+    if(form.hidden)return;
+    const draft=quickAdds.get(section);
+    if(draft){
+      if(!draft.imeEnter)commitQuickAdd(draft,true);
       return;
     }
     const input=form.querySelector('input'),text=input.value.trim();
     if(!text){section.querySelector('.today-task-status').textContent='請輸入項目名稱。';input.focus();return;}
     const id=section.dataset.editTask||undefined,date=section.dataset.editDate;
-    if(save(section,id?'edit':'create',{id,text,date})){
+    if(id&&save(section,'edit',{id,text,date})){
       edit(section);
       const row=id&&(findRow(section,id,date)||findRow(section,id,localDateKey()));
       (row?.querySelector('.memo-item-text')||add).focus({preventScroll:true});
     }
   });
   root.addEventListener('keydown',event=>{
-    if(event.target===dailyInput&&quickAdd){
-      const ime=composing||event.isComposing||event.keyCode===229;
+    const draft=quickAdds.get(event.target.closest('[data-today-task-type]'));
+    if(event.target===draft?.input){
+      const ime=draft.composing||event.isComposing||event.keyCode===229;
       if(event.key==='Enter'){
-        if(ime||imeEnter)suppressImeEnter();
-        else{event.preventDefault();commitQuickAdd(true);}
+        if(ime||draft.imeEnter)suppressImeEnter(draft);
+        else{event.preventDefault();commitQuickAdd(draft,true);}
       }else if(event.key==='Escape'&&!ime){
         event.preventDefault();
-        edit(dailyPanel);
+        edit(draft.section);
         add.focus({preventScroll:true});
       }
       return;
@@ -14511,8 +14588,9 @@ todayTaskView=(()=>{
     if(!button)return;
     const action=button.dataset.taskAction;
     const section=button.closest('[data-today-task-type]')||sections.find(item=>item.dataset.todayTaskType===selected);
+    const draft=quickAdds.get(section);
     if(action==='add'){
-      if(section===dailyPanel&&quickAdd)dailyInput.focus();
+      if(draft)draft.input.focus();
       else edit(section,true);
       return;
     }
@@ -14526,10 +14604,10 @@ todayTaskView=(()=>{
     const item=getTask(section,id,date,Date.now());
     if(!item){refresh();return;}
     if(action==='edit'){
-      if(section===dailyPanel&&quickAdd){
-        pendingEdit={id,date};
-        if(composing){blurPending=true;return;}
-        commitQuickAdd();
+      if(draft){
+        draft.pendingEdit={id,date};
+        if(draft.composing){draft.blurPending=true;return;}
+        commitQuickAdd(draft);
       }else edit(section,true,item);
       return;
     }
