@@ -4478,21 +4478,35 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 html[data-ipad] .wide-tabs[data-ipad-pill] > [aria-current=page] {
   touch-action:pan-y;
   touch-action:pan-y pinch-zoom;
+  -webkit-touch-callout:none;
+  user-select:none;
 }
 html[data-ipad] .wide-tabs[data-ipad-pill] {
   --ipad-pill-transition:none;
 }
 @supports (color:color-mix(in srgb,white,transparent)) {
   html[data-ipad] .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
-    --segment-fill:color-mix(in srgb,var(--nav-sel) 86%,transparent);
+    --segment-fill:color-mix(in srgb,var(--nav-sel) 74%,transparent);
+    --nav-pill-glint:rgba(255,250,242,.72);
     --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),inset 0 1px 0 var(--nav-glass-rim),
-      0 3px 9px var(--nav-pill-shadow);
+      inset 0 -1px 2px var(--nav-glass-edge),0 3px 11px var(--nav-pill-shadow);
+  }
+  html[data-ipad][data-theme=dark] .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
+    --nav-pill-glint:rgba(255,255,255,.23);
+  }
+  html[data-ipad] .wide-tabs[data-ipad-pill][data-ipad-pill-raised]::before {
+    -webkit-backdrop-filter:blur(6px) saturate(125%);
+    backdrop-filter:blur(6px) saturate(125%);
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
   html[data-ipad] .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
     --segment-fill:var(--nav-sel);
     --nav-pill-shadow-layer:initial;
+  }
+  html[data-ipad] .wide-tabs[data-ipad-pill][data-ipad-pill-raised]::before {
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
   }
 }
 </style>
@@ -10262,35 +10276,42 @@ function mountIPadNavPill(group) {
   const tabs=[...group.querySelectorAll('[data-wide-page-button]')];
   const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
   const properties=['--ipad-pill-x','--ipad-pill-width','--ipad-pill-lift'];
-  const threshold=7;
-  let target,position,velocity=[0,0],frame=0,lastFrame=0;
+  const threshold=6;
+  const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+  let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0;
   let gesture,blockClick=false;
 
-  function resetPresentation() {
+  function freeze() {
     cancelAnimationFrame(frame);
     frame=0;
-    lastFrame=0;
-    position=target?.slice();
-    velocity=[0,0];
-    properties.forEach(property=>group.style.removeProperty(property));
-    group.removeAttribute('data-ipad-pill-raised');
   }
 
-  function paint(stretch, lift) {
-    const [x,width]=position;
-    group.style.setProperty(properties[0],(x+Math.min(stretch,0))+'px');
+  function paint() {
+    const [left,width,stretch,lift]=position;
+    group.style.setProperty(properties[0],(left+Math.min(stretch,0))+'px');
     group.style.setProperty(properties[1],(width+Math.abs(stretch))+'px');
     group.style.setProperty(properties[2],lift+'px');
     group.toggleAttribute('data-ipad-pill-raised',lift>0.3);
   }
 
+  function resetPresentation() {
+    freeze();
+    position=target?.slice();
+    velocity=[0,0,0,0];
+    properties.forEach(property=>group.style.removeProperty(property));
+    group.removeAttribute('data-ipad-pill-raised');
+  }
+
   function tick(now) {
-    let remaining=Math.min((now-lastFrame)/1000,0.035);
+    let remaining=clamp((now-lastFrame)/1000,0,0.035);
     lastFrame=now;
     while(remaining>0) {
       const dt=Math.min(remaining,1/120);
-      for(let i=0;i<2;i++) {
-        velocity[i]+=(460*(target[i]-position[i])-39*velocity[i])*dt;
+      const shapeStretch=clamp(velocity[0]/105,-8,8);
+      const shapeLift=Math.min(4,Math.max(Math.abs(velocity[0])/240,Math.abs(target[0]-position[0])/22));
+      const desired=[target[0],target[1],shapeStretch,shapeLift];
+      for(let i=0;i<4;i++) {
+        velocity[i]+=(460*(desired[i]-position[i])-39*velocity[i])*dt;
         position[i]+=velocity[i]*dt;
       }
       remaining-=dt;
@@ -10299,8 +10320,7 @@ function mountIPadNavPill(group) {
       resetPresentation();
       return;
     }
-    const stretch=Math.max(-7,Math.min(7,velocity[0]/100));
-    paint(stretch,Math.min(3,Math.max(Math.abs(velocity[0])/220,Math.abs(target[0]-position[0])/22)));
+    paint();
     frame=requestAnimationFrame(tick);
   }
 
@@ -10308,92 +10328,108 @@ function mountIPadNavPill(group) {
     if(!target||!position||reducedMotion.matches) {
       resetPresentation();
     }else if(!frame) {
-      if(!group.style.getPropertyValue(properties[0]))paint(0,0);
+      paint();
       lastFrame=performance.now();
       frame=requestAnimationFrame(tick);
     }
   }
 
-  function endGesture() {
-    const current=gesture;
+  function align([left,,width],animate) {
+    target=[left,width,0,0];
     gesture=null;
-    if(current&&group.hasPointerCapture(current.id))group.releasePointerCapture(current.id);
-    return current;
-  }
-
-  function align([left,,width], animate) {
-    target=[left,width];
-    endGesture();
     if(animate&&position)settle();
     else resetPresentation();
   }
 
-  group.addEventListener('pointerdown',event=>{
-    if(!event.isPrimary)return;
+  // Observe the real touch target. Its touch events stay on the nav when a
+  // finger crosses labels or leaves the rail, without transferring pointer capture.
+  group.addEventListener('touchstart',event=>{
+    if(event.touches.length!==1){cancelTouch();return;}
     blockClick=false;
-    if(event.pointerType!=='touch'||!target||!active()?.contains(event.target))return;
-    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,dragging:false};
-  });
-
-  window.addEventListener('pointermove',event=>{
-    const current=gesture;
-    if(!current||current.id!==event.pointerId)return;
-    const dx=event.clientX-current.x,dy=event.clientY-current.y;
-    if(!current.dragging) {
-      if(Math.max(Math.abs(dx),Math.abs(dy))<threshold)return;
-      blockClick=true;
-      if(Math.abs(dy)>=Math.abs(dx)) {
-        endGesture();
-        return;
-      }
-      current.dragging=true;
-      current.start=position.slice();
-      cancelAnimationFrame(frame);
-      frame=0;
-      velocity=[0,0];
-      group.setPointerCapture(event.pointerId);
-    }
-    const first=tabs[0],last=tabs[tabs.length-1];
-    const left=Math.max(first.offsetLeft,Math.min(last.offsetLeft+last.offsetWidth-current.start[1],current.start[0]+dx));
-    position=[left,current.start[1]];
-    if(!reducedMotion.matches)paint(Math.max(-5,Math.min(5,(left-current.start[0])/12)),2.5);
+    if(!position||!active()?.contains(event.target))return;
+    const touch=event.changedTouches[0];
+    gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,start:position[0],dragging:false};
+    freeze();
+    velocity=[0,0,0,0];
+    if(!reducedMotion.matches)position[3]=4;
+    paint();
   },{passive:true});
 
-  window.addEventListener('pointerup',event=>{
-    if(gesture?.id!==event.pointerId)return;
-    const current=endGesture();
-    if(!current.dragging)return;
-    const bounds=group.getBoundingClientRect();
-    if(event.clientX>=bounds.left&&event.clientX<=bounds.right&&event.clientY>=bounds.top&&event.clientY<=bounds.bottom) {
-      const center=position[0]+position[1]/2;
-      const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
-      const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,active());
-      if(nearest!==active())nearest.click();
-    }
-    settle();
-  });
+  function trackedTouch(event) {
+    return Array.from(event.changedTouches).find(touch=>touch.identifier===gesture?.id);
+  }
 
-  function cancelGesture(event) {
-    if(gesture?.id!==event.pointerId)return;
-    endGesture();
+  function follow(touch) {
+    const dx=touch.clientX-gesture.x;
+    const first=tabs[0],last=tabs[tabs.length-1];
+    const left=clamp(gesture.start+dx,first.offsetLeft,last.offsetLeft+last.offsetWidth-position[1]);
+    const stretch=reducedMotion.matches?0:clamp((left-gesture.start)/8,-10,10);
+    position=[left,position[1],stretch,reducedMotion.matches?0:4];
+    paint();
+  }
+
+  group.addEventListener('touchmove',event=>{
+    if(event.touches.length!==1){cancelTouch();return;}
+    const touch=trackedTouch(event);
+    if(!touch)return;
+    if(!gesture.dragging) {
+      const dx=Math.abs(touch.clientX-gesture.x),dy=Math.abs(touch.clientY-gesture.y);
+      if(Math.max(dx,dy)<threshold)return;
+      blockClick=true;
+      if(dy>=dx) {
+        gesture=null;
+        settle();
+        return;
+      }
+      gesture.dragging=true;
+    }
+    if(event.cancelable)event.preventDefault();
+    follow(touch);
+  },{passive:false});
+
+  group.addEventListener('touchend',event=>{
+    const touch=trackedTouch(event);
+    if(!touch)return;
+    if(gesture.dragging) {
+      if(event.cancelable)event.preventDefault();
+      follow(touch);
+      const bounds=group.getBoundingClientRect();
+      if(touch.clientX>=bounds.left&&touch.clientX<=bounds.right&&touch.clientY>=bounds.top&&touch.clientY<=bounds.bottom) {
+        const center=position[0]+position[1]/2;
+        const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
+        const selected=active();
+        const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,selected);
+        if(nearest!==selected)nearest.click();
+      }
+    }
+    gesture=null;
+    // The shared selection observer supplies the new target before the next frame.
+    settle();
+  },{passive:false});
+
+  function cancelTouch() {
+    if(!gesture)return;
+    gesture=null;
+    blockClick=true;
     settle();
   }
-  window.addEventListener('pointercancel',cancelGesture);
-  group.addEventListener('lostpointercapture',event=>{if(event.target===group)cancelGesture(event);});
+  group.addEventListener('touchcancel',cancelTouch);
+  group.addEventListener('contextmenu',event=>{if(gesture)event.preventDefault();});
+  group.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse')blockClick=false;});
   group.addEventListener('click',event=>{
     if(!blockClick||!event.isTrusted||!event.detail)return;
     event.preventDefault();
     event.stopPropagation();
   },true);
-  reducedMotion.addEventListener('change',()=>{
-    endGesture();
+
+  function resetGesture() {
+    if(gesture?.dragging)blockClick=true;
+    gesture=null;
     resetPresentation();
-  });
+  }
+  reducedMotion.addEventListener('change',resetGesture);
   // The shared layout controller can skip unchanged geometry on rotation.
-  window.addEventListener('resize',()=>{
-    endGesture();
-    resetPresentation();
-  });
+  window.addEventListener('resize',resetGesture);
 
   const selected=active();
   if(selected?.offsetWidth)align([selected.offsetLeft,selected.offsetTop,selected.offsetWidth],false);
