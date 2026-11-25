@@ -3379,8 +3379,8 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-paper-questions li{padding-block:6px;white-space:pre-wrap;overflow-wrap:anywhere;}
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before{
   inset:0 auto auto 0;
-  width:var(--pill-width);height:var(--pill-height);
-  transform:translate3d(var(--pill-x),var(--pill-y),0);
+  width:var(--ipad-pill-width,var(--pill-width));height:var(--pill-height);
+  transform:translate3d(var(--ipad-pill-x,var(--pill-x)),calc(var(--pill-y) - var(--ipad-pill-lift,0px)),0);
   transition:none;
 }
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before{
@@ -3448,8 +3448,8 @@ body { font-size: var(--ui-body); line-height: var(--ui-body-leading); }
 #panel-cal .view-toggle .vt-btn.active { font-weight: 650; }
 :is(.wide-tabs,.bottom-nav,.account-theme) button { font-weight: 650; }
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before {
-  transition: transform var(--ui-pause) var(--ui-motion),
-    width var(--ui-pause) var(--ui-motion), height var(--ui-pause) var(--ui-motion);
+  transition: var(--ipad-pill-transition, transform var(--ui-pause) var(--ui-motion),
+    width var(--ui-pause) var(--ui-motion), height var(--ui-pause) var(--ui-motion));
 }
 
 /* Course, day and knowledge views share the same surface and spacing. */
@@ -4471,6 +4471,28 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   }
   :is(.wide-tabs,.bottom-nav)::before{
     background-image:none;
+  }
+}
+</style>
+<style id="ipad-nav-pill-trial">
+html[data-ipad] .wide-tabs[data-ipad-pill] > [aria-current=page] {
+  touch-action:pan-y;
+  touch-action:pan-y pinch-zoom;
+}
+html[data-ipad] .wide-tabs[data-ipad-pill] {
+  --ipad-pill-transition:none;
+}
+@supports (color:color-mix(in srgb,white,transparent)) {
+  html[data-ipad] .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
+    --segment-fill:color-mix(in srgb,var(--nav-sel) 86%,transparent);
+    --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),inset 0 1px 0 var(--nav-glass-rim),
+      0 3px 9px var(--nav-pill-shadow);
+  }
+}
+@media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
+  html[data-ipad] .wide-tabs[data-ipad-pill][data-ipad-pill-raised] {
+    --segment-fill:var(--nav-sel);
+    --nav-pill-shadow-layer:initial;
   }
 }
 </style>
@@ -10230,7 +10252,153 @@ function init(){
   mountWideLayout();
   refreshWeekProgressClock();
   checkIOSInstall();
+  if(document.documentElement.hasAttribute('data-ipad'))ipadNavPill=mountIPadNavPill(document.querySelector('.wide-tabs'));
 
+}
+
+let ipadNavPill;
+function mountIPadNavPill(group) {
+  const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
+  const tabs=[...group.querySelectorAll('[data-wide-page-button]')];
+  const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
+  const properties=['--ipad-pill-x','--ipad-pill-width','--ipad-pill-lift'];
+  const threshold=7;
+  let target,position,velocity=[0,0],frame=0,lastFrame=0;
+  let gesture,blockClick=false;
+
+  function resetPresentation() {
+    cancelAnimationFrame(frame);
+    frame=0;
+    lastFrame=0;
+    position=target?.slice();
+    velocity=[0,0];
+    properties.forEach(property=>group.style.removeProperty(property));
+    group.removeAttribute('data-ipad-pill-raised');
+  }
+
+  function paint(stretch, lift) {
+    const [x,width]=position;
+    group.style.setProperty(properties[0],(x+Math.min(stretch,0))+'px');
+    group.style.setProperty(properties[1],(width+Math.abs(stretch))+'px');
+    group.style.setProperty(properties[2],lift+'px');
+    group.toggleAttribute('data-ipad-pill-raised',lift>0.3);
+  }
+
+  function tick(now) {
+    let remaining=Math.min((now-lastFrame)/1000,0.035);
+    lastFrame=now;
+    while(remaining>0) {
+      const dt=Math.min(remaining,1/120);
+      for(let i=0;i<2;i++) {
+        velocity[i]+=(460*(target[i]-position[i])-39*velocity[i])*dt;
+        position[i]+=velocity[i]*dt;
+      }
+      remaining-=dt;
+    }
+    if(position.every((value,i)=>Math.abs(value-target[i])<0.2&&Math.abs(velocity[i])<8)) {
+      resetPresentation();
+      return;
+    }
+    const stretch=Math.max(-7,Math.min(7,velocity[0]/100));
+    paint(stretch,Math.min(3,Math.max(Math.abs(velocity[0])/220,Math.abs(target[0]-position[0])/22)));
+    frame=requestAnimationFrame(tick);
+  }
+
+  function settle() {
+    if(!target||!position||reducedMotion.matches) {
+      resetPresentation();
+    }else if(!frame) {
+      if(!group.style.getPropertyValue(properties[0]))paint(0,0);
+      lastFrame=performance.now();
+      frame=requestAnimationFrame(tick);
+    }
+  }
+
+  function endGesture() {
+    const current=gesture;
+    gesture=null;
+    if(current&&group.hasPointerCapture(current.id))group.releasePointerCapture(current.id);
+    return current;
+  }
+
+  function align([left,,width], animate) {
+    target=[left,width];
+    endGesture();
+    if(animate&&position)settle();
+    else resetPresentation();
+  }
+
+  group.addEventListener('pointerdown',event=>{
+    if(!event.isPrimary)return;
+    blockClick=false;
+    if(event.pointerType!=='touch'||!target||!active()?.contains(event.target))return;
+    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,dragging:false};
+  });
+
+  window.addEventListener('pointermove',event=>{
+    const current=gesture;
+    if(!current||current.id!==event.pointerId)return;
+    const dx=event.clientX-current.x,dy=event.clientY-current.y;
+    if(!current.dragging) {
+      if(Math.max(Math.abs(dx),Math.abs(dy))<threshold)return;
+      blockClick=true;
+      if(Math.abs(dy)>=Math.abs(dx)) {
+        endGesture();
+        return;
+      }
+      current.dragging=true;
+      current.start=position.slice();
+      cancelAnimationFrame(frame);
+      frame=0;
+      velocity=[0,0];
+      group.setPointerCapture(event.pointerId);
+    }
+    const first=tabs[0],last=tabs[tabs.length-1];
+    const left=Math.max(first.offsetLeft,Math.min(last.offsetLeft+last.offsetWidth-current.start[1],current.start[0]+dx));
+    position=[left,current.start[1]];
+    if(!reducedMotion.matches)paint(Math.max(-5,Math.min(5,(left-current.start[0])/12)),2.5);
+  },{passive:true});
+
+  window.addEventListener('pointerup',event=>{
+    if(gesture?.id!==event.pointerId)return;
+    const current=endGesture();
+    if(!current.dragging)return;
+    const bounds=group.getBoundingClientRect();
+    if(event.clientX>=bounds.left&&event.clientX<=bounds.right&&event.clientY>=bounds.top&&event.clientY<=bounds.bottom) {
+      const center=position[0]+position[1]/2;
+      const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
+      const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,active());
+      if(nearest!==active())nearest.click();
+    }
+    settle();
+  });
+
+  function cancelGesture(event) {
+    if(gesture?.id!==event.pointerId)return;
+    endGesture();
+    settle();
+  }
+  window.addEventListener('pointercancel',cancelGesture);
+  group.addEventListener('lostpointercapture',event=>{if(event.target===group)cancelGesture(event);});
+  group.addEventListener('click',event=>{
+    if(!blockClick||!event.isTrusted||!event.detail)return;
+    event.preventDefault();
+    event.stopPropagation();
+  },true);
+  reducedMotion.addEventListener('change',()=>{
+    endGesture();
+    resetPresentation();
+  });
+  // The shared layout controller can skip unchanged geometry on rotation.
+  window.addEventListener('resize',()=>{
+    endGesture();
+    resetPresentation();
+  });
+
+  const selected=active();
+  if(selected?.offsetWidth)align([selected.offsetLeft,selected.offsetTop,selected.offsetWidth],false);
+  group.setAttribute('data-ipad-pill','');
+  return {group,align};
 }
 
 const pillMotion=(()=>{
@@ -10259,6 +10427,7 @@ const pillMotion=(()=>{
     group.setAttribute('data-pill-ready','');
     ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,values[i]+'px'));
     state.geometry=values;
+    if(ipadNavPill?.group===group)ipadNavPill.align(values,animate);
   }
   function capture(root){
     const previous=new Map();
