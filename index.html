@@ -3379,7 +3379,7 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 .study-paper-questions li{padding-block:6px;white-space:pre-wrap;overflow-wrap:anywhere;}
 :is(.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before{
   inset:0 auto auto 0;
-  width:var(--nav-drag-width,var(--pill-width));height:var(--pill-height);
+  width:var(--nav-drag-width,var(--pill-width));height:var(--nav-drag-height,var(--pill-height));
   transform:translate3d(var(--nav-drag-x,var(--pill-x)),calc(var(--pill-y) - var(--nav-drag-lift,0px)),0);
   transition:none;
 }
@@ -4487,62 +4487,67 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
   --nav-drag-transition:none;
-  --nav-drag-glint:rgba(255,250,242,.56);
-  --nav-drag-reflection:rgba(205,159,112,.12);
-  --nav-drag-rim:rgba(255,250,242,.86);
-  --nav-drag-edge:rgba(113,75,47,.21);
-  --nav-drag-shadow:0 1px 3px var(--nav-pill-shadow);
-  --nav-pill-shadow-layer:inset 0 0 0 1px var(--nav-drag-edge),
-    inset 0 1px 0 var(--nav-drag-rim),var(--nav-drag-shadow);
+  --nav-optics:0;
+  --nav-glint:#fffaf2;
+  --nav-glint-bottom:#d4a577;
+  --nav-optic-shadow:rgba(59,36,24,.17);
+  --nav-optic-shadow-offset:5px;
+  --nav-optic-shadow-size:12px;
+  --nav-pill-shadow-layer:none;
+}
+.bottom-nav[data-touch-nav-pill] {
+  --nav-optic-shadow-offset:2px;
+  --nav-optic-shadow-size:5px;
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
-  --nav-drag-color:#383b42;
-  --nav-drag-alpha:79%;
-  --nav-drag-glint:rgba(228,233,242,.08);
-  --nav-drag-reflection:rgba(217,218,220,.045);
-  --nav-drag-rim:rgba(222,228,239,.16);
-  --nav-drag-edge:rgba(191,199,214,.25);
+  --nav-glint:#f0f5ff;
+  --nav-glint-bottom:#bdc8dc;
+  --nav-optic-shadow:rgba(0,0,0,.40);
 }
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
   background-color:var(--segment-fill);
-  background-image:linear-gradient(180deg,var(--nav-drag-glint),transparent 56%,var(--nav-drag-reflection));
-}
-:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-glint:rgba(255,250,242,.84);
-  --nav-drag-reflection:rgba(205,159,112,.22);
-  --nav-drag-rim:var(--nav-glass-rim);
-  --nav-drag-shadow:0 3px 8px var(--nav-pill-shadow);
-}
-:root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-color:#4a4e58;
-  --nav-drag-alpha:46%;
-  --nav-drag-glint:rgba(224,231,244,.21);
-  --nav-drag-reflection:rgba(199,208,225,.11);
-  --nav-drag-rim:rgba(240,245,255,.82);
-  --nav-drag-edge:rgba(203,213,231,.57);
+  background-image:none;
 }
 @supports (color:color-mix(in srgb,white,transparent)) {
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
-    --segment-fill:color-mix(in srgb,var(--nav-drag-color,var(--nav-sel)) var(--nav-drag-alpha,84%),transparent);
+    --nav-flat-opacity:70%;
+    --nav-lightening:23%;
+    --nav-top-glint:76%;
+    --nav-pill-shadow-layer:
+      inset 0 calc(var(--nav-optics)*1px) 0 color-mix(in srgb,var(--nav-glint) calc(var(--nav-optics)*78%),transparent),
+      0 calc(var(--nav-optics)*var(--nav-optic-shadow-offset)) calc(var(--nav-optics)*var(--nav-optic-shadow-size)) color-mix(in srgb,var(--nav-optic-shadow) calc(var(--nav-optics)*100%),transparent);
+    --segment-fill:color-mix(in srgb,var(--nav-sel) calc(var(--nav-flat-opacity) - var(--nav-optics)*var(--nav-lightening)),transparent);
   }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-    --segment-fill:color-mix(in srgb,var(--nav-drag-color,var(--nav-sel)) var(--nav-drag-alpha,58%),transparent);
+  .bottom-nav[data-touch-nav-pill] {
+    --nav-lightening:12%;
+    --nav-top-glint:37%;
+  }
+  :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+    --nav-flat-opacity:78%;
   }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    -webkit-backdrop-filter:blur(8px) saturate(125%);
-    backdrop-filter:blur(8px) saturate(125%);
+    background-image:
+      radial-gradient(ellipse 78% 45% at var(--nav-glint-x,50%) 0%,color-mix(in srgb,var(--nav-glint) calc(var(--nav-optics)*var(--nav-top-glint)),transparent),transparent 94%),
+      radial-gradient(ellipse 63% 34% at calc(100% - var(--nav-glint-x,50%)) 100%,color-mix(in srgb,var(--nav-glint-bottom) calc(var(--nav-optics)*26%),transparent),transparent 96%);
+    -webkit-backdrop-filter:blur(calc(var(--nav-optics)*5px)) saturate(calc(100% + var(--nav-optics)*40%));
+    backdrop-filter:blur(calc(var(--nav-optics)*5px)) saturate(calc(100% + var(--nav-optics)*40%));
+  }
+  .wide-tabs[data-nav-glass-refraction][data-touch-nav-pill-raised]::before {
+    backdrop-filter:url(#studyos-nav-refraction) blur(calc(var(--nav-optics)*2px)) saturate(calc(100% + var(--nav-optics)*40%));
+  }
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready] {
+    --segment-fill:color-mix(in srgb,var(--nav-sel) 80%,transparent);
+    --nav-pill-shadow-layer:inset 0 0 0 1px color-mix(in srgb,var(--segment-border) 34%,transparent);
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill],
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
+  :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready] {
     --segment-fill:var(--nav-sel);
     --nav-pill-shadow-layer:initial;
   }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before,
+  .wide-tabs[data-nav-glass-refraction][data-touch-nav-pill-raised]::before {
     background-image:none;
-  }
-  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
   }
@@ -5390,6 +5395,12 @@ onAuthStateChanged(auth,user=>{
     <div class="study-actions paper-import-footer"><button type="button" class="btn btn-sand" id="study-batch-back">返回修改原文</button><button type="button" class="btn btn-primary" id="study-batch-apply">匯入 0 題</button></div>
   </section>
 </dialog>
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;pointer-events:none">
+  <filter id="studyos-nav-refraction" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feImage href="data:image/png;base64,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" x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="rimMap"/>
+    <feDisplacementMap in="SourceGraphic" in2="rimMap" scale="9" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
 <nav class="bottom-nav" aria-label="主要導覽">
   <button class="bn-btn active" id="bn-course" aria-current="page" onclick="mobileTab('course')">
     <span class="bn-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 6.5C10.4 5.3 8.2 4.8 5 4.8v12.4c3.2 0 5.4.5 7 1.7 1.6-1.2 3.8-1.7 7-1.7V4.8c-3.2 0-5.4.5-7 1.7Zm0 0v12.4"/></svg></span><span class="bn-label">課程</span>
@@ -10310,99 +10321,96 @@ function init(){
 
 const touchNavPills=new Map();
 function mountTouchNavPills() {
-  const platform=document.documentElement;
-  const isPhone=platform.hasAttribute('data-phone-touch');
-  const isTablet=platform.hasAttribute('data-ipad');
-  const phoneTouch=matchMedia('(max-width:767px) and (pointer:coarse) and (hover:none)');
-  const tabletTouch=matchMedia('(min-width:768px) and (min-height:481px) and (pointer:coarse) and (hover:none)');
-  const bottomNav=document.querySelector('.bottom-nav');
-  const topNav=document.querySelector('.wide-tabs');
-
-  function enable(group) {
-    if(!touchNavPills.has(group))touchNavPills.set(group,mountTouchNavPill(group));
+  for(const group of document.querySelectorAll('.wide-tabs,.bottom-nav')){
+    touchNavPills.set(group,mountTouchNavPill(group));
   }
-  function update() {
-    if(isPhone||!isTablet&&phoneTouch.matches)enable(bottomNav);
-    if(isTablet||!isPhone&&tabletTouch.matches)enable(topNav);
-  }
-  phoneTouch.addEventListener('change',update);
-  tabletTouch.addEventListener('change',update);
-  update();
 }
 
 function mountTouchNavPill(group) {
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
   const tabs=[...group.querySelectorAll(':scope > button')];
   const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
-  const properties=['--nav-drag-x','--nav-drag-width','--nav-drag-lift'];
+  const wide=group.classList.contains('wide-tabs');
+  const heldLift=wide?4:2;
+  const lens=wide&&/(?:Chrome|Chromium|Edg)\//.test(navigator.userAgent)&&
+    CSS.supports('backdrop-filter','url(#studyos-nav-refraction)')?
+    document.querySelector('#studyos-nav-refraction feDisplacementMap'):null;
+  group.toggleAttribute('data-nav-glass-refraction',Boolean(lens));
+  const properties=['--nav-drag-x','--nav-drag-width','--nav-drag-lift','--nav-drag-height','--nav-optics','--nav-glint-x'];
   const threshold=6;
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
-  let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0;
+  let target,position,frame=0,landing;
   let gesture,blockClick=false;
 
   function freeze() {
     cancelAnimationFrame(frame);
     frame=0;
+    landing=null;
   }
 
   function paintedBounds() {
-    const [left,width,stretch,lift]=position;
-    const extension=Math.max(0,stretch);
-    return [left-extension/2,width+extension,lift];
+    const [left,width,stretch,lift,height]=position;
+    const swell=lift/heldLift;
+    const extension=stretch+(wide?3:1.5)*swell;
+    return [left-extension/2,width+extension,lift,height+(wide?2:1)*swell];
   }
 
   function paint() {
-    const [left,width,lift]=paintedBounds();
+    const [left,width,lift,height]=paintedBounds();
+    const strength=clamp(lift/heldLift,0,1);
     group.style.setProperty(properties[0],left+'px');
     group.style.setProperty(properties[1],width+'px');
     group.style.setProperty(properties[2],lift+'px');
-    group.toggleAttribute('data-touch-nav-pill-raised',lift>0.3);
+    group.style.setProperty(properties[3],height+'px');
+    group.style.setProperty(properties[4],strength.toFixed(3));
+    group.style.setProperty(properties[5],clamp(24+(left+width/2)/Math.max(1,group.clientWidth)*52,24,76)+'%');
+    group.toggleAttribute('data-touch-nav-pill-raised',strength>0);
+    lens?.setAttribute('scale',(strength*9).toFixed(2));
   }
 
   function resetPresentation() {
     freeze();
     position=target?.slice();
-    velocity=[0,0,0,0];
     properties.forEach(property=>group.style.removeProperty(property));
     group.removeAttribute('data-touch-nav-pill-raised');
+    lens?.setAttribute('scale','0');
   }
 
   function tick(now) {
-    let remaining=clamp((now-lastFrame)/1000,0,0.035);
-    lastFrame=now;
-    while(remaining>0) {
-      const dt=Math.min(remaining,1/120);
-      const shapeStretch=Math.min(8,Math.abs(velocity[0])/105);
-      const shapeLift=Math.min(4,Math.max(Math.abs(velocity[0])/240,Math.abs(target[0]-position[0])/22));
-      const desired=[target[0],target[1],shapeStretch,shapeLift];
-      for(let i=0;i<4;i++) {
-        velocity[i]+=(460*(desired[i]-position[i])-39*velocity[i])*dt;
-        position[i]+=velocity[i]*dt;
-      }
-      remaining-=dt;
-    }
-    if(position.every((value,i)=>Math.abs(value-target[i])<0.2&&Math.abs(velocity[i])<8)) {
-      resetPresentation();
-      return;
+    const {start,from,duration,pulse}=landing;
+    const time=clamp((now-start)/duration,0,1);
+    if(time===1){resetPresentation();return;}
+    // One eased progress lands position, shape and glass together without overshoot.
+    const progress=1-(1-time)**3;
+    position=from.map((value,i)=>value+(target[i]-value)*progress);
+    if(pulse){
+      const arc=4*progress*(1-progress);
+      position[2]+=arc*(wide?3:1.5);
+      position[3]+=arc*heldLift*.6;
     }
     paint();
     frame=requestAnimationFrame(tick);
   }
 
-  function settle() {
+  function settle(pulse=false) {
     if(!target||!position||reducedMotion.matches) {
       resetPresentation();
-    }else if(!frame) {
-      paint();
-      lastFrame=performance.now();
-      frame=requestAnimationFrame(tick);
+      return;
     }
+    const distance=Math.abs(target[0]-position[0]);
+    freeze();
+    if(position.every((value,i)=>Math.abs(value-target[i])<.01)){resetPresentation();return;}
+    landing={start:performance.now(),from:position.slice(),duration:distance<8?180:250+Math.min(78,distance*.4),pulse};
+    paint();
+    frame=requestAnimationFrame(tick);
   }
 
-  function align([left,,width],animate) {
-    target=[left,width,0,0];
+  function align([left,,width,height],animate) {
+    const pulse=animate&&!landing&&!gesture&&!position?.[3];
+    target=[left,width,0,0,height];
+    if(animate&&gesture)return;
     gesture=null;
-    if(animate&&position)settle();
+    if(animate&&position)settle(pulse);
     else resetPresentation();
   }
 
@@ -10413,10 +10421,10 @@ function mountTouchNavPill(group) {
     // A moving pill can be painted over another tab. Use the painted bounds
     // as well as the selected button's hit area, without adding an overlay.
     const bounds=group.getBoundingClientRect();
-    const [left,width,lift]=paintedBounds();
+    const [left,width,lift,height]=paintedBounds();
     const x=touch.clientX-bounds.left-group.clientLeft,y=touch.clientY-bounds.top-group.clientTop;
     const top=selected.offsetTop-lift;
-    return x>=left&&x<=left+width&&y>=top&&y<=top+selected.offsetHeight;
+    return x>=left&&x<=left+width&&y>=top&&y<=top+height;
   }
 
   // Touch events stay on the original nav target as the finger crosses labels.
@@ -10427,8 +10435,7 @@ function mountTouchNavPill(group) {
     if(!touchesPill(touch,event.target))return;
     gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,start:position[0],stretch:position[2],dragging:false};
     freeze();
-    velocity=[0,0,0,0];
-    if(!reducedMotion.matches)position[3]=4;
+    if(!reducedMotion.matches)position[3]=heldLift;
     paint();
   },{passive:true});
 
@@ -10440,8 +10447,10 @@ function mountTouchNavPill(group) {
     const dx=touch.clientX-gesture.x;
     const first=tabs[0],last=tabs[tabs.length-1];
     const left=clamp(gesture.start+dx,first.offsetLeft,last.offsetLeft+last.offsetWidth-position[1]);
-    const stretch=reducedMotion.matches?0:Math.min(10,Math.max(0,gesture.stretch)+Math.abs(left-gesture.start)/8);
-    position=[left,position[1],stretch,reducedMotion.matches?0:4];
+    const travel=Math.abs(left-gesture.start);
+    const maxStretch=wide?11:6;
+    const stretch=reducedMotion.matches?0:Math.min(maxStretch,gesture.stretch+maxStretch*travel/(65+travel));
+    position=[left,position[1],stretch,reducedMotion.matches?0:heldLift,position[4]];
     paint();
   }
 
