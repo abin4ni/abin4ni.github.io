@@ -4691,10 +4691,28 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   --seg-pill-edge:rgba(220,228,242,.24);
 }
 
-/* ── Secondary segmented controls: thin translucent dock + spring-driven pill, zero ghost fills ── */
+/* Animate the rail behind the selection without moving the labels or hit areas. */
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options)::after {
+  transform:scale(calc(1 + var(--pill-rail-pulse,0)*var(--pill-rail-scale-x,.025)),
+    calc(1 + var(--pill-rail-pulse,0)*var(--pill-rail-scale-y,.048)));
+}
+:is(.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options) {
+  --pill-rail-scale-x:.018;
+  --pill-rail-scale-y:.038;
+}
 :is(#panel-cal .view-toggle,.account-theme,.study-mode-options) {
-  background:var(--seg-dock-bg) !important;
+  background:transparent !important;
   border-radius:var(--r-pill);
+  box-shadow:none;
+}
+:is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  border-radius:inherit;
+  background:var(--seg-dock-bg);
   box-shadow:inset 0 0 0 1px var(--seg-dock-edge),inset 0 1px 0 var(--seg-dock-highlight);
 }
 :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
@@ -5059,9 +5077,9 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 
 /* ── Accessibility: Reduced Transparency & Reduced Motion ── */
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
-  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options) {
-    background:var(--sunken) !important;
-    box-shadow:inset 0 0 0 1px var(--border) !important;
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::after {
+    background:var(--sunken);
+    box-shadow:inset 0 0 0 1px var(--border);
   }
   :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
     background-image:none !important;
@@ -10853,6 +10871,31 @@ function init(){
 
 }
 
+const PILL_TAP_DURATION=350;
+const pillRailPulse='--pill-rail-pulse';
+
+function beginPillTap(group,position,lift){
+  return {
+    start:performance.now(),from:position.slice(),lift,
+    rail:Number(group.style.getPropertyValue(pillRailPulse))
+  };
+}
+
+function samplePillTap(group,tap,target,now){
+  const progress=Math.max(0,(now-tap.start)/PILL_TAP_DURATION);
+  if(progress>=1)return null;
+  const tail=(1-progress)**3;
+  // Apply the same damped response to every travel distance. Taper the
+  // residual motion to zero at the deadline, including the glass and rail.
+  const spring=1-(1-progress**2)*Math.exp(-8*progress)*
+    (Math.cos(6.4*progress)+1.25*Math.sin(6.4*progress));
+  const lift=tap.from[5]*tail+tap.lift*8*progress*tail*(1-Math.min(tap.from[5],1));
+  const rail=(tap.rail+1.7*Math.sin(2*Math.PI*progress))*tail;
+  group.style.setProperty(pillRailPulse,rail);
+  return [...target.slice(0,4).map((value,index)=>tap.from[index]+(value-tap.from[index])*spring),
+    tap.from[4]*tail,lift];
+}
+
 const touchNavPills=new Map();
 function mountTouchNavPills() {
   const bottomNav=document.querySelector('.bottom-nav');
@@ -10871,13 +10914,15 @@ function mountTouchNavPill(group) {
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
   const rubber=(over,dim)=>over===0?0:(Math.sign(over)*(Math.abs(over)*dim*0.35)/(dim+0.35*Math.abs(over)));
   let target,position,velocity=[0,0,0,0,0,0],frame=0,dragFrame=0,lastFrame=0;
-  let gesture,blockClick=false,blockClickTimer=0;
+  let gesture,tapMotion,blockClick=false,blockClickTimer=0;
 
   function freeze() {
     cancelAnimationFrame(frame);
     frame=0;
     cancelAnimationFrame(dragFrame);
     dragFrame=0;
+    tapMotion=null;
+    group.style.removeProperty(pillRailPulse);
   }
 
   function paintedBounds() {
@@ -10972,36 +11017,46 @@ function mountTouchNavPill(group) {
     frame=requestAnimationFrame(tick);
   }
 
-  function settle(tap=false) {
+  function settle() {
     cancelAnimationFrame(dragFrame);
     dragFrame=0;
     if(!target||!position||reducedMotion.matches) {
       resetPresentation();
-    }else {
-      if(tap) {
-        // Lift and travel use the same frame loop. Keep the current pose and
-        // position velocity when a nearby tab interrupts a moving pill.
-        velocity[5]=Math.max(velocity[5],(isBottomNav?16:27)*(1-Math.min(position[5],1)));
-      }
-      if(!frame) {
-        if(!tap) {
-          velocity[4]=Math.min(0,velocity[4]);
-          velocity[5]=Math.min(0,velocity[5]);
-        }
-        paint();
-        lastFrame=performance.now();
-        frame=requestAnimationFrame(tick);
-      }
+    }else if(!frame) {
+      velocity[4]=Math.min(0,velocity[4]);
+      velocity[5]=Math.min(0,velocity[5]);
+      paint();
+      lastFrame=performance.now();
+      frame=requestAnimationFrame(tick);
     }
+  }
+
+  function tickTap(now) {
+    const next=samplePillTap(group,tapMotion,target,now);
+    if(!next){resetPresentation();return;}
+    velocity[0]=(next[0]-position[0])/Math.max(.001,(now-lastFrame)/1000);
+    position=next;
+    lastFrame=now;
+    paint();
+    frame=requestAnimationFrame(tickTap);
   }
 
   function align([left,top,width,height],animate) {
     // Drag release already sets its destination before it activates the tab.
-    const tap=!!target&&(target[0]!==left||target[1]!==top);
+    const changedTab=!!target&&(target[0]!==left||target[1]!==top);
     target=[left,top,width,height,0,0];
     if(gesture)return;
-    if(animate&&position)settle(tap);
-    else resetPresentation();
+    if(!animate||!position||reducedMotion.matches){
+      resetPresentation();
+    }else if(changedTab){
+      cancelAnimationFrame(frame);
+      tapMotion=beginPillTap(group,position,isBottomNav?.40:.67);
+      lastFrame=tapMotion.start;
+      paint();
+      frame=requestAnimationFrame(tickTap);
+    }else{
+      settle();
+    }
   }
 
   function ensurePosition() {
@@ -11225,78 +11280,55 @@ const pillMotion=(()=>{
   const mounted=new Map();
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
   const dragProps=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height'];
-  function createSegSpring(group){
-    let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0,lift=0,liftVelocity=0;
+  function createSegmentMotion(group){
+    let target,position,tap,frame=0;
     const liftProp='--segment-lift';
     function paint(){
-      if(!position)return;
-      group.style.setProperty(dragProps[0],(position[0]-lift)+'px');
-      group.style.setProperty(dragProps[1],(position[1]-lift*1.5)+'px');
-      group.style.setProperty(dragProps[2],Math.max(1,position[2]+lift*2)+'px');
-      group.style.setProperty(dragProps[3],Math.max(1,position[3]+lift*2)+'px');
+      const [x,y,width,height,,lift]=position;
+      group.style.setProperty(dragProps[0],(x-lift)+'px');
+      group.style.setProperty(dragProps[1],(y-lift*1.5)+'px');
+      group.style.setProperty(dragProps[2],Math.max(1,width+lift*2)+'px');
+      group.style.setProperty(dragProps[3],Math.max(1,height+lift*2)+'px');
       group.style.setProperty(liftProp,lift);
     }
     function clearPaint(){
-      dragProps.forEach(prop=>group.style.removeProperty(prop));
-      group.style.removeProperty(liftProp);
-    }
-    function reset(){
       cancelAnimationFrame(frame);
       frame=0;
+      dragProps.forEach(prop=>group.style.removeProperty(prop));
+      group.style.removeProperty(liftProp);
+      group.style.removeProperty(pillRailPulse);
+    }
+    function reset(){
       position=target?.slice();
-      velocity=[0,0,0,0];
-      lift=liftVelocity=0;
+      tap=null;
       clearPaint();
       group.removeAttribute('data-pill-moving');
     }
     function tick(now){
-      if(!target||!position||reducedMotion.matches){reset();return;}
-      let remaining=Math.min(0.035,Math.max(0,(now-lastFrame)/1000));
-      lastFrame=now;
-      while(remaining>0){
-        const dt=Math.min(remaining,1/120);
-        for(let i=0;i<4;i++){
-          velocity[i]+=(460*(target[i]-position[i])-29*velocity[i])*dt;
-          position[i]+=velocity[i]*dt;
-        }
-        liftVelocity+=(-380*lift-32*liftVelocity)*dt;
-        lift+=liftVelocity*dt;
-        if(lift<0){lift=0;liftVelocity=0;}
-        remaining-=dt;
-      }
-      const done=lift<0.02&&Math.abs(liftVelocity)<0.15&&
-        position.every((v,i)=>Math.abs(v-target[i])<0.15&&Math.abs(velocity[i])<3.5);
-      if(done){reset();return;}
+      const next=samplePillTap(group,tap,target,now);
+      if(!next){reset();return;}
+      position=next;
       paint();
       frame=requestAnimationFrame(tick);
     }
     return {
       align(values,animate){
         const changedTab=!!target&&(target[0]!==values[0]||target[1]!==values[1]);
-        target=values.slice();
-        if(!animate||!position||reducedMotion.matches){
-          reset();
-          return;
-        }
-        if(changedTab)liftVelocity=Math.max(liftVelocity,15*(1-Math.min(lift,1)));
+        target=[...values,0,0];
+        if(!animate||!position||reducedMotion.matches){reset();return;}
+        if(changedTab)tap=beginPillTap(group,position,.35);
+        if(!tap){reset();return;}
         paint();
-        if(!frame){
-          lastFrame=performance.now();
-          frame=requestAnimationFrame(tick);
-        }
+        if(!frame)frame=requestAnimationFrame(tick);
       },
-      snapshot(){return {position:position?.slice(),target:target?.slice(),velocity:velocity.slice(),lift,liftVelocity,moving:!!frame};},
+      snapshot(){return {position:position?.slice(),target:target?.slice(),tap,rail:group.style.getPropertyValue(pillRailPulse)};},
       restore(prior){
+        position=prior.position;
         target=prior.target;
-        velocity=prior.velocity;
-        lift=prior.lift;
-        liftVelocity=prior.liftVelocity;
+        tap=prior.tap;
+        if(prior.rail)group.style.setProperty(pillRailPulse,prior.rail);
       },
-      destroy(){
-        cancelAnimationFrame(frame);
-        frame=0;
-        clearPaint();
-      }
+      destroy:clearPaint
     };
   }
   reducedMotion.addEventListener('change',()=>{
@@ -11340,7 +11372,7 @@ const pillMotion=(()=>{
       const style=getComputedStyle(group,'::before'),matrix=new DOMMatrixReadOnly(style.transform);
       const spring=mounted.get(group)?.spring?.snapshot();
       previous.set(group.dataset.pillKey,{
-        geometry:spring?.position||[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],
+        geometry:spring?.position?.slice(0,4)||[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],
         scroll:group.scrollLeft,focused:group.contains(document.activeElement),spring
       });
     }
@@ -11380,7 +11412,7 @@ const pillMotion=(()=>{
           }
           update(group,records.some(record=>record.type==='attributes'));
         });
-        const spring=touchNavPills.has(group)?null:createSegSpring(group);
+        const spring=touchNavPills.has(group)?null:createSegmentMotion(group);
         const state={observer,options,geometry:null,spring};
         mounted.set(group,state);
         observer.observe(group,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
@@ -11391,7 +11423,7 @@ const pillMotion=(()=>{
           place(group,state,prior.geometry,false);
           if(prior.spring&&!reducedMotion.matches)spring?.restore(prior.spring);
           update(group,true);
-          if(prior.spring?.moving&&state.geometry===prior.geometry&&!reducedMotion.matches){
+          if(prior.spring?.tap&&state.geometry===prior.geometry&&!reducedMotion.matches){
             group.setAttribute('data-pill-moving','');
             spring?.align(state.geometry,true);
           }
