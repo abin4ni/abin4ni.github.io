@@ -4277,12 +4277,11 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   background:var(--surface);border-color:var(--border-lt);gap:var(--sp-3);
 }
 #panel-r .study-brief-go{max-width:100%;white-space:normal;}
-#panel-r .study-brief-card--paper{align-items:center;flex-wrap:wrap;}
-#panel-r .study-brief-card + .study-brief-card--review{margin-block-start:var(--sp-2);}
-.study-brief-card--paper .study-brief-text{flex:1 1 min(100%,12rem);gap:4px;}
-.study-brief-paper-context{font-size:var(--ui-caption);color:var(--text-2);overflow-wrap:anywhere;}
-.study-brief-paper-progress{font-variant-numeric:tabular-nums;color:var(--text-2);}
-.study-brief-card--paper .study-brief-go{margin-inline-start:auto;}
+#study-brief-primary,.study-brief-option{display:flex;align-items:center;flex-wrap:wrap;min-width:0;}
+#study-brief-primary .study-brief-text,.study-brief-option .study-brief-text{flex:1 1 min(100%,10rem);gap:4px;}
+#study-brief :is(.study-brief-go,.planned-review-actions){margin-inline-start:auto;}
+#study-brief .study-brief-meta{font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.study-brief-option{gap:var(--sp-2);padding-block:var(--sp-2);border-bottom:1px solid var(--border-lt);}
 #panel-r #study-exams-title{cursor:pointer;min-height:44px;align-content:center;}
 #panel-r #study-exams .study-exam-row{margin-block-start:var(--sp-2);}
 #today-lesson-progress{margin-block-end:var(--sp-3);max-inline-size:18rem;}
@@ -9011,10 +9010,10 @@ function reviewScheduleHTML(date=null){
   ${items.map(item=>{
     const info=studyRoom.plannedReviewInfo(item.source);
     const state=item.done?'已完成':item.date<today?'逾期':item.date===today?'今天到期':'已安排';
-    return `<div class="study-brief-card planned-review-row">
+    return `<div class="${date?'study-brief-card':'study-brief-option'} planned-review-row">
       <div class="study-brief-text"><strong class="study-brief-subject">${esc(info?.title||item.title)}</strong>
         <span class="study-brief-meta">${esc(item.date)} · ${state}${!item.done&&!info?.count?' · '+(info?.waiting?'載入中':info?'目前沒有可練題目':'來源已無法使用'):''}</span></div>
-      <div class="planned-review-actions">${!item.done&&info?.count?`<button type="button" class="btn btn-primary" data-review-start="${esc(item.id)}">${studyRoom.plannedReviewActive(item)?'繼續':'開始'}</button>`:''}
+      <div class="planned-review-actions">${!item.done&&info?.count?`<button type="button" class="btn ${date?'btn-primary':'btn-sand'}" data-review-start="${esc(item.id)}">${studyRoom.plannedReviewActive(item)?'繼續':'開始'}</button>`:''}
         ${!item.done?`<button type="button" class="btn btn-sand" data-review-edit="${esc(item.id)}">查看或改期</button>`:''}</div>
     </div>`;
   }).join('')}</div>`;
@@ -9162,12 +9161,10 @@ function studyLocalDay(date=new Date()){
 function todayLessonSubjectNames(){
   return [...(S.calendar[studyLocalDay()]||[])].sort(compareDayLessons).map(l=>course(l.courseId)?.name).filter(Boolean);
 }
-let studyDueExpanded=false,studyExamsExpanded=false;
+let studyMoreExpanded=false,studyDueExpanded=false,studyExamsExpanded=false;
 const expandedStudyExams=new Set();
-function studyDueHTML(brief){
-  if(!brief.due.length){
-    return brief.waiting?'':'<p class="study-brief-meta study-due-list" id="study-brief-due">目前沒有到期題</p>';
-  }
+function studyDueHTML(brief,hasDuePrimary){
+  if(!brief.due.length)return '';
   const groups=new Map();
   for(const question of brief.due){
     if(!groups.has(question.subject))groups.set(question.subject,[]);
@@ -9176,7 +9173,7 @@ function studyDueHTML(brief){
   const canStart=!brief.resume&&!brief.waiting;
   return `<details class="study-due-list" id="study-due-list">
     <summary id="study-brief-due">待複習 ${brief.due.length} 題</summary>
-    ${canStart?'<div class="study-due-controls"><button type="button" class="btn btn-sand" data-study-due="">練習全部到期題</button></div>':''}
+    ${canStart&&!hasDuePrimary?'<div class="study-due-controls"><button type="button" class="btn btn-sand" data-study-due="">練習全部到期題</button></div>':''}
     ${[...groups].map(([subject,questions])=>`<section class="study-due-group">
       <div class="study-due-group-head"><h4>${esc(subject)} · ${questions.length} 題</h4>
         ${canStart?`<button type="button" class="btn btn-sand" data-study-due="${esc(subject)}" aria-label="練習本科到期題：${esc(subject)}">練習本科到期題</button>`:''}</div>
@@ -9185,6 +9182,7 @@ function studyDueHTML(brief){
   </details>`;
 }
 function studyExamHTML(brief){
+  const resume=brief.resume||brief.otherPractice;
   const exams=studyRoom.upcomingExams();
   if(!exams.length)return '';
   return `<details class="study-exams" id="study-exams">
@@ -9194,10 +9192,10 @@ function studyExamHTML(brief){
       ${scopeInvalid?'<p class="study-brief-meta">請重新設定考試範圍</p>':chapters?`<p class="study-brief-meta">${scopeLabel}</p>
         ${chapters.length?`<ul>${chapters.map(({name,answered,total,weak})=>`<li><strong>${esc(name||'未分類')}</strong><span class="study-brief-meta"><span>已作答 ${answered}／${total} 題</span><span>待加強 ${weak} 題</span></span></li>`).join('')}</ul>`:
           '<p class="study-brief-meta">目前沒有題目</p>'}
-        ${!brief.resume?`<p class="study-brief-meta" data-study-exam-focus>${focus.ids.length?
+        ${!resume?`<p class="study-brief-meta" data-study-exam-focus>${focus.ids.length?
           focus.ids.length+' 題 · 涵蓋 '+focus.chapterCount+' 章':'目前沒有待練重點題'}</p>`:''}
-        ${!brief.waiting&&(brief.resume||priority||focus.ids.length)?`<div class="study-exam-actions">
-          ${brief.resume?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">繼續複習</button>`:
+        ${!brief.waiting&&(resume||priority||focus.ids.length)?`<div class="study-exam-actions">
+          ${resume?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">${esc(resume.label)}</button>`:
             `${focus.ids.length?`<button type="button" class="btn btn-sand" data-study-exam-scope-practice="${esc(id)}">練習考試範圍</button>`:''}
               ${priority?`<button type="button" class="btn btn-sand" data-study-exam-practice="${esc(id)}">練習優先章節</button>`:''}`}
         </div>`:''}`:
@@ -9205,32 +9203,39 @@ function studyExamHTML(brief){
     </details>`).join('')}
   </details>`;
 }
+function studyBriefEntryHTML(entry,primary=false){
+  const shortId=primary&&['resume','due','weak'].includes(entry.kind)?' id="study-brief-go"':'';
+  const btn=entry.label?
+    '<button type="button" class="btn '+(primary&&entry.kind!=='library'?'btn-primary':'btn-sand')+
+    ' study-brief-go"'+shortId+' '+entry.attrs+'>'+esc(entry.label)+'</button>':'';
+  return '<div '+(primary?'id="study-brief-primary" class="study-brief-card"':'class="study-brief-option"')+'>'+
+    '<div class="study-brief-text">'+(entry.title?'<span class="study-brief-subject">'+esc(entry.title)+'</span>':'')+
+    (entry.context?'<span class="study-brief-meta">'+esc(entry.context)+'</span>':'')+
+    '<span class="study-brief-meta"'+(primary?' role="status"':'')+'>'+esc(entry.message)+'</span></div>'+btn+'</div>';
+}
 function studyBriefHTML(){
   if(!isTodayPage())return '';
   const brief=studyRoom.todayBrief(todayLessonSubjectNames());
   const draft=brief.paperDraft,review=studyRoom.todayReviewBrief();
-  const hasPrimary=Boolean(draft||brief.subject);
-  const paperCard=draft?`<div class="study-brief-card study-brief-card--paper">
-    <div class="study-brief-text"><span class="study-brief-subject">${esc(draft.title)}</span>
-      <span class="study-brief-paper-context">${esc(draft.context)}</span><span class="study-brief-meta study-brief-paper-progress" role="status">${esc(draft.progress)}</span></div>
-    <button type="button" class="btn btn-primary study-brief-go" id="study-brief-paper-resume" data-round="${esc(draft.id)}">繼續作答</button>
-  </div>`:'';
-  return `
-    <section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">
-      <h3 class="day-panel-title" id="study-brief-title">今日備考</h3>
-      ${paperCard||(review&&brief.empty?'':`<div class="study-brief-card">
-        <div class="study-brief-text">${brief.subject?`<span class="study-brief-subject">${esc(brief.subject)}</span>`:''}<span class="study-brief-meta" role="status">${esc(brief.message)}</span></div>
-        ${brief.subject?`<button type="button" class="btn btn-primary study-brief-go" id="study-brief-go">${brief.resume?'繼續複習':'開始複習'}</button>`:brief.empty?'<button type="button" class="btn btn-sand study-brief-go" id="study-brief-library">前往學習室</button>':''}
-      </div>`)}
-      ${review?`<div class="study-brief-card study-brief-card--paper study-brief-card--review">
-        <div class="study-brief-text"><span class="study-brief-subject">${esc(review.title)}</span>
-          <span class="study-brief-paper-context">${esc(review.context)}</span>
-          <span class="study-brief-meta">${esc(review.position)}</span></div>
-        <button type="button" class="btn ${hasPrimary?'btn-sand':'btn-primary'} study-brief-go" id="study-brief-review-resume">繼續檢討</button>
-      </div>`:''}
-      ${reviewScheduleHTML()}
-      <div class="day-study-options">${studyDueHTML(brief)}${studyExamHTML(brief)}</div>
-    </section>`;
+  const shortEntry=(kind,title,message,label,attrs='data-study-brief-start="'+kind+'"')=>({kind,title,message,label,attrs});
+  const [primary,...otherEntries]=[
+    brief.resume&&shortEntry('resume',brief.resume.subject,brief.resume.message,brief.resume.label),
+    brief.dueRound&&shortEntry('due',brief.dueRound.subject,brief.dueRound.count+' 題到期','開始複習到期題','data-study-due=""'),
+    draft&&{kind:'paper',...draft,message:draft.progress,attrs:'id="study-brief-paper-resume" data-round="'+esc(draft.id)+'"'},
+    review&&{kind:'review',...review,message:review.position,label:'繼續檢討',attrs:'id="study-brief-review-resume"'},
+    brief.weak&&shortEntry('weak',brief.weak.subject,(brief.weak.today?'今日科目':'其他科目')+' · '+brief.weak.count+' 題待加強','複習待加強題'),
+  ].filter(Boolean);
+  const fallback={kind:'library',message:brief.message,label:brief.empty?'前往學習室':'',attrs:'id="study-brief-library"'};
+  if(brief.otherPractice){
+    const {subject,message,label}=brief.otherPractice;
+    otherEntries.push(shortEntry('other',subject,message,label));
+  }
+  const more=otherEntries.map(entry=>studyBriefEntryHTML(entry)).join('')+
+    studyDueHTML(brief,primary?.kind==='due')+studyExamHTML(brief)+reviewScheduleHTML();
+  return '<section class="day-panel-section study-brief" id="study-brief" aria-labelledby="study-brief-title">'+
+    '<h3 class="day-panel-title" id="study-brief-title">今日備考</h3>'+studyBriefEntryHTML(primary||fallback,true)+
+    (more?'<details class="study-due-list" id="study-brief-more"><summary id="study-brief-more-summary">更多備考</summary>'+
+      '<div class="day-study-options">'+more+'</div></details>':'')+'</section>';
 }
 function refreshStudyBrief(){
   const slot=$id('study-brief-slot');
@@ -9239,6 +9244,8 @@ function refreshStudyBrief(){
   if(slot.studyBriefMarkup===wanted)return;
   const focus=document.activeElement;
   const hadFocus=slot.contains(focus);
+  const previousMore=$id('study-brief-more');
+  if(previousMore)studyMoreExpanded=previousMore.open;
   const previousDue=$id('study-due-list');
   if(previousDue)studyDueExpanded=previousDue.open;
   const fromDue=previousDue?.contains(focus);
@@ -9247,6 +9254,8 @@ function refreshStudyBrief(){
   const focusedExam=focus?.closest('[data-study-exam]')?.dataset.studyExam;
   slot.innerHTML=wanted;
   slot.studyBriefMarkup=wanted;
+  const more=$id('study-brief-more');
+  if(more)more.open=studyMoreExpanded;
   const details=$id('study-due-list');
   if(details)details.open=studyDueExpanded;
   const exams=$id('study-exams');
@@ -9259,7 +9268,14 @@ function refreshStudyBrief(){
     const exam=examRows.find(row=>row.dataset.studyExam===focusedExam);
     const examAction=['[data-study-exam-scope-practice]','[data-study-exam-practice]'].find(selector=>focus.matches(selector));
     const examFocus=exam&&((examAction&&exam.querySelector(examAction))||exam.querySelector('summary'));
-    (restored||examFocus||(focus.id==='study-exams-title'&&$id('study-exams-title'))||(focus.id==='study-brief-review-resume'&&$id(focus.id))||$id('study-brief-paper-resume')||$id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
+    const equivalent=[...slot.querySelectorAll('[data-study-brief-start],[data-review-edit],[data-review-start]')].find(button=>
+      ['studyBriefStart','reviewEdit','reviewStart'].some(key=>focus.dataset[key]!==undefined&&focus.dataset[key]===button.dataset[key]));
+    const sameId=focus.id&&$id(focus.id);
+    const moreSummary=$id('study-brief-more-summary');
+    const summary=previousMore?.contains(focus)&&moreSummary;
+    const visible=node=>node&&node.getClientRects().length&&(!more||more.open||!more.contains(node)||node===moreSummary);
+    ([restored,examFocus,equivalent,sameId,summary,$id('study-brief-primary')?.querySelector('button')]
+      .find(visible)||$id('day-label')).focus({preventScroll:true});
   }
 }
 let weeklyReviewExpanded=false;
@@ -9309,11 +9325,12 @@ function openTodayPractice(){
 function returnToTodayPracticeDay(){
   if(isMobile())mobileTab('day');
   else setWidePage('today');
-  ($id('study-brief-go')||$id('study-brief-library')||$id('day-label')).focus({preventScroll:true});
+  ($id('study-brief-primary')?.querySelector('button')||$id('day-label')).focus({preventScroll:true});
 }
 $id('day-label').tabIndex=-1;
 $id('day-events').addEventListener('toggle',event=>{
   if(event.target.id==='today-weekly-review')weeklyReviewExpanded=event.target.open;
+  if(event.target.id==='study-brief-more')studyMoreExpanded=event.target.open;
   if(event.target.id==='study-due-list')studyDueExpanded=event.target.open;
   if(event.target.id==='study-exams')studyExamsExpanded=event.target.open;
   const exam=event.target.dataset?.studyExam;
@@ -9322,6 +9339,7 @@ $id('day-events').addEventListener('toggle',event=>{
 $id('day-events').addEventListener('click',event=>{
   const paperButton=event.target.closest('#study-brief-paper-resume');
   const dueButton=event.target.closest('[data-study-due]');
+  const shortButton=event.target.closest('[data-study-brief-start]');
   const examButton=event.target.closest('[data-study-exam-practice]');
   const scopeButton=event.target.closest('[data-study-exam-scope-practice]');
   const weekly=event.target.closest('[data-weekly-review-round]');
@@ -9332,8 +9350,8 @@ $id('day-events').addEventListener('click',event=>{
   else if(event.target.closest('#study-brief-review-resume'))studyRoom.resumeTodayReview();
   else if(scopeButton)studyRoom.startExamScope(scopeButton.dataset.studyExamScopePractice);
   else if(examButton)studyRoom.openExamChapter(examButton.dataset.studyExamPractice);
-  else if(dueButton)studyRoom.startWeakBrief(todayLessonSubjectNames(),'today',dueButton.dataset.studyDue);
-  else if(event.target.closest('#study-brief-go'))studyRoom.startWeakBrief(todayLessonSubjectNames(),'today');
+  else if(dueButton)studyRoom.startWeakBrief(todayLessonSubjectNames(),'today',dueButton.dataset.studyDue,'due');
+  else if(shortButton)studyRoom.startWeakBrief(todayLessonSubjectNames(),'today',null,shortButton.dataset.studyBriefStart);
   else if(event.target.closest('#study-brief-library')){
     openTodayPractice();
     studyRoom.openHome();
@@ -11989,29 +12007,32 @@ const batchDialog=$id('study-batch');
     return account&&!account.ready&&!account.failure&&navigator.onLine;
   }
   function todayBrief(todayNames){
-    const due=dueToday();
-    const draft=latestTodayPaper();
-    const p=draft&&paper(draft.paperId);
-    if(p)return {due,paperDraft:{id:draft.paperResultId,title:paperSchool(p),context:p.year+' 年度 · '+p.subject,
-      progress:paperDraftProgress(draft)}};
-    const round=resumableToday();
-    if(round){
-      return {subject:round.subject,resume:true,due,
-        message:'已完成 '+round.results.filter(r=>round.queue.includes(r.id)).length+'／'+round.queue.length+' 題'};
-    }
-    if(unfinishedOtherPractice())return {subject:roundSubject()||'進行中的練習',resume:true,due,
-      message:'已完成 '+session.results.length+'／'+session.queue.length+' 題'};
-    if(waitingForToday())return {message:syncText,due,waiting:true};
-    const rec=recommendedToday(todayNames,due);
-    if(rec)return {subject:rec.subject,due,message:rec.ordered?rec.count+' 題可複習':
-      (rec.today?'今日科目':'其他科目')+' · '+rec.count+' 題待加強'};
-    if(account&&(!account.ready||account.failure||!navigator.onLine))return {message:syncText,due};
-    return {message:'目前沒有推薦題目',empty:true,due};
+    const due=dueToday(),draft=latestTodayPaper(),p=draft&&paper(draft.paperId);
+    const paperDraft=p&&{id:draft.paperResultId,title:paperSchool(p),context:p.year+' 年度 · '+p.subject,
+      progress:paperDraftProgress(draft),label:draft.paperPractice?'繼續整卷作答':'繼續模擬考'};
+    const round=resumableToday(),waiting=waitingForToday();
+    const other=!round&&unfinishedOtherPractice()&&{
+      subject:roundSubject()||'進行中的練習',
+      message:session.mockExam?paperDraftProgress(session):'已完成 '+(session.mode==='cards'?session.index:session.results.length)+'／'+session.queue.length+' 題',
+      label:session.mockExam?(session.paperRetry?'繼續錯題練習':'繼續考古題練習'):
+        session.mode==='cards'?'繼續字卡複習':shortOtherPractice()?'繼續複習':'繼續練習',
+    };
+    const resume=round?{subject:round.subject,label:'繼續複習',
+      message:'已完成 '+round.results.filter(r=>round.queue.includes(r.id)).length+'／'+round.queue.length+' 題'}:shortOtherPractice()?other:null;
+    const unavailable=account&&(!account.ready||account.failure||!navigator.onLine);
+    return {due,paperDraft,resume,otherPractice:resume?null:other,waiting,
+      dueRound:!resume&&!waiting&&orderedToday(due.map(question=>question.id)),
+      weak:!resume&&!waiting&&weakBrief(todayNames),
+      message:unavailable?syncText:'目前沒有推薦題目',empty:!unavailable};
   }
   function unfinishedOtherPractice(){
     return session&&session.origin!=='today'&&!isFullPaperAttempt(session)&&session.index<session.queue.length;
   }
-  function startWeakBrief(todayNames,returnMode,onlyDue=null){
+  function shortOtherPractice(){
+    return unfinishedOtherPractice()&&!session.mockExam&&!session.paperId&&!session.paperMix&&
+      session.mode==='practice'&&session.queue.length<=TODAY_ROUND_LIMIT;
+  }
+  function startWeakBrief(todayNames,returnMode,onlyDue=null,entry=''){
     const round=resumableToday();
     if(round){
       if(!parkPaperDraft())return false;
@@ -12026,17 +12047,24 @@ const batchDialog=$id('study-batch');
       go('session');
       return true;
     }
-    if(unfinishedOtherPractice()){
+    if(unfinishedOtherPractice()&&(!entry||entry==='other'||shortOtherPractice())){
       resumeFromToday(returnMode);
       return true;
     }
-    if(waitingForToday())return false;
-    const rec=onlyDue===null?recommendedToday(todayNames):
-      orderedToday(dueToday().filter(p=>!onlyDue||p.subject===onlyDue).map(p=>p.id));
-    if(!rec){briefChanged();return false;}
-    openTodayPractice();
-    start(rec.ids,'practice',{origin:'today',subject:rec.subject,returnMode},{shuffle:!rec.ordered});
-    return true;
+    if(entry==='resume'||entry==='other'){briefChanged();return false;}
+    const launch=()=>{
+      if(waitingForToday())return false;
+      const rec=entry==='weak'?weakBrief(todayNames):onlyDue===null?recommendedToday(todayNames):
+        orderedToday(dueToday().filter(p=>!onlyDue||p.subject===onlyDue).map(p=>p.id));
+      if(!rec){briefChanged();return false;}
+      openTodayPractice();
+      return start(rec.ids,'practice',{origin:'today',subject:rec.subject,returnMode},{shuffle:!rec.ordered});
+    };
+    if(entry&&unfinishedOtherPractice()&&!session.mockExam){
+      confirmPaperMode('開始複習',null,launch);
+      return true;
+    }
+    return launch();
   }
   function resumeFromToday(returnMode){
     session.returnMode=returnMode;
