@@ -4745,6 +4745,23 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   outline-offset:-2px;
 }
 
+@supports (color:color-mix(in srgb,white,transparent)) {
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-moving]::before {
+    --lift:var(--segment-lift,0);
+    box-shadow:inset 0 0 0 1px var(--seg-pill-edge),
+      inset 0 calc(var(--lift)*2px) calc(var(--lift)*4px) color-mix(in srgb,white calc(var(--lift)*48%),transparent),
+      0 calc(var(--lift)*5px) calc(var(--lift)*12px) color-mix(in srgb,black calc(var(--lift)*38%),transparent) !important;
+    -webkit-backdrop-filter:blur(calc(var(--lift)*4px));
+    backdrop-filter:blur(calc(var(--lift)*4px));
+  }
+}
+@media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
+  :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-moving]::before {
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+}
+
 /* Alignment for labels, count badges and narrow viewports inside secondary segmented controls */
 #today-task-tabs {
   align-items:stretch;
@@ -10960,19 +10977,30 @@ function mountTouchNavPill(group) {
     dragFrame=0;
     if(!target||!position||reducedMotion.matches) {
       resetPresentation();
-    }else if(!frame) {
-      velocity[4]=tap?9:Math.min(0,velocity[4]);
-      velocity[5]=tap?7:Math.min(0,velocity[5]);
-      paint();
-      lastFrame=performance.now();
-      frame=requestAnimationFrame(tick);
+    }else {
+      if(tap) {
+        // Lift and travel use the same frame loop. Keep the current pose and
+        // position velocity when a nearby tab interrupts a moving pill.
+        velocity[5]=Math.max(velocity[5],(isBottomNav?16:27)*(1-Math.min(position[5],1)));
+      }
+      if(!frame) {
+        if(!tap) {
+          velocity[4]=Math.min(0,velocity[4]);
+          velocity[5]=Math.min(0,velocity[5]);
+        }
+        paint();
+        lastFrame=performance.now();
+        frame=requestAnimationFrame(tick);
+      }
     }
   }
 
   function align([left,top,width,height],animate) {
+    // Drag release already sets its destination before it activates the tab.
+    const tap=!!target&&(target[0]!==left||target[1]!==top);
     target=[left,top,width,height,0,0];
     if(gesture)return;
-    if(animate&&position)settle(Math.abs(position[0]-left)>1&&position[5]<=0);
+    if(animate&&position)settle(tap);
     else resetPresentation();
   }
 
@@ -11198,20 +11226,27 @@ const pillMotion=(()=>{
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
   const dragProps=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height'];
   function createSegSpring(group){
-    let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0;
+    let target,position,velocity=[0,0,0,0],frame=0,lastFrame=0,lift=0,liftVelocity=0;
+    const liftProp='--segment-lift';
     function paint(){
       if(!position)return;
-      group.style.setProperty(dragProps[0],position[0]+'px');
-      group.style.setProperty(dragProps[1],position[1]+'px');
-      group.style.setProperty(dragProps[2],Math.max(1,position[2])+'px');
-      group.style.setProperty(dragProps[3],Math.max(1,position[3])+'px');
+      group.style.setProperty(dragProps[0],(position[0]-lift)+'px');
+      group.style.setProperty(dragProps[1],(position[1]-lift*1.5)+'px');
+      group.style.setProperty(dragProps[2],Math.max(1,position[2]+lift*2)+'px');
+      group.style.setProperty(dragProps[3],Math.max(1,position[3]+lift*2)+'px');
+      group.style.setProperty(liftProp,lift);
+    }
+    function clearPaint(){
+      dragProps.forEach(prop=>group.style.removeProperty(prop));
+      group.style.removeProperty(liftProp);
     }
     function reset(){
       cancelAnimationFrame(frame);
       frame=0;
       position=target?.slice();
       velocity=[0,0,0,0];
-      dragProps.forEach(prop=>group.style.removeProperty(prop));
+      lift=liftVelocity=0;
+      clearPaint();
       group.removeAttribute('data-pill-moving');
     }
     function tick(now){
@@ -11224,32 +11259,43 @@ const pillMotion=(()=>{
           velocity[i]+=(460*(target[i]-position[i])-29*velocity[i])*dt;
           position[i]+=velocity[i]*dt;
         }
+        liftVelocity+=(-380*lift-32*liftVelocity)*dt;
+        lift+=liftVelocity*dt;
+        if(lift<0){lift=0;liftVelocity=0;}
         remaining-=dt;
       }
-      const done=position.every((v,i)=>Math.abs(v-target[i])<0.15&&Math.abs(velocity[i])<3.5);
+      const done=lift<0.02&&Math.abs(liftVelocity)<0.15&&
+        position.every((v,i)=>Math.abs(v-target[i])<0.15&&Math.abs(velocity[i])<3.5);
       if(done){reset();return;}
       paint();
       frame=requestAnimationFrame(tick);
     }
     return {
       align(values,animate){
+        const changedTab=!!target&&(target[0]!==values[0]||target[1]!==values[1]);
         target=values.slice();
         if(!animate||!position||reducedMotion.matches){
           reset();
           return;
         }
+        if(changedTab)liftVelocity=Math.max(liftVelocity,15*(1-Math.min(lift,1)));
         paint();
         if(!frame){
           lastFrame=performance.now();
           frame=requestAnimationFrame(tick);
         }
       },
-      seedVelocity(v){if(Array.isArray(v)&&v.length===4)velocity=v.slice();},
-      velocity(){return velocity.slice();},
+      snapshot(){return {position:position?.slice(),target:target?.slice(),velocity:velocity.slice(),lift,liftVelocity,moving:!!frame};},
+      restore(prior){
+        target=prior.target;
+        velocity=prior.velocity;
+        lift=prior.lift;
+        liftVelocity=prior.liftVelocity;
+      },
       destroy(){
         cancelAnimationFrame(frame);
         frame=0;
-        dragProps.forEach(prop=>group.style.removeProperty(prop));
+        clearPaint();
       }
     };
   }
@@ -11292,10 +11338,10 @@ const pillMotion=(()=>{
     for(const group of root.querySelectorAll('[data-pill-key][data-pill-ready]')){
       if(!group.offsetWidth)continue;
       const style=getComputedStyle(group,'::before'),matrix=new DOMMatrixReadOnly(style.transform);
+      const spring=mounted.get(group)?.spring?.snapshot();
       previous.set(group.dataset.pillKey,{
-        geometry:[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],scroll:group.scrollLeft,
-        focused:group.contains(document.activeElement),
-        velocity:mounted.get(group)?.spring?.velocity()||null
+        geometry:spring?.position||[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],
+        scroll:group.scrollLeft,focused:group.contains(document.activeElement),spring
       });
     }
     return previous;
@@ -11343,8 +11389,12 @@ const pillMotion=(()=>{
         if(prior&&group.offsetWidth){
           group.scrollLeft=prior.scroll;
           place(group,state,prior.geometry,false);
-          if(prior.velocity&&spring)spring.seedVelocity(prior.velocity);
+          if(prior.spring&&!reducedMotion.matches)spring?.restore(prior.spring);
           update(group,true);
+          if(prior.spring?.moving&&state.geometry===prior.geometry&&!reducedMotion.matches){
+            group.setAttribute('data-pill-moving','');
+            spring?.align(state.geometry,true);
+          }
           if(prior.focused)group.querySelector('[aria-pressed=true]')?.focus({preventScroll:true});
         }else update(group,false);
         resize.observe(group);
