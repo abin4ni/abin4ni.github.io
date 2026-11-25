@@ -426,7 +426,7 @@ body{
   will-change:transform;
 }
 .btn:hover{opacity:.88;transform:translateY(-1px);}
-.btn:active{transform:scale(.96) translateY(0) !important;transition-duration:80ms !important;}
+.btn:active:not(:disabled){transform:scale(.96) translateY(0) !important;transition-duration:80ms !important;}
 .btn-primary{background:var(--primary-fill);color:var(--primary-text);box-shadow:var(--shadow-sm);}
 .btn-primary:hover{opacity:.9;}
 .btn-sand{background:var(--sand);color:var(--text-2);}
@@ -836,7 +836,6 @@ body{
   box-shadow:var(--shadow-sm);
   transition:box-shadow .28s var(--ease-ios), transform .28s var(--ease-ios);
 }
-.day-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);}
 .day-card:active{transform:scale(.98);}
 .day-card.is-done{background:var(--done-bg);border-color:rgba(var(--success-rgb),.2);}
 .day-card-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
@@ -1111,7 +1110,6 @@ body{
   align-items:center;justify-content:center;
   transition:transform .2s var(--ease-spring),box-shadow .2s;
 }
-.fab-manage:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(var(--accent-rgb),.55);}
 .fab-manage:active{transform:scale(.94);}
 .tablet-overlay{
   display:none;position:fixed;inset:0;z-index:39;
@@ -1463,7 +1461,7 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .btn,.act-btn,.install-banner-btns button,.vt-btn,.course-expand-btn,.cal-nav button{border-radius:var(--r-btn);}
 .view-toggle{border-radius:calc(var(--r-btn) + 3px);}
 .btn:hover{opacity:1;transform:none;}
-.btn:active{transform:scale(.98) !important;}
+.btn:active:not(:disabled){transform:scale(.98) !important;}
 .btn-primary{box-shadow:none;}
 .btn-primary:hover{background:var(--primary-hover);opacity:1;}
 .btn-sand{background:var(--sunken);color:var(--text-2);}
@@ -1472,7 +1470,6 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .act-btn:hover{background:var(--sunken-h);}
 .vt-btn.active{box-shadow:var(--shadow-sm);}
 .fab-manage{box-shadow:var(--shadow-md);}
-.fab-manage:hover{box-shadow:var(--shadow-md);transform:scale(1.04);}
 button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
 
 /* ── Tags / badges / chips ── */
@@ -1743,7 +1740,7 @@ button:focus-visible,.vt-btn:focus-visible{outline:2px solid var(--accent);outli
   .panel-l .btn,.panel-r .btn,.cal-panel .btn,#reschedule-dialog .btn,#memo-modal .btn,#repeat-preview .btn{
     min-height:44px;border-radius:10px;font-size:14px;line-height:1.35;white-space:normal;
   }
-  .panel-l .btn:active,.panel-r .btn:active,.cal-panel button:active{filter:brightness(.92);}
+  .panel-l .btn:active:not(:disabled),.panel-r .btn:active:not(:disabled),.cal-panel button:active:not(:disabled){filter:brightness(.92);}
   .course-card,.todo-card,.day-card,.day-memo-wrap,#day-schedule-form{
     border-radius:var(--touch-radius);box-shadow:none;
   }
@@ -4587,173 +4584,58 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   transform:translate3d(var(--nav-drag-x,var(--pill-x)),var(--nav-drag-y,var(--pill-y)),0);
   will-change:transform,width,height;
 }
-/* Beat ID-weighted base rules (#panel-cal .view-toggle) so .wide-tabs & .bottom-nav stay transparent and driven 100% by spring JS. */
+/* The spring controls geometry and material on the same selection layer. */
 :is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready]::before,
 :is(#touch-nav-spec,.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-pill-ready][data-pill-moving]::before {
-  background-color:transparent !important;
-  transition-property:box-shadow,filter !important;
-  transition-duration:150ms !important;
-  transition-timing-function:var(--ease-ios) !important;
+  background-color:var(--nav-pill-fill,var(--nav-sel)) !important;
+  transition:none !important;
 }
-/* .wide-tabs retains strong convex Liquid Glass lens optics. */
-.wide-tabs[data-touch-nav-pill] {
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
   --nav-drag-transition:none;
-  --nav-drag-top:rgba(255,253,249,.34);
-  --nav-drag-mid:rgba(246,230,210,.15);
-  --nav-drag-bot:rgba(235,212,184,.24);
-  --nav-drag-specular:rgba(255,255,255,.94);
-  --nav-drag-caustic:rgba(214,166,118,.42);
-  --nav-drag-rim-tint:rgba(255,250,242,.34);
-  --nav-drag-rim:rgba(255,255,255,1);
-  --nav-drag-edge:rgba(138,86,52,.42);
-  --nav-drag-bottom-glint:rgba(188,134,88,.42);
-  --nav-drag-inner-glow:rgba(255,251,244,.44);
-  --nav-drag-edge-caustic:rgba(255,248,236,.52);
-  --nav-drag-shadow:0 3px 10px rgba(59,36,24,.14),0 0 0 .5px rgba(138,86,52,.12);
-  --nav-pill-shadow-layer:inset 0 0 0 1px var(--nav-drag-edge),
-    inset 0 1.25px 0 var(--nav-drag-rim),
-    inset 0 -1px 0 var(--nav-drag-bottom-glint),
-    inset var(--nav-edge-shift,0px) 0 6px var(--nav-drag-edge-caustic),
-    inset 0 0 7px var(--nav-drag-inner-glow),
-    var(--nav-drag-shadow);
+  --nav-material:0;
+  --nav-specular:#fffaf2;
+  --nav-reflection:#d6a676;
+  --nav-lift-shadow:rgba(59,36,24,.22);
+  --nav-specularity:76%;
+  --nav-reflectivity:40%;
+  --nav-blur:7px;
+  --nav-saturation:115%;
+  --nav-shadow-drop:8px;
+  --nav-shadow-radius:22px;
+  --nav-pill-shadow-layer:none;
 }
-:root[data-theme=dark] .wide-tabs[data-touch-nav-pill] {
-  --nav-drag-top:rgba(124,132,148,.24);
-  --nav-drag-mid:rgba(74,79,90,.14);
-  --nav-drag-bot:rgba(58,63,74,.22);
-  --nav-drag-specular:rgba(255,255,255,.54);
-  --nav-drag-caustic:rgba(212,222,242,.26);
-  --nav-drag-rim-tint:rgba(226,234,248,.16);
-  --nav-drag-rim:rgba(246,249,255,.68);
-  --nav-drag-edge:rgba(218,226,242,.44);
-  --nav-drag-bottom-glint:rgba(204,214,234,.28);
-  --nav-drag-inner-glow:rgba(232,238,250,.18);
-  --nav-drag-edge-caustic:rgba(236,242,255,.28);
-  --nav-drag-shadow:0 3px 10px rgba(0,0,0,.36);
-}
-.wide-tabs[data-touch-nav-pill]::before {
-  background-color:transparent !important;
-  background-image:
-    radial-gradient(62% 88% at var(--nav-glint-x,50%) 0%,var(--nav-drag-specular) 0%,transparent 62%),
-    radial-gradient(56% 74% at calc(100% - var(--nav-glint-x,50%)) 100%,var(--nav-drag-caustic) 0%,transparent 60%),
-    radial-gradient(115% 135% at 50% 50%,transparent 56%,var(--nav-drag-rim-tint) 94%,var(--nav-drag-specular) 100%),
-    linear-gradient(var(--nav-glint-angle,168deg),var(--nav-drag-top) 0%,var(--nav-drag-mid) 50%,var(--nav-drag-bot) 100%);
-}
-.wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-top:rgba(255,253,248,.22);
-  --nav-drag-mid:rgba(245,228,206,.09);
-  --nav-drag-bot:rgba(232,202,168,.18);
-  --nav-drag-specular:rgba(255,255,255,.99);
-  --nav-drag-caustic:rgba(214,164,114,.58);
-  --nav-drag-rim-tint:rgba(255,252,246,.46);
-  --nav-drag-rim:rgba(255,255,255,1);
-  --nav-drag-edge:rgba(138,86,52,.52);
-  --nav-drag-bottom-glint:rgba(176,120,76,.50);
-  --nav-drag-inner-glow:rgba(255,250,242,.62);
-  --nav-drag-edge-caustic:rgba(255,252,244,.76);
-  --nav-drag-shadow:0 10px 26px rgba(59,36,24,.20),0 3px 8px rgba(59,36,24,.12);
-  --nav-pill-shadow-layer:inset 0 0 0 1.25px var(--nav-drag-edge),
-    inset 0 1.5px 0 var(--nav-drag-rim),
-    inset 0 -1.5px 0 var(--nav-drag-bottom-glint),
-    inset var(--nav-edge-shift,0px) 0 8px var(--nav-drag-edge-caustic),
-    inset 0 0 11px var(--nav-drag-inner-glow),
-    var(--nav-drag-shadow);
-}
-:root[data-theme=dark] .wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-top:rgba(146,154,172,.20);
-  --nav-drag-mid:rgba(86,92,106,.10);
-  --nav-drag-bot:rgba(68,74,88,.18);
-  --nav-drag-specular:rgba(255,255,255,.90);
-  --nav-drag-caustic:rgba(220,230,248,.44);
-  --nav-drag-rim-tint:rgba(234,240,252,.26);
-  --nav-drag-rim:rgba(250,252,255,.96);
-  --nav-drag-edge:rgba(232,238,250,.78);
-  --nav-drag-bottom-glint:rgba(218,226,242,.50);
-  --nav-drag-inner-glow:rgba(236,242,252,.30);
-  --nav-drag-edge-caustic:rgba(244,248,255,.52);
-  --nav-drag-shadow:0 10px 26px rgba(0,0,0,.52),0 3px 8px rgba(0,0,0,.30);
-}
-/* .bottom-nav shares drag + spring physics but uses lighter glass without heavy convex magnification. */
 .bottom-nav[data-touch-nav-pill] {
-  --nav-drag-transition:none;
-  --nav-drag-top:rgba(255,253,249,.68);
-  --nav-drag-mid:rgba(246,232,214,.46);
-  --nav-drag-bot:rgba(236,216,192,.54);
-  --nav-drag-rim:rgba(255,255,255,.92);
-  --nav-drag-edge:rgba(138,86,52,.30);
-  --nav-drag-bottom-glint:rgba(188,134,88,.24);
-  --nav-drag-inner-glow:rgba(255,251,244,.28);
-  --nav-drag-shadow:0 2px 8px rgba(59,36,24,.10);
-  --nav-pill-shadow-layer:inset 0 0 0 1px var(--nav-drag-edge),
-    inset 0 1px 0 var(--nav-drag-rim),
-    inset 0 -1px 0 var(--nav-drag-bottom-glint),
-    inset 0 0 4px var(--nav-drag-inner-glow),
-    var(--nav-drag-shadow);
+  --nav-specularity:40%;
+  --nav-reflectivity:24%;
+  --nav-blur:6px;
+  --nav-saturation:45%;
+  --nav-shadow-drop:5px;
+  --nav-shadow-radius:14px;
 }
-:root[data-theme=dark] .bottom-nav[data-touch-nav-pill] {
-  --nav-drag-top:rgba(104,110,124,.38);
-  --nav-drag-mid:rgba(68,72,82,.26);
-  --nav-drag-bot:rgba(54,58,68,.32);
-  --nav-drag-rim:rgba(244,248,255,.36);
-  --nav-drag-edge:rgba(214,222,238,.28);
-  --nav-drag-bottom-glint:rgba(200,210,230,.16);
-  --nav-drag-inner-glow:rgba(230,236,248,.10);
-  --nav-drag-shadow:0 2px 8px rgba(0,0,0,.28);
+:root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+  --nav-specular:#f6f9ff;
+  --nav-reflection:#d4def2;
+  --nav-lift-shadow:rgba(0,0,0,.48);
 }
-.bottom-nav[data-touch-nav-pill]::before {
-  background-color:transparent !important;
-  background-image:
-    radial-gradient(56% 78% at var(--nav-glint-x,50%) 0%,var(--nav-drag-rim) 0%,transparent 65%),
-    linear-gradient(var(--nav-glint-angle,172deg),var(--nav-drag-top) 0%,var(--nav-drag-mid) 52%,var(--nav-drag-bot) 100%);
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
+  background-image:none;
 }
-.bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-top:rgba(255,253,248,.60);
-  --nav-drag-mid:rgba(245,228,206,.38);
-  --nav-drag-bot:rgba(232,206,176,.46);
-  --nav-drag-rim:rgba(255,255,255,.98);
-  --nav-drag-edge:rgba(138,86,52,.42);
-  --nav-drag-bottom-glint:rgba(176,120,76,.34);
-  --nav-drag-inner-glow:rgba(255,250,242,.38);
-  --nav-drag-shadow:0 6px 16px rgba(59,36,24,.15),0 2px 5px rgba(59,36,24,.09);
-}
-:root[data-theme=dark] .bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised] {
-  --nav-drag-top:rgba(124,132,148,.42);
-  --nav-drag-mid:rgba(82,88,100,.30);
-  --nav-drag-bot:rgba(64,70,82,.36);
-  --nav-drag-rim:rgba(250,252,255,.58);
-  --nav-drag-edge:rgba(228,234,248,.46);
-  --nav-drag-bottom-glint:rgba(210,220,238,.26);
-  --nav-drag-inner-glow:rgba(236,242,252,.16);
-  --nav-drag-shadow:0 6px 18px rgba(0,0,0,.38),0 2px 6px rgba(0,0,0,.22);
-}
-@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))) {
-  .wide-tabs[data-touch-nav-pill]::before {
-    -webkit-backdrop-filter:blur(8px) saturate(195%) brightness(1.04) contrast(1.03);
-    backdrop-filter:blur(8px) saturate(195%) brightness(1.04) contrast(1.03);
+@supports (color:color-mix(in srgb,white,transparent)) {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+    --nav-pill-fill:color-mix(in srgb,var(--nav-sel) calc(78% - var(--nav-material)*27%),transparent);
   }
-  :root[data-theme=dark] .wide-tabs[data-touch-nav-pill]::before {
-    -webkit-backdrop-filter:blur(8px) saturate(185%) brightness(1.14) contrast(1.04);
-    backdrop-filter:blur(8px) saturate(185%) brightness(1.14) contrast(1.04);
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
+    --nav-pill-shadow-layer:
+      inset var(--nav-edge-shift,0px) calc(var(--nav-material)*1px) calc(var(--nav-material)*3px) color-mix(in srgb,var(--nav-specular) calc(var(--nav-material)*62%),transparent),
+      0 calc(var(--nav-material)*var(--nav-shadow-drop)) calc(var(--nav-material)*var(--nav-shadow-radius)) color-mix(in srgb,var(--nav-lift-shadow) calc(var(--nav-material)*100%),transparent);
   }
-  .wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    -webkit-backdrop-filter:blur(7px) saturate(215%) brightness(1.08) contrast(1.05);
-    backdrop-filter:blur(7px) saturate(215%) brightness(1.08) contrast(1.05);
-  }
-  :root[data-theme=dark] .wide-tabs[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    -webkit-backdrop-filter:blur(7px) saturate(200%) brightness(1.22) contrast(1.06);
-    backdrop-filter:blur(7px) saturate(200%) brightness(1.22) contrast(1.06);
-  }
-  .bottom-nav[data-touch-nav-pill]::before {
-    -webkit-backdrop-filter:blur(6px) saturate(130%);
-    backdrop-filter:blur(6px) saturate(130%);
-  }
-  .bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    -webkit-backdrop-filter:blur(6px) saturate(145%) brightness(1.02);
-    backdrop-filter:blur(6px) saturate(145%) brightness(1.02);
-  }
-  :root[data-theme=dark] .bottom-nav[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
-    -webkit-backdrop-filter:blur(6px) saturate(140%) brightness(1.06);
-    backdrop-filter:blur(6px) saturate(140%) brightness(1.06);
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
+    background-image:
+      radial-gradient(62% 88% at var(--nav-glint-x,50%) 0%,color-mix(in srgb,var(--nav-specular) calc(var(--nav-material)*var(--nav-specularity)),transparent),transparent 68%),
+      radial-gradient(56% 74% at calc(100% - var(--nav-glint-x,50%)) 100%,color-mix(in srgb,var(--nav-reflection) calc(var(--nav-material)*var(--nav-reflectivity)),transparent),transparent 64%),
+      linear-gradient(var(--nav-glint-angle,168deg),color-mix(in srgb,var(--nav-specular) calc(var(--nav-material)*18%),transparent),transparent 58%);
+    -webkit-backdrop-filter:blur(calc(var(--nav-material)*var(--nav-blur))) saturate(calc(100% + var(--nav-material)*var(--nav-saturation)));
+    backdrop-filter:blur(calc(var(--nav-material)*var(--nav-blur))) saturate(calc(100% + var(--nav-material)*var(--nav-saturation)));
   }
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
@@ -4798,19 +4680,15 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   --seg-dock-bg:rgba(235,224,210,.64);
   --seg-dock-edge:rgba(138,86,52,.13);
   --seg-dock-highlight:rgba(255,255,255,.60);
-  --seg-pill-bg:linear-gradient(180deg,rgba(255,253,249,.90) 0%,rgba(249,240,228,.78) 100%);
-  --seg-pill-rim:rgba(255,255,255,.94);
+  --seg-pill-bg:rgba(249,240,228,.86);
   --seg-pill-edge:rgba(138,86,52,.24);
-  --seg-pill-shadow:0 1px 4px rgba(59,36,24,.10),0 0 0 .5px rgba(138,86,52,.08);
 }
 :root[data-theme=dark] {
   --seg-dock-bg:rgba(48,50,57,.70);
   --seg-dock-edge:rgba(255,255,255,.10);
   --seg-dock-highlight:rgba(255,255,255,.09);
-  --seg-pill-bg:linear-gradient(180deg,rgba(88,92,102,.76) 0%,rgba(66,70,79,.66) 100%);
-  --seg-pill-rim:rgba(246,249,255,.26);
+  --seg-pill-bg:rgba(82,86,96,.72);
   --seg-pill-edge:rgba(220,228,242,.24);
-  --seg-pill-shadow:0 2px 6px rgba(0,0,0,.28);
 }
 
 /* ── Secondary segmented controls: thin translucent dock + spring-driven pill, zero ghost fills ── */
@@ -4822,9 +4700,9 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
   z-index:0 !important;
   border-radius:var(--r-pill) !important;
-  background-color:transparent !important;
-  background-image:var(--seg-pill-bg) !important;
-  box-shadow:inset 0 0 0 1px var(--seg-pill-edge),inset 0 1px 0 var(--seg-pill-rim),var(--seg-pill-shadow) !important;
+  background-color:var(--seg-pill-bg) !important;
+  background-image:none !important;
+  box-shadow:inset 0 0 0 1px var(--seg-pill-edge) !important;
 }
 :is(#touch-nav-spec,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready]::before,
 :is(#touch-nav-spec,#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-ready][data-pill-moving]::before {
@@ -4964,7 +4842,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 
 /* ── Unified tactile press + spring rebound on action buttons ── */
-:is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link) {
+:is(button,.btn,#calendar-more>summary) {
   transition:transform var(--motion-release-dur) var(--motion-spring),
     background-color 150ms var(--motion-ease),
     border-color 150ms var(--motion-ease),
@@ -4973,7 +4851,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     opacity 140ms var(--motion-ease),
     filter 120ms var(--motion-ease);
 }
-:is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link):active:not(:disabled) {
+:is(button,.btn,#calendar-more>summary):active:not(:disabled) {
   transform:translate3d(0,1px,0) scale(var(--press-scale-btn)) !important;
   filter:brightness(.96);
   transition-duration:var(--motion-press-dur);
@@ -5019,7 +4897,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     background-color 150ms var(--motion-ease),
     box-shadow 150ms var(--motion-ease);
 }
-.past-answer-choices label:active {
+.past-answer-choices label:has(input:enabled):active {
   transform:translate3d(0,1px,0) scale(var(--press-scale-option));
   background:var(--segment-press);
   transition-duration:var(--motion-press-dur);
@@ -5178,10 +5056,10 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)::before {
     transition:none !important;
   }
-  :is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link,.wide-course-row,.course-card,.todo-card,.cal-cell,.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row,.ed-row,#panel-r .day-card.day-lesson,.past-answer-choices label) {
+  :is(button,.btn,#calendar-more>summary,.wide-course-row,.course-card,.todo-card,.cal-cell,.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row,.ed-row,#panel-r .day-card.day-lesson,.past-answer-choices label) {
     transition:none !important;
   }
-  :is(.btn,.act-btn,.popup-close,.wide-close,.cal-nav button,.fab-manage,.exam-pen-btn,.del-btn,.rp-skip,.rp-restore,.exam-progress,#account-toggle,#calendar-more>summary,.schedule-time-trigger,#paper-exam-progress,.paper-review-link,.wide-course-row,.course-card,.todo-card,.cal-cell,.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row,.ed-row,.past-answer-choices label):active:not(:disabled),
+  :is(button,.btn,#calendar-more>summary,.wide-course-row,.course-card,.todo-card,.cal-cell,.memo-card,#paper-result-list button,.paper-exam-history button,.past-question-link,.eo-row,.ed-row,.past-answer-choices label):active:not(:disabled),
   #panel-r .day-card.day-lesson:has(.day-lesson-details:active) {
     transform:none !important;
   }
@@ -10971,7 +10849,7 @@ function mountTouchNavPill(group) {
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
   const tabs=[...group.querySelectorAll(':scope > button')];
   const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
-  const properties=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height','--nav-glint-x','--nav-glint-angle','--nav-edge-shift'];
+  const properties=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height','--nav-glint-x','--nav-glint-angle','--nav-edge-shift','--nav-material'];
   const threshold=6;
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
   const rubber=(over,dim)=>over===0?0:(Math.sign(over)*(Math.abs(over)*dim*0.35)/(dim+0.35*Math.abs(over)));
@@ -11012,7 +10890,9 @@ function mountTouchNavPill(group) {
     group.style.setProperty(properties[4],glintX);
     group.style.setProperty(properties[5],glintAngle);
     group.style.setProperty(properties[6],edgeShift);
-    group.toggleAttribute('data-touch-nav-pill-raised',lift>0.08||Boolean(gesture));
+    const material=reducedMotion.matches?0:clamp(lift,0,1);
+    group.style.setProperty(properties[7],material.toFixed(3));
+    group.toggleAttribute('data-touch-nav-pill-raised',material>.001);
   }
 
   function resetPresentation() {
@@ -11054,14 +10934,14 @@ function mountTouchNavPill(group) {
     lastFrame=now;
     while(remaining>0) {
       const dt=Math.min(remaining,1/120);
-      const shapeStretch=Math.min(13,Math.abs(velocity[0])/95);
-      const shapeLift=Math.min(0.85,Math.max(Math.abs(velocity[0])/420,Math.abs(target[0]-position[0])/65));
-      const desired=[target[0],target[1],target[2],target[3],shapeStretch,shapeLift];
+      // Position keeps the reference spring. Stretch and lift settle toward the flat target.
+      const desired=target;
       const stiffness=[440,440,440,440,380,380];
       const damping=[32,32,32,32,28,32];
       for(let i=0;i<6;i++) {
         velocity[i]+=(stiffness[i]*(desired[i]-position[i])-damping[i]*velocity[i])*dt;
         position[i]+=velocity[i]*dt;
+        if(i>=4&&position[i]<0){position[i]=0;velocity[i]=0;}
       }
       remaining-=dt;
     }
@@ -11075,12 +10955,14 @@ function mountTouchNavPill(group) {
     frame=requestAnimationFrame(tick);
   }
 
-  function settle() {
+  function settle(tap=false) {
     cancelAnimationFrame(dragFrame);
     dragFrame=0;
     if(!target||!position||reducedMotion.matches) {
       resetPresentation();
     }else if(!frame) {
+      velocity[4]=tap?9:Math.min(0,velocity[4]);
+      velocity[5]=tap?7:Math.min(0,velocity[5]);
       paint();
       lastFrame=performance.now();
       frame=requestAnimationFrame(tick);
@@ -11090,7 +10972,7 @@ function mountTouchNavPill(group) {
   function align([left,top,width,height],animate) {
     target=[left,top,width,height,0,0];
     if(gesture)return;
-    if(animate&&position)settle();
+    if(animate&&position)settle(Math.abs(position[0]-left)>1&&position[5]<=0);
     else resetPresentation();
   }
 
