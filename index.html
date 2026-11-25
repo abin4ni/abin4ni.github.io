@@ -3609,12 +3609,12 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   color: var(--segment-selected);
 }
 @media(hover:hover){
-  :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:not([aria-current=page],[aria-pressed=true]):hover{
+  :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme):not([data-touch-nav-pill]) button:not([aria-current=page],[aria-pressed=true]):hover{
     color:var(--text);background-color:var(--segment-press);text-decoration:none;
   }
   .wide-tabs button[aria-current=page]:hover{color:var(--text);text-decoration:none;}
 }
-:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme) button:active {
+:is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme):not([data-touch-nav-pill]) button:active {
   background-color: var(--segment-press);
   color: var(--text);
 }
@@ -4417,7 +4417,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     -webkit-backdrop-filter:none;backdrop-filter:none;
   }
 }
-:is(.wide-tabs,.bottom-nav)>button:active:not(:disabled){
+:is(.wide-tabs,.bottom-nav):not([data-touch-nav-pill])>button:active:not(:disabled){
   filter:none;box-shadow:inset 0 1px 2px var(--border-strong),inset 0 -1px 0 var(--nav-glass-sheen);
 }
 .bottom-nav>.bn-btn:active :is(.bn-icon,.bn-label){opacity:1;}
@@ -4482,19 +4482,24 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   -webkit-user-select:none;
   user-select:none;
 }
+:is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] > button:active:not(:disabled) {
+  filter:none;
+}
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
   --nav-drag-transition:none;
   --nav-drag-glint:rgba(255,250,242,.56);
   --nav-drag-reflection:rgba(205,159,112,.12);
   --nav-drag-rim:rgba(255,250,242,.86);
-  --nav-drag-shadow:0 2px 5px var(--nav-pill-shadow);
-  --nav-pill-shadow-layer:inset 0 0 0 1px var(--segment-border),
+  --nav-drag-edge:rgba(113,75,47,.21);
+  --nav-drag-shadow:0 1px 3px var(--nav-pill-shadow);
+  --nav-pill-shadow-layer:inset 0 0 0 1px var(--nav-drag-edge),
     inset 0 1px 0 var(--nav-drag-rim),var(--nav-drag-shadow);
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
   --nav-drag-glint:rgba(255,255,255,.15);
   --nav-drag-reflection:rgba(217,218,220,.07);
   --nav-drag-rim:rgba(255,255,255,.25);
+  --nav-drag-edge:rgba(217,218,220,.37);
 }
 :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill]::before {
   background-color:var(--segment-fill);
@@ -4504,7 +4509,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   --nav-drag-glint:rgba(255,250,242,.84);
   --nav-drag-reflection:rgba(205,159,112,.22);
   --nav-drag-rim:var(--nav-glass-rim);
-  --nav-drag-shadow:0 4px 12px var(--nav-pill-shadow);
+  --nav-drag-shadow:0 3px 8px var(--nav-pill-shadow);
 }
 :root[data-theme=dark] :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
   --nav-drag-glint:rgba(255,255,255,.27);
@@ -4512,8 +4517,11 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   --nav-drag-rim:var(--nav-glass-rim);
 }
 @supports (color:color-mix(in srgb,white,transparent)) {
+  :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill] {
+    --segment-fill:color-mix(in srgb,var(--nav-sel) 84%,transparent);
+  }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised] {
-    --segment-fill:color-mix(in srgb,var(--nav-sel) 68%,transparent);
+    --segment-fill:color-mix(in srgb,var(--nav-sel) 58%,transparent);
   }
   :is(.wide-tabs,.bottom-nav)[data-touch-nav-pill][data-touch-nav-pill-raised]::before {
     -webkit-backdrop-filter:blur(8px) saturate(125%);
