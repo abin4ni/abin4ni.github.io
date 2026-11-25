@@ -10648,7 +10648,7 @@ const studyRoom=(()=>{
   let mixedSubject='',questionId=null,questionBack='paper-mix',collectBack='paper-question',savingQuestion=false;
   let paperSearch='',paperArchiveOrigin=null,mixedArchive=false;
   let paperResultRound=null,paperResultFilter='all',paperReviewReturn=null;
-  let paperPdfRoundId=null;
+  let freshPaperResultId=null;
   const examMapDialog=$id('paper-exam-map-dialog');
   const widePaperMap=matchMedia('(min-width:1200px)');
   let examMapTrigger=null;
@@ -10689,9 +10689,9 @@ const studyRoom=(()=>{
     pillMotion.mount(root,priorPills);
     if(session?.mockExam?.deadline&&!roundComplete(session))queueMicrotask(updateMockClock);
   }
-  function go(next,submittedForPdf=null){
-    if(paperPdfRoundId)leavePaperPdfResult();
-    paperPdfRoundId=submittedForPdf;
+  function go(next,submittedRoundId=null){
+    if(freshPaperResultId)leaveFreshPaperResult();
+    freshPaperResultId=submittedRoundId;
     if(screen==='papers'&&next!=='papers'){
       paperArchiveOrigin={subject:paperSubject,ref:paperSubjectRef,search:paperSearch,
         id:['paper','session'].includes(next)?paperId:null,scroll:reviewScrollPositions().map(([,top])=>top)};
@@ -12626,8 +12626,8 @@ const batchDialog=$id('study-batch');
     rememberCompletedPaper(completed);
     completePlannedReview(completed.reviewPlanId);
     if(active&&(screen==='session'||screen==='paper'&&paperId===round.paperId)){
-      const pdfRound=!root.hidden&&isFullPaperAttempt(completed)?completed.paperResultId:null;
-      go('results',pdfRound);
+      const submittedRoundId=!root.hidden&&isFullPaperAttempt(completed)?completed.paperResultId:null;
+      go('results',submittedRoundId);
     }else if(screen==='papers')updatePaperList();
     else if(screen==='paper'&&paperId===round.paperId)render();
     return true;
@@ -12721,8 +12721,8 @@ const batchDialog=$id('study-batch');
   const paperPdfGenerate=$id('paper-pdf-generate'),paperPdfShare=$id('paper-pdf-share');
   const paperPdfStatus=$id('paper-pdf-status'),paperPdfError=$id('paper-pdf-error');
   let paperPdfModel=null,paperPdfJob=null,paperPdfFile=null,paperPdfUrl=null;
-  function isCurrentPaperPdf(round){
-    return screen==='results'&&paperPdfRoundId&&round?.paperResultId===paperPdfRoundId&&isFullPaperAttempt(round);
+  function isFreshPaperResult(round){
+    return screen==='results'&&freshPaperResultId&&round?.paperResultId===freshPaperResultId&&isFullPaperAttempt(round);
   }
   function clearPaperPdfOutput(){
     paperPdfJob?.abort();
@@ -12747,10 +12747,10 @@ const batchDialog=$id('study-batch');
     paperPdfDialog.close();
     if(restoreFocus)root.querySelector('[data-study-action=paper-pdf]')?.focus({preventScroll:true});
   }
-  function leavePaperPdfResult(){
-    paperPdfRoundId=null;
+  function leaveFreshPaperResult(){
+    freshPaperResultId=null;
     closePaperPdf(false);
-    root.querySelector('[data-study-action=paper-pdf]')?.remove();
+    for(const button of root.querySelectorAll('[data-study-action=paper-pdf],[data-study-action=paper-review-start]'))button.remove();
   }
   function paperPdfRows(round){
     let group=null;
@@ -12795,7 +12795,7 @@ const batchDialog=$id('study-batch');
   }
   function openPaperPdf(){
     const round=paperResultRound,p=round&&paper(round.paperId);
-    if(!p||!isCurrentPaperPdf(round))return;
+    if(!p||!isFreshPaperResult(round))return;
     paperPdfModel={paper:{school:paperSchool(p),year:p.year,subject:p.subject,date:examDate(round)},rows:paperPdfRows(round)};
     $id('paper-pdf-target').textContent=paperTitle(p)+' · '+p.subject;
     paperPdfForm.reset();
@@ -12814,11 +12814,11 @@ const batchDialog=$id('study-batch');
   paperPdfOptions.addEventListener('change',updatePaperPdfOptions);
   $id('paper-pdf-close').addEventListener('click',()=>closePaperPdf());
   bindWideDialog(paperPdfDialog,closePaperPdf);
-  root.addEventListener('study-review-pause',leavePaperPdfResult);
+  root.addEventListener('study-review-pause',leaveFreshPaperResult);
   paperPdfForm.addEventListener('submit',async event=>{
     event.preventDefault();
     const rows=selectedPaperPdfRows();
-    if(!rows.length||paperPdfJob||!isCurrentPaperPdf(paperResultRound))return;
+    if(!rows.length||paperPdfJob||!isFreshPaperResult(paperResultRound))return;
     const job=paperPdfJob=new AbortController();
     const paper={...paperPdfModel.paper,scope:paperPdfForm.scope.value==='wrong'?'錯題':'整卷'};
     const withExplanations=$id('paper-pdf-explanations').checked;
@@ -13169,6 +13169,7 @@ const batchDialog=$id('study-batch');
     const ungraded=rows.filter(row=>row.kind==='ungraded'&&!row.pending).length;
     const m=round.mockExam;
     const back=currentPaper?'paper-return':round.wrongBook?'paper-wrong-return':'paper-mix-return';
+    const fresh=currentPaper&&isFreshPaperResult(round);
     draw(round.reviewRetry?'重練結果':'試卷結果','<div class="study-surface paper-result"><p class="study-meta">'+esc(currentPaper?paperTitle(currentPaper):round.wrongBook?'錯題本':'混合刷題')+'</p>'+
       (m?'<p class="study-meta">'+esc(examDate(round))+'</p>':'')+
       (rows.some(row=>row.kind==='unknown')?'<p class="study-meta">部分題目缺少交卷當時的判分紀錄。</p>':'')+
@@ -13181,10 +13182,11 @@ const batchDialog=$id('study-batch');
         '<div><dt>'+paperResultLabels[key]+'</dt><dd>'+count+'</dd></div>').join('')+'</dl>'+
       (pending&&!round.scoring?'<p class="study-meta">'+(round.mockExam?pending+' 題待補正解，暫待判分。':'未作答含 '+pending+' 題尚未補正解')+'</p>':'')+
       (ungraded?'<p class="study-meta">'+ungraded+' 題已作答，請在檢討時自行核對。</p>':'')+
-      '<div class="study-actions">'+(round.reviewRetry?action('返回原次檢討','paper-retry-source',true):'')+paperReviewFinishAction(round)+
-      (currentPaper&&isCurrentPaperPdf(round)?action('匯出 PDF','paper-pdf',false,'aria-haspopup="dialog" aria-controls="paper-pdf-dialog"'):'')+
-      action(currentPaper?'返回試卷':round.wrongBook?'返回錯題本':'返回混合刷題',back,!retryCount&&!round.reviewRetry)+
-      (retryCount?action((currentPaper?'重練本卷錯題':'重練錯題')+'（'+retryCount+' 題）','retry',!round.reviewRetry):'')+'</div></div>'+
+      '<div class="study-actions">'+(fresh?action('開始檢討','paper-review-start',true)+
+      action('匯出 PDF','paper-pdf',false,'aria-haspopup="dialog" aria-controls="paper-pdf-dialog"'):'')+
+      (round.reviewRetry?action('返回原次檢討','paper-retry-source',true):'')+paperReviewFinishAction(round)+
+      action(currentPaper?'返回試卷':round.wrongBook?'返回錯題本':'返回混合刷題',back,!fresh&&!retryCount&&!round.reviewRetry)+
+      (retryCount?action((currentPaper?'重練本卷錯題':'重練錯題')+'（'+retryCount+' 題）','retry',!fresh&&!round.reviewRetry):'')+'</div></div>'+
       paperResultListPanel(rows)+
       (earlier.length?'<details class="study-supplements study-previous-results"><summary>查看先前輪次結果</summary>'+
         earlier.map((records,index)=>'<p class="study-meta">第 '+(index+1)+' 輪</p>'+roundCounts(records,true)).join('')+'</details>':''),false);
@@ -13583,6 +13585,12 @@ const batchDialog=$id('study-batch');
       const position=selectedRound&&readPaperReviewPosition(selectedRound);
       if(selectedRound&&(history||!position?.completed))openPaperReview({round:selectedRound,position},!history);
       else if(!history)render();
+    }else if(act==='paper-review-start'&&isFreshPaperResult(paperResultRound)){
+      const rows=paperResultRows(paperResultRound);
+      const first=rows.find(row=>matchesPaperResult(row,paperResultFilter));
+      if(!first)paperResultFilter='all';
+      const row=first||rows[0];
+      if(row)choosePaperReview(row.id);
     }else if(act==='paper-pdf'){
       openPaperPdf();
     }else if(act==='paper-review-finish'){
@@ -14409,7 +14417,7 @@ const batchDialog=$id('study-batch');
   }
   function switchLearning(uid){
     if(account?.uid===uid||(!account&&!uid))return;
-    leavePaperPdfResult();
+    leaveFreshPaperResult();
     globalSearch?.reset();
     flushExamDraft();
     clearTimeout(examTimer);
@@ -14545,7 +14553,7 @@ const batchDialog=$id('study-batch');
     switchAccount:switchLearning,
     backup:()=>account?{...data,syncJournal:account.operations}:data,
     restore(newData){
-      leavePaperPdfResult();
+      leaveFreshPaperResult();
       session=null;
       if(account){
         try{
