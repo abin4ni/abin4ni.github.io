@@ -40,7 +40,7 @@ const studyTheme=(()=>{
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <title>StudyOS</title>
-<link rel="preload" href="./studyos-intro.js?v=3" as="script">
+<link rel="preload" href="./studyos-intro.js?v=4" as="script">
 <style>
 /* ═══════════════════════════════════════════════════════════════
    Apple-grade UI — 課程進度追蹤
@@ -5317,7 +5317,6 @@ onAuthStateChanged(auth,user=>{
 </script>
 </head>
 <body data-wide-page="calendar">
-<script async src="./studyos-intro.js?v=3"></script>
 <script defer src="./studyos-review-pdf.js?v=1"></script>
 
 <div id="drag-ghost">
@@ -6012,7 +6011,7 @@ onAuthStateChanged(auth,user=>{
   <button class="bn-btn" id="bn-day" onclick="mobileTab('day')">
     <span class="bn-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="m8.3 12.3 2.6 2.6 4.8-5.3"/></svg></span><span class="bn-label">今日</span>
   </button>
-  <button class="bn-btn" id="bn-study" onclick="mobileTab('study')">
+  <button class="bn-btn" id="bn-study" onclick="openStudyHome()">
     <span class="bn-icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="4" width="13" height="15" rx="2"/><path d="M4 8v11a3 3 0 0 0 3 3h9m-5-13h5m-5 4h5"/></svg></span><span class="bn-label">學習室</span>
   </button>
 </nav>
@@ -8178,8 +8177,19 @@ $id('wide-drag-toggle').addEventListener('click',()=>{
   setDragShelf(open);
   if(open)$id('wide-drag-close').focus({preventScroll:true});
 });
+function openStudyHome(){
+  const room=$id('study-room');
+  if(!room.hidden)room.dispatchEvent(new Event('study-review-pause'));
+  if(isMobile())mobileTab('study');
+  else setWidePage('study');
+  studyRoom.openHome();
+}
 for(const button of document.querySelectorAll('[data-wide-page-button]')){
-  button.addEventListener('click',()=>setWidePage(button.dataset.widePageButton));
+  button.addEventListener('click',()=>{
+    const page=button.dataset.widePageButton;
+    if(page==='study')openStudyHome();
+    else setWidePage(page);
+  });
 }
 
 function closeAccountPanel(restoreFocus=false){
@@ -13932,12 +13942,15 @@ const batchDialog=$id('study-batch');
   }
   function submitMockExam(round,reason='manual'){
     const active=session===round;
+    const showResult=active&&(screen==='session'||screen==='paper'&&paperId===round.paperId);
     if((!active&&reason!=='expired')||roundComplete(round)||data.examDiscarded?.includes(round.paperResultId))return false;
     if(active){closePaperQuestionMap(false);flushExamDraft();}
     const previous=data.examSubmissions?.[round.paperResultId]||(active?readPaperReview(round.paperId)?.round:null);
     if(previous?.paperResultId===round.paperResultId){
       completePlannedReview(previous.reviewPlanId);
-      if(active){session=previous;go('results');}
+      if(active)session=previous;
+      if(showResult)go('results');
+      else if(active&&screen==='home')render();
       return true;
     }
     const results=[],changes=[];
@@ -13975,11 +13988,11 @@ const batchDialog=$id('study-batch');
     }
     rememberCompletedPaper(completed);
     completePlannedReview(completed.reviewPlanId);
-    if(active&&(screen==='session'||screen==='paper'&&paperId===round.paperId)){
+    if(showResult){
       const submittedRoundId=!root.hidden&&isFullPaperAttempt(completed)?completed.paperResultId:null;
       go('results',submittedRoundId);
     }else if(screen==='papers')updatePaperList();
-    else if(screen==='paper'&&paperId===round.paperId)render();
+    else if(active&&screen==='home'||screen==='paper'&&paperId===round.paperId)render();
     return true;
   }
   function play(){
@@ -16582,6 +16595,7 @@ if(document.readyState==='loading'){
   init();
 }
 </script>
+<script async src="./studyos-intro.js?v=4"></script>
 </body>
 </html>
 
