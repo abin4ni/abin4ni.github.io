@@ -1074,6 +1074,7 @@ body{
 #today-task-tabs{display:grid;grid-template-columns:repeat(2,minmax(max-content,1fr));flex:none;max-inline-size:100%;overflow-x:auto;scrollbar-width:none;border-radius:var(--r-pill);}
 #today-task-tabs .vt-btn{min-height:44px;padding:0 12px;border:0;box-shadow:none;text-decoration:none;white-space:nowrap;}
 #today-task-tabs .vt-btn:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-3px;}
+.today-task-feedback .toast{width:fit-content;margin-block-end:var(--sp-2);}
 #today-task-add{display:grid;place-items:center;flex:none;min-width:44px;min-height:44px;padding:0;font-size:1.3rem;}
 .today-task-completed{margin-block-start:var(--sp-3);}
 #today-task-lists .today-task-completed h4{margin:0 0 var(--sp-1);color:var(--text-2);}
@@ -1090,6 +1091,7 @@ body{
 .today-task-form[data-quick-add] button{display:none;}
 .today-task-form textarea{scroll-margin-block:12px;}
 .today-task-form [hidden]{display:none;}
+.today-task-hint{margin:0;color:var(--text-2);font-size:var(--ui-caption);}
 .today-task-status{margin:var(--sp-2) 0 0;color:var(--danger-c);font-size:var(--ui-caption);}
 .today-task-status:empty{display:none;}
 .today-task-item.memo-row{grid-template-columns:44px minmax(0,1fr) auto;}
@@ -12168,12 +12170,16 @@ const studyRoom=(()=>{
   }
   function updatePaperList(){
     const list=$id('paper-archive-results'),query=normalizePaperSearch(paperSearch);
+    const keywords=query?query.split(' '):[];
     const papers=(data.papers||[]).filter(p=>!paperSubjectRef||paperRef(p)===paperSubjectRef)
       .sort((a,b)=>Number(b.year)-Number(a.year)||paperSchool(a).localeCompare(paperSchool(b),'zh-Hant'));
     const groups=new Map();
     for(const p of papers){
       const year=String(Number(p.year));
-      if(query&&![p.school||'',year,year+' 年度',year+'年度'].some(value=>normalizePaperSearch(value).includes(query)))continue;
+      if(keywords.length){
+        const fields=[normalizePaperSearch(p.school||''),year,year+' 年度',year+'年度'];
+        if(!keywords.every(keyword=>fields.some(value=>value.includes(keyword))))continue;
+      }
       if(!groups.has(year))groups.set(year,[]);
       groups.get(year).push(p);
     }
@@ -12201,7 +12207,7 @@ const studyRoom=(()=>{
   function paperList(){
     draw(esc(paperSubjectRef?paperSubject+'・考古題':'歷屆試卷'),
       (paperSubjectRef?paperModes('paper-list'):'')+'<div class="paper-archive-toolbar">'+
-      '<label class="study-field"><span>搜尋學校或年度</span><input id="paper-query" type="search" value="'+esc(paperSearch)+'" autocomplete="off"></label>'+
+      '<label class="study-field"><span>搜尋學校或年度</span><input id="paper-query" type="search" placeholder="例如：中國醫 115" value="'+esc(paperSearch)+'" autocomplete="off"></label>'+
       '<div class="paper-archive-actions"><button id="paper-query-clear" type="button" class="btn btn-sand" data-study-action="paper-clear" hidden>清除搜尋</button>'+
       (paperSubjectRef?action('＋ 新增試卷','paper-new',true):'')+'</div></div>'+
       '<p class="study-meta" id="paper-archive-status" role="status"></p><div id="paper-archive-results"></div>');
@@ -12212,11 +12218,24 @@ const studyRoom=(()=>{
   }
   function mixedPage(){
     const items=mixedItems(),ready=items.filter(canPracticePaper);
+    const filteredEmpty=!ready.length&&!mixedArchive&&mixedSubject&&(data.paperQuestions||[]).some(canPracticePaper);
+    const needsQuestions=!ready.length&&!filteredEmpty;
+    let summary,actions='';
+    if(ready.length){
+      summary='可作答 '+ready.length+' 題';
+      actions=action(savedMixedPractice()?'繼續考古題練習':'開始考古題練習','paper-mix-start',true);
+    }else if(filteredEmpty){
+      summary='目前範圍沒有可作答的題目。請選擇其他考科，或改用「全部科目」。';
+    }else{
+      summary=mixedSubject?'這個科目還沒有可作答的題目':'還沒有可作答的考古題';
+      actions=action('新增第一題','paper-question-new',true)+action('前往歷屆試卷','paper-mix-archive');
+    }
+    const list=needsQuestions&&!items.length?'':'<section class="study-surface"><div class="paper-workflow-heading"><h3>題目</h3>'+
+      (needsQuestions?'':action('新增單題','paper-question-new'))+'</div>'+pastQuestionList(items)+'</section>';
     draw(esc(mixedArchive?paperSubject+'・考古題':'混合刷題'),(mixedArchive?paperModes('paper-mix-subject'):'')+
       '<div class="study-surface paper-mode-surface">'+(mixedArchive?'<h3>混合刷題</h3>':'<label class="study-field">考科<select id="paper-mix-subject">'+
-      subjectChoices(mixedSubject,'全部科目')+'</select></label>')+'<p class="study-meta">可作答 '+ready.length+' 題</p><div class="study-actions">'+
-      action(savedMixedPractice()?'繼續考古題練習':'開始考古題練習','paper-mix-start',true)+
-      '</div></div><section class="study-surface"><div class="paper-workflow-heading"><h3>題目</h3>'+action('新增單題','paper-question-new')+'</div>'+pastQuestionList(items)+'</section>');
+      subjectChoices(mixedSubject,'全部科目')+'</select></label>')+'<p class="study-meta">'+summary+'</p>'+
+      (actions?'<div class="study-actions">'+actions+'</div>':'')+'</div>'+list);
   }
   function sourceLabel(q){
     const p=paper(q.paperId);
@@ -14859,6 +14878,14 @@ const batchDialog=$id('study-batch');
         }
       }
       go('paper-mix');
+    }else if(act==='paper-mix-archive'){
+      if(!mixedArchive){
+        paperArchiveOrigin=null;
+        paperSubjectRef=mixedSubject;
+        paperSubject=pastSubjects().find(item=>item.key===mixedSubject)?.name||'';
+        paperSearch='';
+      }
+      go('papers');
     }else if(act==='paper-wrong-book'||act==='paper-wrong-return'){
       if(act==='paper-wrong-return'){
         const source=session?.wrongBook;
@@ -15919,14 +15946,28 @@ todayTaskView=(()=>{
     groups.map(([type,title])=>'<button type="button" class="vt-btn" data-task-tab="'+type+'" aria-pressed="'+(type==='daily')+
       '" aria-controls="today-task-panel-'+type+'">'+title+'</button>').join('')+
     '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業">＋</button></div>'+
+    '<div class="today-task-feedback" role="status" aria-atomic="true"><div class="toast toast-success show" hidden><span aria-hidden="true">✓</span><span></span></div></div>'+
     groups.map(([type,title,placeholder])=>'<section id="today-task-panel-'+type+'" data-today-task-type="'+type+'" aria-label="'+title+'"'+
       (type==='daily'?'':' hidden')+'><form class="today-task-form" hidden>'+
       '<textarea data-elastic-field rows="1" aria-label="新增'+title+'" aria-describedby="today-task-status-'+type+'" maxlength="160" placeholder="'+placeholder+'"></textarea>'+
+      '<p class="today-task-hint" id="today-task-hint-'+type+'" hidden>按 Enter 或點欄位外即可新增</p>'+
       '<button class="btn btn-primary">儲存</button><button type="button" class="btn btn-sand" data-task-action="cancel">取消</button>'+
       '</form><p class="today-task-status" id="today-task-status-'+type+'" role="status"></p><div class="today-task-items"></div></section>').join('');
   const sections=[...root.querySelectorAll('[data-today-task-type]')],add=root.querySelector('#today-task-add');
   const tabs=[...root.querySelectorAll('[data-task-tab]')];
-  let timer,ownerEpoch=0,selected='daily';
+  const feedback=root.querySelector('.today-task-feedback .toast'),feedbackText=feedback.lastElementChild;
+  let timer,feedbackTimer,ownerEpoch=0,selected='daily';
+  function clearQuickAddFeedback(){
+    clearTimeout(feedbackTimer);
+    feedback.hidden=true;
+    feedbackText.textContent='';
+  }
+  function showQuickAddFeedback(section){
+    clearTimeout(feedbackTimer);
+    feedback.hidden=false;
+    feedbackText.textContent='已新增至'+section.getAttribute('aria-label');
+    feedbackTimer=setTimeout(clearQuickAddFeedback,2800);
+  }
   // A pending blur belongs to the input that initiated it, even after a tab change.
   const quickAdds=new Map();
   function commitQuickAdd(draft,restoreFocus=false){
@@ -15936,6 +15977,7 @@ todayTaskView=(()=>{
     draft.blurPending=false;
     const text=input.value.trim();
     if(text&&!save(section,'create',{text})){
+      clearQuickAddFeedback();
       input.setAttribute('aria-invalid','true');
       return;
     }
@@ -15944,6 +15986,7 @@ todayTaskView=(()=>{
     const item=target&&!section.hidden&&editableTask(section.dataset.todayTaskType,target.id,Date.now());
     if(item)edit(section,true,{...item,date:target.date});
     else if(restoreFocus&&!section.hidden)add.focus({preventScroll:true});
+    if(text)showQuickAddFeedback(section);
   }
   function scheduleQuickBlur(draft,delay=0){
     clearTimeout(draft.blurTimer);
@@ -16033,6 +16076,7 @@ todayTaskView=(()=>{
   }
   function edit(section,show=false,item){
     const form=section.querySelector('form'),input=form.querySelector('textarea');
+    const hint=form.querySelector('.today-task-hint'),status=section.querySelector('.today-task-status');
     const title=section.getAttribute('aria-label');
     section.dataset.editTask=item?.id||'';
     section.dataset.editDate=item?.date||'';
@@ -16046,12 +16090,14 @@ todayTaskView=(()=>{
     const quickAdd=show&&!item;
     if(quickAdd)quickAdds.set(section,{section,input,pointerId:null});
     form.toggleAttribute('data-quick-add',quickAdd);
+    hint.hidden=!quickAdd;
+    input.setAttribute('aria-describedby',quickAdd?hint.id+' '+status.id:status.id);
     input.required=Boolean(item);
     input.enterKeyHint=quickAdd?'done':'enter';
     input.removeAttribute('aria-invalid');
     input.value=item?.text||'';
     input.setAttribute('aria-label',(item?'編輯':'新增')+title);
-    section.querySelector('.today-task-status').textContent='';
+    status.textContent='';
     if(show)input.focus();
   }
   function rowHTML(item,type){
@@ -16220,6 +16266,7 @@ todayTaskView=(()=>{
     root,refresh,activeTasks,
     reset(){
       ownerEpoch++;
+      clearQuickAddFeedback();
       select('daily');
       if(['刪除每日作業','刪除待辦事項'].includes($id('confirm-title').textContent))hideConfirm();
       sections.forEach(section=>edit(section));
