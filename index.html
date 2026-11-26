@@ -1067,7 +1067,7 @@ body{
 .memo-delete{min-width:44px;color:var(--danger-c);font-size:12px;padding-inline:4px;}
 .memo-empty{font-size:13px;color:var(--text-2);margin:8px 0;}
 #memo-add,#memo-item-form{margin-top:12px;}
-#memo-item-input{display:block;min-height:68px;margin-bottom:8px;}
+#memo-item-input{display:block;margin-bottom:8px;}
 .memo-form-actions{display:flex;flex-wrap:wrap;gap:8px;}
 #today-task-lists [hidden]{display:none;}
 .today-task-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-block-end:var(--sp-3);}
@@ -1084,13 +1084,12 @@ body{
 .today-task-section{min-width:0;padding:var(--sp-3);background:var(--card);border:1px solid var(--border-lt);border-radius:var(--r-sm);}
 .today-task-section :is(h3,.memo-checklist){margin-block:0 var(--sp-2);}
 .today-task-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:start;}
-.today-task-form input,.today-task-form .btn{min-height:44px;}
+.today-task-form .btn{min-height:44px;}
 .today-task-form{margin-block-end:var(--sp-2);}
 .today-task-form[data-quick-add]{grid-template-columns:minmax(0,1fr);}
 .today-task-form[data-quick-add] button{display:none;}
-.today-task-form input{scroll-margin-block:12px;}
+.today-task-form textarea{scroll-margin-block:12px;}
 .today-task-form [hidden]{display:none;}
-.today-task-form input{min-width:0;width:100%;}
 .today-task-status{margin:var(--sp-2) 0 0;color:var(--danger-c);font-size:var(--ui-caption);}
 .today-task-status:empty{display:none;}
 .today-task-item.memo-row{grid-template-columns:44px minmax(0,1fr) auto;}
@@ -3970,6 +3969,30 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
   font:inherit;font-size:max(16px,1rem);line-height:1.4;letter-spacing:normal;
 }
 textarea{min-height:max(68px,4.25rem);resize:vertical;}
+:is(input:not([type]),input:is([type=text],[type=search],[type=email],[type=password],[type=url],[type=tel])){
+  border-radius:var(--r-pill);
+}
+textarea[data-elastic-field]{
+  --field-padding-block:max(.5rem,calc((var(--field-height) - 1lh - 2px)/2));
+  --field-compact-height:calc(1lh + 2 * var(--field-padding-block) + 2px);
+  display:block;
+  height:var(--field-compact-height);
+  min-height:var(--field-compact-height);
+  max-height:max(var(--field-compact-height),min(15rem,42dvh));
+  margin:0;
+  padding-block:var(--field-padding-block);
+  border-radius:calc(var(--field-compact-height)/2);
+  overflow-wrap:anywhere;
+  resize:none;
+  transition:height 140ms var(--motion-ease),border-radius 140ms var(--motion-ease);
+}
+textarea[data-elastic-field][data-multiline]{
+  height:var(--field-content-height);
+  border-radius:var(--r-sm);
+}
+@media(prefers-reduced-motion:reduce){
+  textarea[data-elastic-field]{transition:none;}
+}
 select:not([multiple]){appearance:auto;}
 input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 :is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger):focus,:is(input:not([type]),input:is([type=text],[type=search],[type=number],[type=date],[type=time],[type=email],[type=password],[type=url],[type=tel]),select,textarea,.schedule-time-trigger)[aria-expanded=true]{border-color:var(--accent);}
@@ -4513,10 +4536,10 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   }
   @media(max-width:767px){
     /* Keep end-of-scroll clearance inside scrollable tabs so content passes behind the glass dock. */
-    html:not([data-keyboard-viewport]) .app-shell:has(:is(#panel-r,#panel-l).mob-active,#study-room:not([hidden])):not(:has(#today-task-lists input:focus)){
+    html:not([data-keyboard-viewport]) .app-shell:has(:is(#panel-r,#panel-l).mob-active,#study-room:not([hidden])):not(:has(#today-task-lists textarea:focus)){
       padding-block-end:0;
     }
-    html:not([data-keyboard-viewport]) :is(#panel-r,#panel-l).mob-active:not(:has(#today-task-lists input:focus)),
+    html:not([data-keyboard-viewport]) :is(#panel-r,#panel-l).mob-active:not(:has(#today-task-lists textarea:focus)),
     html:not([data-keyboard-viewport]) #study-room:not([hidden]){
       padding-block-end:calc(var(--sp-6) + var(--bot-h));
       scroll-padding-block-end:var(--bot-h);
@@ -5429,7 +5452,7 @@ onAuthStateChanged(auth,user=>{
       <form class="section course-planning-form fold-card" id="new-course-form" novalidate onsubmit="addCourse(event)">
         <button type="button" class="fold-head" aria-expanded="false" aria-controls="fold-add" onclick="toggleFold(this)"><span class="section-label">新增課程</span><span class="fold-chev" aria-hidden="true"></span></button>
         <div class="fold-body" id="fold-add">
-        <div class="form-group"><input type="text" id="inp-name" aria-label="科目名稱" placeholder="科目名稱（例：化學）" required/></div>
+        <div class="form-group"><textarea data-elastic-field rows="1" id="inp-name" aria-label="科目名稱" placeholder="科目名稱（例：化學）" enterkeyhint="next" required></textarea></div>
         <div class="form-group">
           <input type="number" id="inp-total" aria-label="總堂數" aria-describedby="course-number-message" placeholder="總堂數" min="1" step="1" required/>
         </div>
@@ -5645,7 +5668,7 @@ onAuthStateChanged(auth,user=>{
       <div id="day-edit-conflicts" class="schedule-conflicts" aria-live="polite"></div>
       <label class="day-edit-field study-field" for="day-edit-content">
         <span>上課內容（選填）</span>
-        <textarea id="day-edit-content" rows="4"></textarea>
+        <textarea data-elastic-field id="day-edit-content" rows="1"></textarea>
       </label>
       <fieldset class="day-edit-field" id="day-edit-study-link">
         <legend>對應章節（選填）</legend>
@@ -5846,7 +5869,7 @@ onAuthStateChanged(auth,user=>{
   <div class="dialog-actions"><button type="button" class="btn btn-sand" id="memo-add">＋新增事項</button></div>
   <form id="memo-item-form" hidden>
     <label for="memo-item-input" id="memo-item-label"></label>
-    <textarea id="memo-item-input" rows="2" aria-describedby="memo-item-message"></textarea>
+    <textarea data-elastic-field id="memo-item-input" rows="1" aria-describedby="memo-item-message"></textarea>
     <p id="memo-item-message" role="alert"></p>
     <div class="memo-form-actions dialog-actions">
       <button type="button" class="btn btn-sand" id="memo-item-cancel">取消</button>
@@ -6871,7 +6894,7 @@ function editCourse(id){
     {label:'取消',action:closeModal}
   ],null,null,
   '<div class="form-group"><label class="form-label" for="edit-name">科目名稱</label>'+
-  '<input type="text" id="edit-name" value="'+esc(subject.name)+'"></div>'+
+  '<textarea data-elastic-field rows="1" id="edit-name">'+esc(subject.name)+'</textarea></div>'+
   '<div class="course-edit-values">'+
     '<div><label class="form-label" for="edit-start">起始編號</label>'+
       '<input type="number" id="edit-start" value="'+esc(subject.lessonStart??1)+'" min="1" step="1" aria-describedby="edit-start-error edit-course-range">'+
@@ -10846,7 +10869,7 @@ function init(){
 
   for(const [field,next] of [['inp-name','inp-total'],['inp-total','inp-ls'],['inp-ls','inp-exam']]){
     document.getElementById(field).addEventListener('keydown',event=>{
-      if(event.key==='Enter'&&!event.isComposing){
+      if(event.key==='Enter'&&!event.isComposing&&event.keyCode!==229){
         event.preventDefault();
         document.getElementById(next).focus();
       }
@@ -15863,7 +15886,7 @@ todayTaskView=(()=>{
     '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業">＋</button></div>'+
     groups.map(([type,title,placeholder])=>'<section id="today-task-panel-'+type+'" data-today-task-type="'+type+'" aria-label="'+title+'"'+
       (type==='daily'?'':' hidden')+'><form class="today-task-form" hidden>'+
-      '<input aria-label="新增'+title+'" aria-describedby="today-task-status-'+type+'" type="text" maxlength="160" placeholder="'+placeholder+'">'+
+      '<textarea data-elastic-field rows="1" aria-label="新增'+title+'" aria-describedby="today-task-status-'+type+'" maxlength="160" placeholder="'+placeholder+'"></textarea>'+
       '<button class="btn btn-primary">儲存</button><button type="button" class="btn btn-sand" data-task-action="cancel">取消</button>'+
       '</form><p class="today-task-status" id="today-task-status-'+type+'" role="status"></p><div class="today-task-items"></div></section>').join('');
   const sections=[...root.querySelectorAll('[data-today-task-type]')],add=root.querySelector('#today-task-add');
@@ -15900,7 +15923,7 @@ todayTaskView=(()=>{
     draft.imeTimer=setTimeout(()=>{draft.imeEnter=false;},0);
   }
   for(const section of sections){
-    const input=section.querySelector('form input');
+    const input=section.querySelector('form textarea');
     input.addEventListener('focus',()=>{
       const draft=quickAdds.get(section);
       if(draft)draft.blurPending=false;
@@ -15974,7 +15997,7 @@ todayTaskView=(()=>{
     return [...section.querySelectorAll('[data-today-task]')].find(row=>row.dataset.todayTask===id&&row.dataset.taskDate===date);
   }
   function edit(section,show=false,item){
-    const form=section.querySelector('form'),input=form.querySelector('input');
+    const form=section.querySelector('form'),input=form.querySelector('textarea');
     const title=section.getAttribute('aria-label');
     section.dataset.editTask=item?.id||'';
     section.dataset.editDate=item?.date||'';
@@ -16075,7 +16098,7 @@ todayTaskView=(()=>{
       if(!draft.imeEnter)commitQuickAdd(draft,true);
       return;
     }
-    const input=form.querySelector('input'),text=input.value.trim();
+    const input=form.querySelector('textarea'),text=input.value.trim();
     if(!text){section.querySelector('.today-task-status').textContent='請輸入項目名稱。';input.focus();return;}
     const id=section.dataset.editTask||undefined,date=section.dataset.editDate;
     if(id&&save(section,'edit',{id,text,date})){
@@ -16084,14 +16107,27 @@ todayTaskView=(()=>{
       (row?.querySelector('.memo-item-text')||add).focus({preventScroll:true});
     }
   });
+  // Some touch keyboards send the newline edit without a keydown.
+  root.addEventListener('beforeinput',event=>{
+    if(!event.target.matches('.today-task-form textarea')||
+      !['insertLineBreak','insertParagraph'].includes(event.inputType))return;
+    const draft=quickAdds.get(event.target.closest('[data-today-task-type]'));
+    if(event.isComposing||draft?.composing||draft?.imeEnter)return;
+    event.preventDefault();
+    event.target.form.requestSubmit();
+  });
   root.addEventListener('keydown',event=>{
     const draft=quickAdds.get(event.target.closest('[data-today-task-type]'));
-    if(event.target===draft?.input){
-      const ime=draft.composing||event.isComposing||event.keyCode===229;
+    if(event.target.matches('.today-task-form textarea')){
+      const ime=draft?.composing||event.isComposing||event.keyCode===229;
       if(event.key==='Enter'){
-        if(ime||draft.imeEnter)suppressImeEnter(draft);
-        else{event.preventDefault();commitQuickAdd(draft,true);}
-      }else if(event.key==='Escape'&&!ime){
+        if(ime||draft?.imeEnter){
+          if(draft)suppressImeEnter(draft);
+        }else{
+          event.preventDefault();
+          event.target.form.requestSubmit();
+        }
+      }else if(event.key==='Escape'&&draft&&!ime){
         event.preventDefault();
         edit(draft.section);
         add.focus({preventScroll:true});
@@ -16347,6 +16383,53 @@ function updateStudyReviewDay(){
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateStudyReviewDay();});
 window.addEventListener('pageshow',updateStudyReviewDay);
+
+// Measure with the browser's own textarea wrapping, independently of the animated height.
+{
+  const selector='textarea[data-elastic-field]';
+  const measure=document.createElement('textarea');
+  measure.inert=true;
+  measure.setAttribute('aria-hidden','true');
+  measure.style.cssText='position:fixed;inset:0 auto auto -10000px;visibility:hidden;pointer-events:none;'+
+    'min-width:0;max-width:none;height:0;min-height:0;max-height:none;overflow:hidden;resize:none;transition:none;';
+  document.body.append(measure);
+  const metrics=['boxSizing','fontFamily','fontSize','fontWeight','fontStyle','fontStretch','fontVariant',
+    'lineHeight','letterSpacing','wordSpacing','padding','borderTopWidth','borderBottomWidth',
+    'borderLeftWidth','borderRightWidth','textIndent','textTransform','whiteSpace','overflowWrap','wordBreak','tabSize','direction'];
+  const widths=new WeakMap();
+  function size(field){
+    if(!field.offsetWidth)return;
+    const style=getComputedStyle(field);
+    for(const key of metrics)measure.style[key]=style[key];
+    measure.style.width=style.width;
+    measure.value=field.value||' ';
+    const single=parseFloat(style.lineHeight)+parseFloat(style.paddingTop)+parseFloat(style.paddingBottom);
+    const content=measure.scrollHeight;
+    field.toggleAttribute('data-multiline',content>single+1);
+    field.style.setProperty('--field-content-height',(content+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth))+'px');
+  }
+  const resize=new ResizeObserver(entries=>{
+    for(const {target,contentRect} of entries){
+      if(!target.isConnected){resize.unobserve(target);continue;}
+      if(widths.get(target)===contentRect.width)continue;
+      widths.set(target,contentRect.width);
+      size(target);
+    }
+  });
+  document.querySelectorAll(selector).forEach(field=>resize.observe(field));
+  document.fonts?.ready.then(()=>document.querySelectorAll(selector).forEach(size));
+  document.addEventListener('focusin',event=>{
+    if(!event.target.matches(selector))return;
+    resize.observe(event.target);
+    size(event.target);
+  });
+  document.addEventListener('input',event=>{
+    if(event.target.matches(selector))size(event.target);
+  });
+  document.addEventListener('reset',event=>{
+    requestAnimationFrame(()=>event.target.querySelectorAll(selector).forEach(size));
+  });
+}
 
 // 等 DOM 確實就緒才執行
 if(document.readyState==='loading'){
