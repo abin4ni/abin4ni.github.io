@@ -2977,7 +2977,8 @@ body:has(#lesson-time-dialog[open]) #repeat-preview-content .popup-close{visibil
 #repeat-preview-options .schedule-conflict-choice{min-height:44px;}
 #day-repeat-details>summary{min-height:44px;align-content:center;cursor:pointer;}
 #day-repeat-slot :is(.fold-head,[for=rep-start],#rep-start,#rep-course){display:none;}
-#phone-course-dialog .schedule-secondary{margin-top:10px;}
+#phone-course-dialog .schedule-secondary{margin-top:10px;flex-wrap:wrap;}
+#schedule-empty-message{margin:0;color:var(--text-2);}
 body:has(#phone-course-dialog[data-calendar-schedule][open]) #day-panel-close,
 body:has(#lesson-time-dialog[open]) #phone-course-dialog[data-calendar-schedule] [data-local-close]{visibility:hidden;}
 #wide-calendar-add{width:44px;padding:0;font-size:1.2rem;}
@@ -5400,7 +5401,7 @@ onAuthStateChanged(auth,user=>{
 
     <section class="wide-only" id="wide-courses" hidden inert aria-labelledby="wide-courses-title">
       <div class="wide-course-head">
-        <h2 id="wide-courses-title">我的課程</h2>
+        <h2 id="wide-courses-title" tabindex="-1">我的課程</h2>
         <div class="wide-tools">
           <button type="button" class="btn btn-sand" id="wide-makeup-open" aria-haspopup="dialog">補課清單</button>
           <button type="button" class="btn btn-primary" id="wide-add-open" aria-haspopup="dialog">＋新增課程</button>
@@ -5414,7 +5415,7 @@ onAuthStateChanged(auth,user=>{
     </section>
 
     <aside class="panel panel-l" id="panel-l">
-      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2>我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></div><p id="course-summary"></p></div>
+      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2 id="phone-courses-title" tabindex="-1">我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></div><p id="course-summary"></p></div>
       <div class="tablet-course-heading">
         <h2>我的課程</h2>
         <button type="button" class="btn btn-sand" id="tablet-course-close" onclick="closeTabletPanel()">關閉</button>
@@ -5727,6 +5728,7 @@ onAuthStateChanged(auth,user=>{
     <button type="button" class="btn btn-primary" id="phone-manual-open">新增課程</button>
   </div>
   <div id="calendar-schedule-panel" hidden>
+    <p id="schedule-empty-message" role="status" hidden></p>
     <form id="day-schedule-form" onsubmit="submitDaySchedule(event)">
       <p id="day-schedule-message" role="status"></p>
       <label for="day-schedule-course">科目</label>
@@ -5746,6 +5748,7 @@ onAuthStateChanged(auth,user=>{
       <details id="day-repeat-conflicts" class="schedule-conflicts" hidden><summary></summary><ul></ul></details>
     </details>
     <div class="dialog-actions schedule-secondary">
+      <button type="button" class="btn btn-primary" id="schedule-courses-open" hidden>前往我的課程</button>
       <button type="button" class="btn btn-sand" id="schedule-manual-open">新增課程</button>
       <button type="button" class="btn btn-sand" id="schedule-quick-open">快速輸入</button>
     </div>
@@ -9372,8 +9375,15 @@ for(const id of ['day-schedule-course','day-schedule-date'])$id(id).addEventList
 $id('day-schedule-date').addEventListener('click',event=>{
   try{event.currentTarget.showPicker?.();}catch{/* The native date control still handles taps. */}
 });
+function scheduleEntryFocus(){
+  if(!$id('day-schedule-form').hidden)return $id('day-schedule-course');
+  const coursesButton=$id('schedule-courses-open');
+  return coursesButton.hidden?$id('schedule-manual-open'):coursesButton;
+}
 function refreshDayScheduleCourses(){
-  const select=document.getElementById('day-schedule-course');
+  const select=$id('day-schedule-course');
+  const focused=document.activeElement;
+  const panel=$id('calendar-schedule-panel');
   const previous=repeatHost===phoneCourseDialog?repeatPreview.courseId:select.value;
   select.replaceChildren();
   const pending=S.courses.filter(c=>remaining(c)>0);
@@ -9383,11 +9393,25 @@ function refreshDayScheduleCourses(){
     select.appendChild(option);
   });
   if(pending.some(c=>c.id===previous))select.value=previous;
-  select.disabled=!pending.length;
-  document.getElementById('day-schedule-confirm').disabled=!pending.length;
-  $id('day-schedule-message').textContent=pending.length?'':(S.courses.length?'所有課程都已排滿，目前沒有可安排的課堂。':'目前沒有可安排的課程。');
-  $id('day-repeat-details').hidden=!pending.length;
+  const hasPending=pending.length>0;
+  const noCourses=!S.courses.length;
+  const emptyMessage=$id('schedule-empty-message');
+  select.disabled=!hasPending;
+  $id('day-schedule-confirm').disabled=!hasPending;
+  $id('day-schedule-form').hidden=!hasPending;
+  $id('day-schedule-message').textContent='';
+  $id('day-repeat-details').hidden=!hasPending;
+  emptyMessage.hidden=hasPending;
+  emptyMessage.textContent=hasPending?'':noCourses?'先新增一門課程，就能安排到行事曆。':
+    '所有課堂都已排入行事曆，目前沒有可安排的堂次。';
+  $id('schedule-courses-open').hidden=hasPending||noCourses;
+  $id('schedule-manual-open').classList.toggle('btn-primary',noCourses);
+  $id('schedule-manual-open').classList.toggle('btn-sand',!noCourses);
+  $id('schedule-quick-open').hidden=!hasPending&&!noCourses;
   syncScheduleFields();
+  if(!panel.hidden&&panel.contains(focused)&&focused.closest('[hidden]')){
+    scheduleEntryFocus().focus({preventScroll:true});
+  }
 }
 function openDaySchedule(){
   beginCalendarSchedule(dayPanelDate()||localDateKey(),$id('day-schedule-open'),wideDay.open);
@@ -10749,8 +10773,9 @@ function openPhoneCourse(mode,id=''){
   }
   if(!phoneCourseDialog.open)showAppDialog(phoneCourseDialog,dismissPhoneCourse);
   phoneCourseDialog.scrollTop=0;
-  $id({menu:'phone-manual-open',manual:'inp-name',quick:'quick-input',repeat:'rep-course',
-    schedule:$id('day-schedule-course').disabled?'schedule-manual-open':'day-schedule-course'}[mode]).focus();
+  const focusTarget=mode==='schedule'?scheduleEntryFocus():
+    $id({menu:'phone-manual-open',manual:'inp-name',quick:'quick-input',repeat:'rep-course'}[mode]);
+  focusTarget.focus();
 }
 bindWideDialog(phoneCourseDialog,dismissPhoneCourse);
 phoneCourseDialog.querySelector('[data-local-close]').addEventListener('click',closePhoneCourse);
@@ -10758,6 +10783,16 @@ for(const [id,mode] of [['phone-course-open','menu'],['phone-manual-open','manua
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
 }
 $id('wide-calendar-add').addEventListener('click',openCalendarSchedule);
+$id('schedule-courses-open').addEventListener('click',()=>{
+  closePhoneCourse({restoreFocus:false,returnDay:false});
+  if(isMobile()){
+    mobileTab('course');
+    $id('phone-courses-title').focus();
+  }else{
+    setWidePage('courses');
+    $id('wide-courses-title').focus();
+  }
+});
 for(const [id,mode] of [['schedule-manual-open','manual'],['schedule-quick-open','quick'],['schedule-back','schedule']]){
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
 }
