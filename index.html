@@ -324,15 +324,6 @@ body{
   border-color:var(--success);background:rgba(var(--success-rgb),.1);
 }
 
-/* Day panel statistics */
-
-.day-today-stat{
-  flex:1;background:var(--card);border:1px solid var(--border-lt);
-  border-radius:var(--r-sm);padding:7px 10px;text-align:center;
-  box-shadow:var(--shadow-sm);
-}
-.dts-val{font-size:18px;font-weight:700;font-family:var(--serif);line-height:1;}
-.dts-lbl{font-size:10px;color:var(--text-3);margin-top:2px;}
 
 .app-header{
   height:var(--nav-h);
@@ -404,7 +395,7 @@ body{
   font-size:10px;font-weight:600;letter-spacing:.8px;
   text-transform:uppercase;color:var(--text-3);margin-bottom:10px;
 }
-.panel-l,.cal-panel,.panel-r,.memo-area,.course-card,.todo-card,.day-card,.memo-card,.day-today-stat{border-radius:24px;}
+.panel-l,.cal-panel,.panel-r,.memo-area,.course-card,.todo-card,.day-card,.memo-card{border-radius:24px;}
 
 /* ── Bottom nav (mobile only) ── */
 .bottom-nav{display:none;}
@@ -909,12 +900,6 @@ body{
 .day-course-list .day-card{
   margin-bottom:0;
 }
-.day-panel-stats{
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:8px;
-}
-.day-panel-stats .day-today-stat{margin-bottom:0;}
 
 /* Empty states */
 .empty-state{text-align:center;padding:32px 12px;color:var(--text-3);}
@@ -1425,12 +1410,12 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 :root *{letter-spacing:var(--tracking);}
 .section-label,.memo-area-title,.cal-lbl,.wch-day,.day-label-today-badge{letter-spacing:var(--tracking-label);}
 .app-header h1,.modal h2,#confirm-dialog h3{letter-spacing:0;}
-.hstat-val,.dts-val,.memo-card-name,.day-label-today-badge{font-weight:600;}
-.hstat-val,.dts-val,.date-num,.wch-date,.cal-tag-time{font-variant-numeric:tabular-nums;}
-.section-label,.memo-area-title,.cal-lbl,.quick-input-hint,.dts-lbl,.exam-badge,.lesson-chip{font-size:11px;}
+.hstat-val,.memo-card-name,.day-label-today-badge{font-weight:600;}
+.hstat-val,.date-num,.wch-date,.cal-tag-time{font-variant-numeric:tabular-nums;}
+.section-label,.memo-area-title,.cal-lbl,.quick-input-hint,.exam-badge,.lesson-chip{font-size:11px;}
 
 /* ── Glass → solid surfaces ── */
-.course-card,.todo-card,.cal-cell,.day-card,.memo-area,.memo-card,.day-memo-wrap,.day-today-stat{
+.course-card,.todo-card,.cal-cell,.day-card,.memo-area,.memo-card,.day-memo-wrap{
   -webkit-backdrop-filter:none;backdrop-filter:none;
 }
 .course-card,.todo-card,.day-card,.cal-cell{background:var(--card);}
@@ -1438,7 +1423,7 @@ body{line-height:var(--lh);letter-spacing:var(--tracking);}
 .app-header,.bottom-nav{background:var(--header-bg);}
 
 /* ── Radius unification ── */
-.course-card,.todo-card,.day-card,.memo-card,.day-memo-wrap,.day-today-stat{border-radius:var(--r);}
+.course-card,.todo-card,.day-card,.memo-card,.day-memo-wrap{border-radius:var(--r);}
 .cal-cell{border-radius:var(--r-sm);}
 .panel-l,.cal-panel,.panel-r{border-radius:var(--r-lg);}
 
@@ -1584,7 +1569,7 @@ button:focus-visible,a.btn:focus-visible,.vt-btn:focus-visible{outline:2px solid
   .cal-title{font-size:19px;font-weight:700;}
   .panel-r #day-label{font-size:21px;font-weight:700;color:var(--text);margin:4px 0 12px;}
   .day-panel-main>.day-panel-title{font-size:16px;color:var(--text);}
-  .day-panel-notes,.day-panel-meta{border-top:1px solid var(--border-lt);padding-top:14px;}
+  .day-panel-notes{border-top:1px solid var(--border-lt);padding-top:14px;}
 }
 
 /* 今日備考 */
@@ -1791,10 +1776,7 @@ button:focus-visible,a.btn:focus-visible,.vt-btn:focus-visible{outline:2px solid
   #day-schedule-open{min-height:44px;}
   .day-panel-shell{gap:18px;}
   .day-panel-title{font-size:15px;color:var(--text);letter-spacing:0;}
-  .day-panel-meta{order:-1;}
-  .day-panel-meta .day-panel-title{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;}
-  .day-panel-meta,.day-panel-notes{border:0;padding-top:0;}
-  .day-panel-stats .day-today-stat{border-radius:10px;box-shadow:none;}
+  .day-panel-notes{border:0;padding-top:0;}
   .day-card{padding:10px;}
   .day-card-head{align-items:center;display:grid;grid-template-columns:44px 9px minmax(0,1fr);gap:4px 6px;margin-bottom:0;}
   .day-card-head .day-name{font-size:15px;line-height:1.45;min-width:0;overflow-wrap:anywhere;}
@@ -1962,10 +1944,6 @@ button:focus-visible,a.btn:focus-visible,.vt-btn:focus-visible{outline:2px solid
   .panel-r #day-label{font-size:26px;line-height:1.2;margin:0 0 12px;letter-spacing:-.02em;}
   .day-schedule-entry{margin-bottom:12px;}
   #day-schedule-open{width:100%;min-height:48px;font-size:15px;}
-  .day-panel-stats{gap:8px;}
-  .day-panel-stats .day-today-stat{padding:6px 4px;background:var(--sunken);}
-  .day-panel-stats .dts-val{font-size:18px;}
-  .day-panel-stats .dts-lbl{font-size:11px;}
   .day-panel-main>.day-panel-title{font-size:15px;margin-bottom:2px;}
 }
 
@@ -2005,15 +1983,6 @@ button:focus-visible,a.btn:focus-visible,.vt-btn:focus-visible{outline:2px solid
 #panel-r .day-panel-shell{gap:20px;padding-bottom:8px;}
 #panel-r .day-panel-section{gap:8px;}
 #panel-r .day-panel-title{margin:0;font-size:17px;line-height:1.35;font-weight:700;color:var(--text);letter-spacing:-.01em;}
-#panel-r .day-panel-meta{order:-1;position:relative;padding:0;border:0;}
-#panel-r .day-panel-meta .day-panel-title{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;}
-#panel-r .day-panel-stats{gap:0;border:1px solid var(--border-lt);background:var(--card-2);border-radius:var(--r);}
-#panel-r .day-today-stat{border:0;border-radius:0;background:none;box-shadow:none;padding:8px 4px;}
-#panel-r .day-today-stat+.day-today-stat{border-inline-start:1px solid var(--border-lt);}
-#panel-r .dts-val{font-size:17px;line-height:1.15;font-variant-numeric:tabular-nums;}
-#panel-r .dts-lbl{font-size:12px;}
-#panel-r .day-completed-count{color:var(--done-c);}
-#panel-r .day-progress-count{color:var(--accent-h);}
 #panel-r .day-course-list{gap:0;background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);padding-inline:10px;min-width:0;}
 #panel-r .day-card{
   padding:8px 0;margin:0;border:0;border-radius:0;box-shadow:none;background:none;transform:none;
@@ -3424,7 +3393,7 @@ body { font-size: var(--ui-body); line-height: var(--ui-body-leading); }
 }
 :where(.btn,#account-toggle,#calendar-more>summary) { touch-action: manipulation; }
 :where(.btn,#account-toggle,#calendar-more>summary):active { filter: brightness(.94); }
-:where(.course-stat,.wide-course-row,.dts-val,.study-stats,.cal-title,.date-num,.wch-date,.cal-tag-time) {
+:where(.course-stat,.wide-course-row,.study-stats,.cal-title,.date-num,.wch-date,.cal-tag-time) {
   font-variant-numeric: tabular-nums;
 }
 :is(#panel-cal .cal-title,.wide-course-head h2,#panel-r #day-label,#study-room h2) {
@@ -4341,16 +4310,17 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .study-brief-option{gap:var(--sp-2);padding-block:var(--sp-2);border-bottom:1px solid var(--border-lt);}
 #panel-r #study-exams-title{cursor:pointer;min-height:44px;align-content:center;}
 #panel-r #study-exams .study-exam-row{margin-block-start:var(--sp-2);}
-#today-lesson-progress{margin-block-end:var(--sp-3);max-inline-size:18rem;}
-#today-lesson-progress-text{color:var(--text-2);font-size:var(--ui-caption);font-variant-numeric:tabular-nums;}
-#today-lesson-progress-bar{
+#today-lesson-progress{margin-block-end:var(--sp-3);}
+.lesson-progress{max-inline-size:18rem;}
+.lesson-progress-caption{color:var(--text-2);font-size:var(--ui-caption);font-variant-numeric:tabular-nums;}
+.lesson-progress-bar{
   appearance:none;display:block;inline-size:100%;block-size:3px;margin-block-start:5px;
   border:0;border-radius:var(--r-pill);background:var(--sunken);overflow:hidden;
 }
-#today-lesson-progress-bar[hidden]{display:none;}
-#today-lesson-progress-bar::-webkit-progress-bar{background:var(--sunken);}
-#today-lesson-progress-bar::-webkit-progress-value{background:var(--accent);border-radius:var(--r-pill);}
-#today-lesson-progress-bar::-moz-progress-bar{background:var(--accent);border-radius:var(--r-pill);}
+.lesson-progress-bar[hidden]{display:none;}
+.lesson-progress-bar::-webkit-progress-bar{background:var(--sunken);}
+.lesson-progress-bar::-webkit-progress-value{background:var(--accent);border-radius:var(--r-pill);}
+.lesson-progress-bar::-moz-progress-bar{background:var(--accent);border-radius:var(--r-pill);}
 #panel-r[data-day-context=today] .day-panel-shell{gap:var(--sp-4);}
 #panel-r[data-day-context=today] .day-schedule-entry{margin-block-end:var(--sp-3);}
 #study-room .study-home-modes{
@@ -4413,7 +4383,6 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
     background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r-lg);box-shadow:none;
   }
   #calendar-day-slot #panel-r .day-heading h2{font-size:var(--ui-heading);}
-  #calendar-day-slot #panel-r .day-panel-meta{order:0;}
   #calendar-day-slot #panel-r .day-panel-shell{gap:var(--sp-4);}
 }
 </style>
@@ -5624,9 +5593,9 @@ onAuthStateChanged(auth,user=>{
         <h2 id="day-label">選擇日期</h2>
         <button type="button" class="btn popup-close" aria-label="關閉日期詳情" id="day-panel-close" onclick="closeDayPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
       </div>
-      <div id="today-lesson-progress" hidden>
-        <p id="today-lesson-progress-text" role="status"></p>
-        <progress id="today-lesson-progress-bar" aria-label="今日課堂進度"></progress>
+      <div class="lesson-progress" id="today-lesson-progress" hidden>
+        <p class="lesson-progress-caption" id="today-lesson-progress-text" role="status"></p>
+        <progress class="lesson-progress-bar" id="today-lesson-progress-bar" aria-label="今日課堂進度"></progress>
       </div>
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
@@ -10270,14 +10239,6 @@ function renderDayPanel(){
         <h3 class="day-panel-title">提醒事項</h3>
         <p class="memo-empty">請選擇日期查看當天課程的備忘錄。</p>
       </section>
-      <section class="day-panel-section day-panel-meta">
-        <h3 class="day-panel-title">完成狀態</h3>
-        <div class="day-panel-stats">
-          <div class="day-today-stat"><div class="dts-val">0</div><div class="dts-lbl">課堂</div></div>
-          <div class="day-today-stat"><div class="dts-val day-completed-count">0</div><div class="dts-lbl">完成</div></div>
-          <div class="day-today-stat"><div class="dts-val day-progress-count">0%</div><div class="dts-lbl">進度</div></div>
-        </div>
-      </section>
     </div>`;
     return;
   }
@@ -10292,11 +10253,10 @@ function renderDayPanel(){
   const allEvts=S.calendar[date]||[];
   const dayTotal=allEvts.length;
   const dayDone=allEvts.filter(e=>e.done).length;
-  const dayRate=dayTotal>0?Math.round(dayDone/dayTotal*100):0;
+  const progressText=dayTotal?'已完成 '+dayDone+'／'+dayTotal+' 堂':onToday?'今日未排課':'當日未排課';
   if(onToday){
     const text=$id('today-lesson-progress-text'),bar=$id('today-lesson-progress-bar');
-    const label=dayTotal?'已完成 '+dayDone+'／'+dayTotal+' 堂':'今日未排課';
-    if(text.textContent!==label)text.textContent=label;
+    if(text.textContent!==progressText)text.textContent=progressText;
     bar.hidden=!dayTotal;
     bar.max=dayTotal||1;
     bar.value=dayDone;
@@ -10324,6 +10284,10 @@ function renderDayPanel(){
   el.innerHTML=`  <div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
+      ${onToday?'':`<div class="lesson-progress">
+        <p class="lesson-progress-caption" role="status">${progressText}</p>
+        <progress class="lesson-progress-bar" aria-label="當日課堂進度" max="${dayTotal||1}" value="${dayDone}" ${dayTotal?'':'hidden'}></progress>
+      </div>`}
       <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
       <div id="day-planned-reviews"></div>
     </section>${onToday?`<section id="today-tasks-slot" class="day-panel-section" aria-labelledby="today-tasks-title"><h3 class="day-panel-title" id="today-tasks-title">任務清單</h3></section>
@@ -10340,14 +10304,6 @@ function renderDayPanel(){
       <h3 class="day-panel-title">提醒事項</h3>
       <div id="day-course-memos"></div>
     </section>
-    ${onToday?'':`<section class="day-panel-section day-panel-meta">
-      <h3 class="day-panel-title">完成狀態</h3>
-      <div class="day-panel-stats">
-        <div class="day-today-stat"><div class="dts-val">${dayTotal}</div><div class="dts-lbl">課堂</div></div>
-        <div class="day-today-stat"><div class="dts-val day-completed-count">${dayDone}</div><div class="dts-lbl">完成</div></div>
-        <div class="day-today-stat"><div class="dts-val day-progress-count">${dayRate}%</div><div class="dts-lbl">進度</div></div>
-      </div>
-    </section>`}
   </div>`;
   renderDayMemo();
   refreshDayReviewPlans();
