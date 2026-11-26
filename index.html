@@ -1067,6 +1067,7 @@ body{
 .today-task-annotation{display:flex;flex-wrap:wrap;gap:0 6px;color:var(--text-2);font-size:var(--ui-caption);}
 #today-task-lists .memo-row.is-done .memo-item-text{text-decoration:none;}
 .today-task-item.is-done .today-task-name{text-decoration:line-through;text-decoration-color:var(--text-3);}
+.today-task-tick{display:block;font-weight:inherit;}
 .today-task-section{min-width:0;padding:var(--sp-3);background:var(--card);border:1px solid var(--border-lt);border-radius:var(--r-sm);}
 .today-task-section :is(h3,.memo-checklist){margin-block:0 var(--sp-2);}
 .today-task-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:start;}
@@ -10960,8 +10961,17 @@ function samplePillTap(group,tap,target,now){
   const lift=tap.from[5]*tail+tap.lift*8*progress*tail*(1-Math.min(tap.from[5],1));
   const rail=(tap.rail+1.7*Math.sin(2*Math.PI*progress))*tail;
   group.style.setProperty(pillRailPulse,rail);
-  return [...target.slice(0,4).map((value,index)=>tap.from[index]+(value-tap.from[index])*spring),
-    tap.from[4]*tail,lift];
+  const bounds=target.slice(0,4).map((value,index)=>tap.from[index]+(value-tap.from[index])*spring);
+  if(group.dataset.pillKey==='study-home'){
+    // Keep the leading edge elastic within the rail. The sampled bounds
+    // also become the starting geometry when this motion is interrupted.
+    const travel=target[0]-tap.from[0];
+    const room=travel<0?bounds[0]:group.clientWidth-bounds[0]-bounds[2];
+    const stretch=Math.max(0,Math.min(room,12,Math.abs(travel)*.16, target[2]*.10)*9.5*progress*tail);
+    if(travel<0)bounds[0]-=stretch;
+    bounds[2]+=stretch;
+  }
+  return [...bounds,tap.from[4]*tail,lift];
 }
 
 const pillGroupSelector='.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options';
@@ -15959,6 +15969,18 @@ todayTaskView=(()=>{
   const tabs=[...root.querySelectorAll('[data-task-tab]')];
   const feedback=root.querySelector('.today-task-feedback .toast'),feedbackText=feedback.lastElementChild;
   let timer,feedbackTimer,ownerEpoch=0,selected='daily';
+  const completionDuration=260,completionHolds=new Map();
+  const taskMotion=matchMedia('(prefers-reduced-motion:no-preference)');
+  const completionKey=item=>item.id+':'+item.date;
+  function releaseCompletion(key){
+    clearTimeout(completionHolds.get(key));
+    completionHolds.delete(key);
+  }
+  taskMotion.addEventListener('change',()=>{
+    if(taskMotion.matches||!completionHolds.size)return;
+    for(const key of completionHolds.keys())releaseCompletion(key);
+    refresh();
+  });
   function clearQuickAddFeedback(){
     clearTimeout(feedbackTimer);
     feedback.hidden=true;
@@ -16108,7 +16130,7 @@ todayTaskView=(()=>{
     const annotation=(type==='daily'?'<span>↻ 每天</span>':'')+(date?'<time datetime="'+esc(date)+'">'+esc(fmtDate(date))+'</time>':'');
     return '<li class="memo-row today-task-item'+(done?' is-done':'')+'" data-today-task="'+esc(item.id)+'" data-task-date="'+esc(item.date)+'">'+
       '<button type="button" class="memo-check" data-task-action="toggle" aria-label="完成：'+esc(item.text)+
-      (date?'，'+esc(fmtDate(date)):'')+'" aria-pressed="'+done+'"><span aria-hidden="true">'+(done?'✓':'')+'</span></button>'+
+      (date?'，'+esc(fmtDate(date)):'')+'" aria-pressed="'+done+'"><span aria-hidden="true">'+(done?'<b class="today-task-tick">✓</b>':'')+'</span></button>'+
       '<button type="button" class="memo-item-text" data-task-action="edit" aria-label="編輯：'+esc(item.text)+'">'+
       '<span class="today-task-name">'+esc(item.text)+'</span>'+
       (annotation?'<span class="today-task-annotation">'+annotation+'</span>':'')+'</button>'+
@@ -16121,9 +16143,11 @@ todayTaskView=(()=>{
     const now=Date.now(),today=localDateKey(new Date(now)),deadlines=[];
     for(const section of sections){
       const type=section.dataset.todayTaskType,items=activeTasks(type,now);
-      const pending=items.filter(item=>item.completedAt===null).sort((a,b)=>a.createdAt-b.createdAt);
+      const completing=item=>completionHolds.has(completionKey(item));
+      const pending=items.filter(item=>item.completedAt===null||completing(item)).sort((a,b)=>a.createdAt-b.createdAt);
       const completed=completedTasks(type,items,now).sort((a,b)=>b.completedAt-a.completedAt);
       for(const item of completed)deadlines.push(item.completedAt+todayTaskLifetime);
+      const displayedCompleted=completed.filter(item=>!completing(item));
       const list=section.querySelector('.today-task-items');
       const focus=list.contains(document.activeElement)?document.activeElement:null;
       const previous=focus?.closest('[data-today-task]');
@@ -16135,7 +16159,7 @@ todayTaskView=(()=>{
       const rows=entries=>'<ul class="memo-checklist">'+entries.map(item=>rowHTML(item,type)).join('')+'</ul>';
       const markup=(pending.length?rows(pending):'<p class="memo-empty">'+
         (type==='daily'?'今天沒有未完成的每日作業。':'目前沒有未完成的待辦事項。')+'</p>')+
-        (completed.length?'<div class="today-task-completed"><h4>已完成</h4>'+rows(completed)+'</div>':'');
+        (displayedCompleted.length?'<div class="today-task-completed"><h4>已完成</h4>'+rows(displayedCompleted)+'</div>':'');
       if(list.dataset.rendered!==markup){
         list.dataset.rendered=markup;
         list.innerHTML=markup;
@@ -16171,6 +16195,30 @@ todayTaskView=(()=>{
       ?'無法儲存到本機，請檢查瀏覽器的儲存空間或其他分頁的登入狀態後重試。'
       :'無法儲存，請重試。';
     return saved;
+  }
+  function toggleTask(section,item,button){
+    const {id,date,completedAt}=item,key=completionKey(item);
+    if(completedAt!==null){
+      if(save(section,'uncheck',{id,date}))releaseCompletion(key);
+      return;
+    }
+    if(!taskMotion.matches){save(section,'check',{id,date});return;}
+    const name=button.closest('[data-today-task]').querySelector('.today-task-name');
+    const color=getComputedStyle(name).color;
+    // Save immediately, keeping the checked row in place just long enough
+    // for the local feedback to finish before it joins the completed list.
+    completionHolds.set(key,null);
+    if(!save(section,'check',{id,date})){releaseCompletion(key);return;}
+    completionHolds.set(key,setTimeout(()=>{
+      releaseCompletion(key);
+      refresh();
+    },completionDuration));
+    const row=findRow(section,id,date);
+    const tick=row?.querySelector('.today-task-tick'),label=row?.querySelector('.today-task-name');
+    tick?.animate([{transform:'scale(.72)'},{transform:'scale(1.22)',offset:.4},{transform:'scale(1)'}],
+      {duration:completionDuration,easing:'cubic-bezier(.2,.8,.25,1)'});
+    if(label)label.animate([{color},{color:getComputedStyle(label).color}],
+      {duration:completionDuration,easing:'ease-out'});
   }
   root.addEventListener('submit',event=>{
     event.preventDefault();
@@ -16253,7 +16301,7 @@ todayTaskView=(()=>{
       }else edit(section,true,item);
       return;
     }
-    if(action==='toggle'){save(section,item.completedAt===null?'check':'uncheck',{id,date});return;}
+    if(action==='toggle'){toggleTask(section,item,button);return;}
     const type=section.dataset.todayTaskType,owner=ownerEpoch;
     showConfirm(type==='daily'?'刪除每日作業':'刪除待辦事項',
       '確定刪除「'+item.text+'」？'+(type==='daily'?'之後每天都會移除。':''),
@@ -16268,6 +16316,7 @@ todayTaskView=(()=>{
     root,refresh,activeTasks,
     reset(){
       ownerEpoch++;
+      for(const key of completionHolds.keys())releaseCompletion(key);
       clearQuickAddFeedback();
       select('daily');
       if(['刪除每日作業','刪除待辦事項'].includes($id('confirm-title').textContent))hideConfirm();
