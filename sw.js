@@ -1,10 +1,12 @@
-// ── StudyOS Service Worker v12 ──────────────────────────────────
+// ── StudyOS Service Worker v13 ──────────────────────────────────
 // HTML 先向網路重新驗證，離線時才讀取頁面快取。介面發版時一併更新快取版本。
 //        同源靜態資源 → cache-first（加速載入）
 //        Firebase / Google → 直接穿透
 // 全部使用相對路徑，放在 GitHub Pages 子路徑（/repo-name/）也能正常運作
 
-const CACHE_NAME  = 'course-tracker-v12';
+const CACHE_NAME  = 'course-tracker-v13';
+const APP_ROOT = new URL('./', self.location.href);
+const APP_INDEX = new URL('index.html', APP_ROOT);
 const STATIC_EXTS = ['.js', '.css', '.png', '.jpg', '.svg', '.ico', '.woff2', '.json'];
 const PRECACHE    = ['./manifest.json', './icon-192.png', './icon-512.png'];
 const EXTERNAL    = ['firebase', 'google', 'gstatic', 'googleapis', 'firebaseio'];
@@ -51,6 +53,8 @@ self.addEventListener('fetch', event => {
   // 3. HTML / 頁面導覽：network-first
   const isHTML = req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
   if (isHTML) {
+    // The manifest start URL, index.html and preview queries share the latest app shell.
+    const cacheKey = url.pathname === APP_ROOT.pathname || url.pathname === APP_INDEX.pathname ? APP_INDEX.href : req;
     event.respondWith((async () => {
       try {
         const resp = await fetch(req, { cache: 'no-cache' });
@@ -58,7 +62,7 @@ self.addEventListener('fetch', event => {
           const copy = resp.clone();
           try {
             const cache = await caches.open(CACHE_NAME);
-            await cache.put(req, copy);
+            await cache.put(cacheKey, copy);
           } catch (error) {
             console.warn('[SW] Could not cache HTML', error);
           }
@@ -66,7 +70,7 @@ self.addEventListener('fetch', event => {
         return resp;
       } catch (err) {
         const cache = await caches.open(CACHE_NAME);
-        return (await cache.match(req, { ignoreSearch: true }))
+        return (await cache.match(cacheKey, { ignoreSearch: true }))
             || (await cache.match('./index.html'))
             || (await cache.match('./'))
             || new Response('離線中，且尚無快取版本。', {

@@ -10966,10 +10966,14 @@ function samplePillTap(group,tap,target,now){
     // Keep the leading edge elastic within the rail. The sampled bounds
     // also become the starting geometry when this motion is interrupted.
     const travel=target[0]-tap.from[0];
-    const room=travel<0?bounds[0]:group.clientWidth-bounds[0]-bounds[2];
-    const stretch=Math.max(0,Math.min(room,12,Math.abs(travel)*.16, target[2]*.10)*9.5*progress*tail);
-    if(travel<0)bounds[0]-=stretch;
-    bounds[2]+=stretch;
+    const envelope=16*progress**2*(1-progress)**2;
+    const stretch=Math.min(28,Math.abs(travel)*.36,target[2]*.18)*envelope;
+    const leftRoom=Math.max(0,bounds[0]-2);
+    const rightRoom=Math.max(0,group.clientWidth-bounds[0]-bounds[2]-2);
+    const forward=Math.min(stretch*.72,travel<0?leftRoom:rightRoom);
+    const backward=Math.min(stretch-forward,travel<0?rightRoom:leftRoom);
+    bounds[0]-=travel<0?forward:backward;
+    bounds[2]+=forward+backward;
   }
   return [...bounds,tap.from[4]*tail,lift];
 }
@@ -10996,6 +11000,7 @@ function measurePillOption(group,option){
 function createPillInteraction(group) {
   const isBottomNav=group.classList.contains('bottom-nav');
   const isNav=group.matches('.wide-tabs,.bottom-nav');
+  const tapLift=isBottomNav?.40:isNav?.67:group.dataset.pillKey==='study-home'?.59:.40;
   const strength=isNav?1:.55;
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
   const controller=new AbortController();
@@ -11152,7 +11157,7 @@ function createPillInteraction(group) {
       resetPresentation();
     }else if(changedTab&&!dragRelease){
       cancelAnimationFrame(frame);
-      tapMotion=beginPillTap(group,position,isBottomNav?.40:isNav?.67:.40);
+      tapMotion=beginPillTap(group,position,tapLift);
       lastFrame=tapMotion.start;
       paint();
       frame=requestAnimationFrame(tickTap);
@@ -15969,7 +15974,7 @@ todayTaskView=(()=>{
   const tabs=[...root.querySelectorAll('[data-task-tab]')];
   const feedback=root.querySelector('.today-task-feedback .toast'),feedbackText=feedback.lastElementChild;
   let timer,feedbackTimer,ownerEpoch=0,selected='daily';
-  const completionDuration=260,completionHolds=new Map();
+  const completionHold=520,completionAnimation=440,completionHolds=new Map();
   const taskMotion=matchMedia('(prefers-reduced-motion:no-preference)');
   const completionKey=item=>item.id+':'+item.date;
   function releaseCompletion(key){
@@ -16010,7 +16015,7 @@ todayTaskView=(()=>{
     const item=target&&!section.hidden&&editableTask(section.dataset.todayTaskType,target.id,Date.now());
     if(item)edit(section,true,{...item,date:target.date});
     else if(restoreFocus&&!section.hidden)add.focus({preventScroll:true});
-    if(text)showQuickAddFeedback(section);
+    if(text&&section.dataset.todayTaskType==='daily')showQuickAddFeedback(section);
   }
   function scheduleQuickBlur(draft,delay=0){
     clearTimeout(draft.blurTimer);
@@ -16212,13 +16217,19 @@ todayTaskView=(()=>{
     completionHolds.set(key,setTimeout(()=>{
       releaseCompletion(key);
       refresh();
-    },completionDuration));
+    },completionHold));
     const row=findRow(section,id,date);
-    const tick=row?.querySelector('.today-task-tick'),label=row?.querySelector('.today-task-name');
-    tick?.animate([{transform:'scale(.72)'},{transform:'scale(1.22)',offset:.4},{transform:'scale(1)'}],
-      {duration:completionDuration,easing:'cubic-bezier(.2,.8,.25,1)'});
-    if(label)label.animate([{color},{color:getComputedStyle(label).color}],
-      {duration:completionDuration,easing:'ease-out'});
+    const tick=row?.querySelector('.memo-check > span'),label=row?.querySelector('.today-task-name');
+    tick?.animate([
+      {transform:'scale(.82)',easing:'cubic-bezier(.2,.8,.25,1)'},
+      {transform:'scale(1.38)',offset:.34,easing:'ease-out'},
+      {transform:'scale(1)',offset:.91},{transform:'scale(1)'}
+    ],{duration:completionAnimation});
+    if(label){
+      const doneColor=getComputedStyle(label).color;
+      label.animate([{color,opacity:1},{color:doneColor,opacity:.76,offset:.70},{color:doneColor,opacity:1}],
+        {duration:completionAnimation,easing:'ease-in-out'});
+    }
   }
   root.addEventListener('submit',event=>{
     event.preventDefault();
