@@ -3787,8 +3787,7 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
 #review-plan-dialog .study-field{margin-block:12px;}
 #review-plan-source{overflow-wrap:anywhere;}
 #review-plan-form [hidden],#paper-group-actions [hidden]{display:none;}
-.review-plan-presets{justify-content:flex-start;gap:8px;}
-.review-plan-presets button[aria-pressed=true]{background:var(--nav-sel);}
+.review-plan-presets{justify-content:flex-start;}
 .planned-review-list{display:grid;gap:8px;margin-block:8px;}
 .planned-review-row{flex-wrap:wrap;}
 .planned-review-row .study-brief-text{min-width:min(100%,9rem);}
@@ -4701,7 +4700,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 
 /* Animate the rail behind the selection without moving the labels or hit areas. */
 :is(.wide-tabs,.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options)::after {
-  transform:scale(calc(1 + var(--pill-rail-pulse,0)*var(--pill-rail-scale-x,.025)),
+  transform:translateX(var(--pill-rail-scroll,0px)) scale(calc(1 + var(--pill-rail-pulse,0)*var(--pill-rail-scale-x,.025)),
     calc(1 + var(--pill-rail-pulse,0)*var(--pill-rail-scale-y,.048)));
 }
 :is(.bottom-nav,#panel-cal .view-toggle,.account-theme,.study-mode-options) {
@@ -4751,8 +4750,24 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   text-decoration:none !important;
   -webkit-tap-highlight-color:transparent;
 }
+.study-mode-options:not([data-pill-ready])::before{content:none;}
+.study-mode-options > :is(button[aria-pressed=true],label:has(input:checked)),
+:is(#panel-cal .view-toggle,.account-theme) > button {
+  touch-action:pan-y;
+  touch-action:pan-y pinch-zoom;
+  -webkit-touch-callout:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+:is(#paper-batch-filters,.study-radio-segments,.review-plan-presets){
+  flex-wrap:nowrap;max-inline-size:100%;overflow-x:auto;overscroll-behavior-inline:contain;
+}
+:is(#paper-batch-filters,.study-radio-segments,.review-plan-presets) > :is(button,label){
+  flex:none;white-space:nowrap;
+}
 :is(#panel-cal .view-toggle,.account-theme,.study-mode-options) > :is(button,label) {
   border-radius:var(--r-pill);
+  font-weight:650;
   color:var(--segment-text);
   transition:color 150ms var(--motion-ease);
 }
@@ -4773,7 +4788,8 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 
 @supports (color:color-mix(in srgb,white,transparent)) {
   :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-moving]::before {
-    --lift:var(--segment-lift,0);
+    --lift:var(--nav-material,0);
+    background-image:radial-gradient(70% 85% at var(--nav-glint-x,50%) 0%,color-mix(in srgb,white calc(var(--lift)*40%),transparent),transparent 68%) !important;
     box-shadow:inset 0 0 0 1px var(--seg-pill-edge),
       inset 0 calc(var(--lift)*2px) calc(var(--lift)*4px) color-mix(in srgb,white calc(var(--lift)*48%),transparent),
       0 calc(var(--lift)*5px) calc(var(--lift)*12px) color-mix(in srgb,black calc(var(--lift)*38%),transparent) !important;
@@ -4783,6 +4799,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 @media (prefers-reduced-transparency:reduce), (prefers-contrast:more), (forced-colors:active) {
   :is(#panel-cal .view-toggle,.account-theme,.study-mode-options)[data-pill-moving]::before {
+    background-image:none !important;
     -webkit-backdrop-filter:none;
     backdrop-filter:none;
   }
@@ -5628,7 +5645,7 @@ onAuthStateChanged(auth,user=>{
   <div class="makeup-head"><h2 id="review-plan-title">安排複習</h2><button type="button" class="btn popup-close" id="review-plan-close" aria-label="關閉複習設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
   <p id="review-plan-source" class="study-meta"></p>
   <form id="review-plan-form">
-    <div class="study-actions review-plan-presets" role="group" aria-label="複習日期快捷選擇">
+    <div class="study-actions study-mode-options review-plan-presets" role="group" aria-label="複習日期快捷選擇">
       <button type="button" class="btn btn-sand" data-review-offset="1" aria-pressed="false">明天</button>
       <button type="button" class="btn btn-sand" data-review-offset="3" aria-pressed="false">3 天後</button>
       <button type="button" class="btn btn-sand" data-review-offset="7" aria-pressed="false">7 天後</button>
@@ -10906,7 +10923,6 @@ function init(){
   mountWideLayout();
   refreshWeekProgressClock();
   checkIOSInstall();
-  mountTouchNavPills();
 
 }
 
@@ -10935,25 +10951,41 @@ function samplePillTap(group,tap,target,now){
     tap.from[4]*tail,lift];
 }
 
-const touchNavPills=new Map();
-function mountTouchNavPills() {
-  const bottomNav=document.querySelector('.bottom-nav');
-  const topNav=document.querySelector('.wide-tabs');
-  if(bottomNav&&!touchNavPills.has(bottomNav))touchNavPills.set(bottomNav,mountTouchNavPill(bottomNav));
-  if(topNav&&!touchNavPills.has(topNav))touchNavPills.set(topNav,mountTouchNavPill(topNav));
+const pillGroupSelector='.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options';
+const pillOptionSelector='button,label:has(input[type=radio])';
+const pillSelectedSelector='[aria-current=page],[aria-pressed=true],label:has(input:checked)';
+function pillOptions(group){
+  return [...group.children].filter(option=>option.matches(pillOptionSelector));
+}
+function selectedPillOption(group){
+  return pillOptions(group).find(option=>option.matches(pillSelectedSelector));
+}
+function measurePillOption(group,option){
+  if(option.offsetParent===group)return [option.offsetLeft,option.offsetTop,option.offsetWidth,option.offsetHeight];
+  // Use CSS pixels even when an opening popover visually scales the group.
+  const frame=group.getBoundingClientRect(),rect=option.getBoundingClientRect();
+  const sx=frame.width/group.offsetWidth||1,sy=frame.height/group.offsetHeight||1;
+  return [(rect.left-frame.left)/sx-group.clientLeft+group.scrollLeft,
+    (rect.top-frame.top)/sy-group.clientTop+group.scrollTop,rect.width/sx,rect.height/sy]
+    .map(value=>Math.round(value*10)/10);
 }
 
-function mountTouchNavPill(group) {
+function createPillInteraction(group) {
   const isBottomNav=group.classList.contains('bottom-nav');
+  const isNav=group.matches('.wide-tabs,.bottom-nav');
+  const strength=isNav?1:.55;
   const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
-  const tabs=[...group.querySelectorAll(':scope > button')];
-  const active=()=>tabs.find(tab=>tab.getAttribute('aria-current')==='page');
+  const controller=new AbortController();
+  const {signal}=controller;
+  const listen=(element,type,handler,options)=>element.addEventListener(type,handler,{...options,signal});
+  const enabled=()=>pillOptions(group).filter(tab=>tab.offsetWidth&&!tab.matches(':disabled,[aria-disabled=true]')&&!tab.querySelector('input:disabled'));
+  const active=()=>selectedPillOption(group);
   const properties=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height','--nav-glint-x','--nav-glint-angle','--nav-edge-shift','--nav-material'];
   const threshold=6;
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
   const rubber=(over,dim)=>over===0?0:(Math.sign(over)*(Math.abs(over)*dim*0.35)/(dim+0.35*Math.abs(over)));
   let target,position,velocity=[0,0,0,0,0,0],frame=0,dragFrame=0,lastFrame=0;
-  let gesture,tapMotion,blockClick=false,blockClickTimer=0;
+  let gesture,tapMotion,releasing=false,blockClick=false,blockClickTimer=0;
 
   function freeze() {
     cancelAnimationFrame(frame);
@@ -10967,7 +10999,7 @@ function mountTouchNavPill(group) {
   function paintedBounds() {
     const [left,top,width,height,stretch,lift]=position;
     const extension=Math.max(0,stretch);
-    const l=Math.max(0,lift);
+    const l=Math.max(0,lift)*strength;
     const cushionX=l*(isBottomNav?4:3.5);
     const cushionY=l*(isBottomNav?3.6:2.8);
     const liftOffset=l*(isBottomNav?2.5:1.9);
@@ -10993,7 +11025,7 @@ function mountTouchNavPill(group) {
     group.style.setProperty(properties[6],edgeShift);
     const material=reducedMotion.matches?0:clamp(lift,0,1);
     group.style.setProperty(properties[7],material.toFixed(3));
-    group.toggleAttribute('data-touch-nav-pill-raised',material>.001);
+    group.toggleAttribute(isNav?'data-touch-nav-pill-raised':'data-pill-moving',material>.001);
   }
 
   function resetPresentation() {
@@ -11013,7 +11045,7 @@ function mountTouchNavPill(group) {
       gesture.vx*=Math.exp(-20*dt);
       if(Math.abs(gesture.vx)<4)gesture.vx=0;
     }
-    const desiredStretch=reducedMotion.matches?0:clamp(Math.abs(gesture.vx)/28,0,14);
+    const desiredStretch=reducedMotion.matches?0:clamp(Math.abs(gesture.vx)/28,0,14*strength);
     const desiredLift=reducedMotion.matches?0:1;
     // Elastic spring for horizontal stretch and glass lift while tracking finger 1:1
     velocity[4]+=(360*(desiredStretch-position[4])-27*velocity[4])*dt;
@@ -11080,19 +11112,23 @@ function mountTouchNavPill(group) {
     frame=requestAnimationFrame(tickTap);
   }
 
-  function align([left,top,width,height],animate) {
+  function align([left,top,width,height],animate,dragRelease=false) {
     // Drag release already sets its destination before it activates the tab.
     const changedTab=!!target&&(target[0]!==left||target[1]!==top);
     target=[left,top,width,height,0,0];
-    if(gesture)return;
+    // Size changes can arrive while a rebuilt page is still laying out. Keep
+    // the current animation clock and let its next frame use the new bounds.
+    if(gesture||(!animate&&frame&&!reducedMotion.matches))return;
     if(!animate||!position||reducedMotion.matches){
       resetPresentation();
-    }else if(changedTab){
+    }else if(changedTab&&!dragRelease){
       cancelAnimationFrame(frame);
-      tapMotion=beginPillTap(group,position,isBottomNav?.40:.67);
+      tapMotion=beginPillTap(group,position,isBottomNav?.40:isNav?.67:.40);
       lastFrame=tapMotion.start;
       paint();
       frame=requestAnimationFrame(tickTap);
+    }else if(tapMotion){
+      if(!frame)frame=requestAnimationFrame(tickTap);
     }else{
       settle();
     }
@@ -11102,25 +11138,26 @@ function mountTouchNavPill(group) {
     if(position)return true;
     const selected=active();
     if(!selected||!selected.offsetWidth)return false;
-    target=[selected.offsetLeft,selected.offsetTop,selected.offsetWidth,selected.offsetHeight,0,0];
+    target=[...measurePillOption(group,selected),0,0];
     position=target.slice();
     return true;
   }
 
   function touchesPill(touch,hit) {
     const selected=active();
-    if(!selected||!ensurePosition())return false;
+    if(!selected||!enabled().includes(selected)||!ensurePosition())return false;
     if(selected.contains(hit))return true;
     // A moving pill can be painted over another tab. Use the painted bounds
     // as well as the selected button's hit area, without adding an overlay.
     const bounds=group.getBoundingClientRect();
     const [left,top,width,height]=paintedBounds();
-    const x=touch.clientX-bounds.left-group.clientLeft,y=touch.clientY-bounds.top-group.clientTop;
+    const x=touch.clientX-bounds.left-group.clientLeft+group.scrollLeft;
+    const y=touch.clientY-bounds.top-group.clientTop+group.scrollTop;
     return x>=left&&x<=left+width&&y>=top&&y<=top+height;
   }
 
   // Touch events stay on the original nav target as the finger crosses labels.
-  group.addEventListener('touchstart',event=>{
+  listen(group,'touchstart',event=>{
     if(event.touches.length!==1){cancelTouch();return;}
     clearTimeout(blockClickTimer);
     blockClick=false;
@@ -11155,9 +11192,11 @@ function mountTouchNavPill(group) {
     gesture.lastX=clientX;
     gesture.lastTime=now;
     const dx=clientX-gesture.x;
+    const tabs=enabled();
     const first=tabs[0],last=tabs[tabs.length-1];
-    const minLeft=first.offsetLeft;
-    const maxLeft=last.offsetLeft+last.offsetWidth-position[2];
+    if(!first)return;
+    const [minLeft]=measurePillOption(group,first),[lastLeft,,lastWidth]=measurePillOption(group,last);
+    const maxLeft=Math.max(minLeft,lastLeft+lastWidth-position[2]);
     const raw=gesture.start+dx;
     let left=clamp(raw,minLeft,maxLeft);
     if(!reducedMotion.matches){
@@ -11174,32 +11213,33 @@ function mountTouchNavPill(group) {
   }
 
   function commitDragRelease(clientX,clientY,wasDragging,releaseVx) {
+    gesture=null;
     if(wasDragging) {
+      if(!reducedMotion.matches)velocity[0]=clamp(releaseVx,-1600,1600);
+      blockNextClick();
       const bounds=group.getBoundingClientRect();
       const slop=44;
       if(clientX>=bounds.left-slop&&clientX<=bounds.right+slop&&clientY>=bounds.top-slop&&clientY<=bounds.bottom+slop) {
         const [left,,width]=paintedBounds();
         const center=left+width/2;
-        const distance=tab=>Math.abs(tab.offsetLeft+tab.offsetWidth/2-center);
+        const distance=tab=>{
+          const [x,,w]=measurePillOption(group,tab);
+          return Math.abs(x+w/2-center);
+        };
         const selected=active();
-        const nearest=tabs.reduce((closest,tab)=>distance(tab)<distance(closest)?tab:closest,selected);
-        if(nearest!==selected){
-          target=[nearest.offsetLeft,nearest.offsetTop,nearest.offsetWidth,nearest.offsetHeight,0,0];
-          gesture=null;
+        const nearest=enabled().reduce((closest,tab)=>!closest||distance(tab)<distance(closest)?tab:closest,selected);
+        if(nearest&&nearest!==selected){
+          target=[...measurePillOption(group,nearest),0,0];
+          releasing=true;
           nearest.click();
+          releasing=false;
         }
       }
     }
-    gesture=null;
-    if(wasDragging){
-      if(!reducedMotion.matches)velocity[0]=clamp(releaseVx,-1600,1600);
-      clearTimeout(blockClickTimer);
-      blockClickTimer=setTimeout(()=>{blockClick=false;},350);
-    }
-    settle();
+    if(!signal.aborted)settle();
   }
 
-  group.addEventListener('touchmove',event=>{
+  listen(group,'touchmove',event=>{
     if(event.touches.length!==1){cancelTouch();return;}
     const touch=trackedTouch(event);
     if(!touch)return;
@@ -11207,20 +11247,14 @@ function mountTouchNavPill(group) {
       const dx=Math.abs(touch.clientX-gesture.x),dy=Math.abs(touch.clientY-gesture.y);
       if(Math.max(dx,dy)<threshold)return;
       blockClick=true;
-      if(dy>=dx) {
-        gesture=null;
-        clearTimeout(blockClickTimer);
-        blockClickTimer=setTimeout(()=>{blockClick=false;},350);
-        settle();
-        return;
-      }
+      if(dy>=dx){cancelTouch();return;}
       gesture.dragging=true;
     }
     if(event.cancelable)event.preventDefault();
     follow(touch);
   },{passive:false});
 
-  group.addEventListener('touchend',event=>{
+  listen(group,'touchend',event=>{
     const touch=trackedTouch(event);
     if(!touch)return;
     const wasDragging=gesture.dragging;
@@ -11232,17 +11266,21 @@ function mountTouchNavPill(group) {
     commitDragRelease(touch.clientX,touch.clientY,wasDragging,releaseVx);
   },{passive:false});
 
-  function cancelTouch() {
-    if(!gesture)return;
-    gesture=null;
+  function blockNextClick(){
     blockClick=true;
     clearTimeout(blockClickTimer);
     blockClickTimer=setTimeout(()=>{blockClick=false;},350);
+  }
+
+  function cancelTouch() {
+    if(!gesture)return;
+    gesture=null;
+    blockNextClick();
     settle();
   }
-  group.addEventListener('touchcancel',cancelTouch);
-  group.addEventListener('contextmenu',event=>{if(gesture)event.preventDefault();});
-  group.addEventListener('pointerdown',event=>{
+  listen(group,'touchcancel',cancelTouch);
+  listen(group,'contextmenu',event=>{if(gesture)event.preventDefault();});
+  listen(group,'pointerdown',event=>{
     if(event.pointerType==='mouse')blockClick=false;
     if(event.pointerType==='touch'||event.button!==0)return;
     if(!touchesPill(event,event.target))return;
@@ -11264,7 +11302,7 @@ function mountTouchNavPill(group) {
     paint();
     if(!reducedMotion.matches)startDragLoop();
   });
-  group.addEventListener('pointermove',event=>{
+  listen(group,'pointermove',event=>{
     if(gesture?.id!=='pointer:'+event.pointerId)return;
     if(!gesture.dragging){
       const dx=Math.abs(event.clientX-gesture.x),dy=Math.abs(event.clientY-gesture.y);
@@ -11284,190 +11322,133 @@ function mountTouchNavPill(group) {
     try{if(group.hasPointerCapture(event.pointerId))group.releasePointerCapture(event.pointerId);}catch{}
     commitDragRelease(event.clientX,event.clientY,wasDragging,releaseVx);
   };
-  group.addEventListener('pointerup',endPointer);
-  window.addEventListener('pointerup',endPointer);
-  group.addEventListener('pointercancel',event=>{
+  listen(group,'pointerup',endPointer);
+  listen(window,'pointerup',endPointer);
+  listen(window,'pointercancel',event=>{
     if(gesture?.id==='pointer:'+event.pointerId)cancelTouch();
   });
-  window.addEventListener('pointercancel',event=>{
-    if(gesture?.id==='pointer:'+event.pointerId)cancelTouch();
-  });
-  group.addEventListener('click',event=>{
+  listen(window,'blur',cancelTouch);
+  listen(group,'click',event=>{
     if(!blockClick||!event.isTrusted||!event.detail)return;
     event.preventDefault();
     event.stopPropagation();
     blockClick=false;
-  },true);
+  },{capture:true});
 
   function resetGesture() {
     if(gesture?.dragging)blockClick=true;
     gesture=null;
     resetPresentation();
   }
-  reducedMotion.addEventListener('change',resetGesture);
-  // The shared layout controller can skip unchanged geometry on rotation.
-  window.addEventListener('resize',resetGesture);
+  listen(reducedMotion,'change',resetGesture);
+  listen(window,'resize',resetGesture);
 
-  const selected=active();
-  if(selected?.offsetWidth)align([selected.offsetLeft,selected.offsetTop,selected.offsetWidth,selected.offsetHeight],false);
-  group.setAttribute('data-touch-nav-pill','');
-  return {align};
+  if(isNav)group.setAttribute('data-touch-nav-pill','');
+  return {
+    align,
+    clear(){
+      target=null;
+      resetGesture();
+    },
+    snapshot(){
+      return {position:position?.slice(),target:target?.slice(),velocity:velocity.slice(),tapMotion,
+        rail:group.style.getPropertyValue(pillRailPulse),releasing,focused:group.contains(document.activeElement)};
+    },
+    restore(prior){
+      position=prior.position;
+      target=prior.target;
+      velocity=prior.velocity;
+      tapMotion=prior.tapMotion;
+      lastFrame=performance.now();
+      if(prior.rail)group.style.setProperty(pillRailPulse,prior.rail);
+      paint();
+    },
+    destroy(){
+      controller.abort();
+      clearTimeout(blockClickTimer);
+      resetGesture();
+    },
+    signal
+  };
 }
 
 const pillMotion=(()=>{
-  const selector='.bottom-nav,.wide-tabs,#panel-cal .view-toggle,.account-theme,.study-mode-options';
   const mounted=new Map();
-  const reducedMotion=matchMedia('(prefers-reduced-motion:reduce)');
-  const dragProps=['--nav-drag-x','--nav-drag-y','--nav-drag-width','--nav-drag-height'];
-  function createSegmentMotion(group){
-    let target,position,tap,frame=0;
-    const liftProp='--segment-lift';
-    function paint(){
-      const [x,y,width,height,,lift]=position;
-      group.style.setProperty(dragProps[0],(x-lift)+'px');
-      group.style.setProperty(dragProps[1],(y-lift*1.5)+'px');
-      group.style.setProperty(dragProps[2],Math.max(1,width+lift*2)+'px');
-      group.style.setProperty(dragProps[3],Math.max(1,height+lift*2)+'px');
-      group.style.setProperty(liftProp,lift);
+  const motionAllowed=matchMedia('(prefers-reduced-motion:no-preference)');
+  function update(group,animate,prior){
+    const state=mounted.get(group),selected=selectedPillOption(group);
+    if(!selected){
+      if(state.geometry)state.motion.clear();
+      state.geometry=null;
+      group.removeAttribute('data-pill-ready');
+      return;
     }
-    function clearPaint(){
-      cancelAnimationFrame(frame);
-      frame=0;
-      dragProps.forEach(prop=>group.style.removeProperty(prop));
-      group.style.removeProperty(liftProp);
-      group.style.removeProperty(pillRailPulse);
-    }
-    function reset(){
-      position=target?.slice();
-      tap=null;
-      clearPaint();
-      group.removeAttribute('data-pill-moving');
-    }
-    function tick(now){
-      const next=samplePillTap(group,tap,target,now);
-      if(!next){reset();return;}
-      position=next;
-      paint();
-      frame=requestAnimationFrame(tick);
-    }
-    return {
-      align(values,animate){
-        const changedTab=!!target&&(target[0]!==values[0]||target[1]!==values[1]);
-        target=[...values,0,0];
-        if(!animate||!position||reducedMotion.matches){reset();return;}
-        if(changedTab)tap=beginPillTap(group,position,.35);
-        if(!tap){reset();return;}
-        paint();
-        if(!frame)frame=requestAnimationFrame(tick);
-      },
-      snapshot(){return {position:position?.slice(),target:target?.slice(),tap,rail:group.style.getPropertyValue(pillRailPulse)};},
-      restore(prior){
-        position=prior.position;
-        target=prior.target;
-        tap=prior.tap;
-        if(prior.rail)group.style.setProperty(pillRailPulse,prior.rail);
-      },
-      destroy:clearPaint
-    };
-  }
-  reducedMotion.addEventListener('change',()=>{
-    if(!reducedMotion.matches)return;
-    for(const [group,state] of mounted){
-      group.removeAttribute('data-pill-moving');
-      if(state.geometry&&state.spring)state.spring.align(state.geometry,false);
-    }
-  });
-  function update(group,animate){
-    const state=mounted.get(group);
-    const selected=group.querySelector('[aria-current=page],[aria-pressed=true],label:has(input:checked)');
-    if(!selected||!group.getClientRects().length)return;
-    // Measure in CSS pixels so an opening popover's scale can't shrink its selection.
-    let values;
-    if(selected.offsetParent===group){
-      values=[selected.offsetLeft,selected.offsetTop,selected.offsetWidth,selected.offsetHeight];
-    }else{
-      const frame=group.getBoundingClientRect(),rect=selected.getBoundingClientRect();
-      const sx=frame.width/group.offsetWidth||1,sy=frame.height/group.offsetHeight||1;
-      values=[(rect.left-frame.left)/sx-group.clientLeft+group.scrollLeft,(rect.top-frame.top)/sy-group.clientTop+group.scrollTop,rect.width/sx,rect.height/sy];
-      values=values.map(value=>Math.round(value*10)/10);
-    }
-    if(!values[2]||!values[3]||values.every((value,i)=>value===state.geometry?.[i]))return;
-    // Spring retargets from the position and width currently being rendered.
-    place(group,state,values,animate&&!!state.geometry);
-  }
-  function place(group,state,values,animate=false){
-    group.toggleAttribute('data-pill-moving',animate);
+    if(!group.getClientRects().length)return;
+    const geometry=measurePillOption(group,selected);
+    if(!geometry[2]||!geometry[3]||geometry.every((value,i)=>value===state.geometry?.[i]))return;
+    const animateFromCurrent=animate&&Boolean(state.geometry||prior?.position);
     group.setAttribute('data-pill-ready','');
-    ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,values[i]+'px'));
-    state.geometry=values;
-    const touchNav=touchNavPills.get(group);
-    if(touchNav)touchNav.align(values,animate);
-    else state.spring?.align(values,animate);
+    ['x','y','width','height'].forEach((key,i)=>group.style.setProperty('--pill-'+key,geometry[i]+'px'));
+    state.geometry=geometry;
+    if(prior?.position&&motionAllowed.matches)state.motion.restore(prior);
+    state.motion.align(geometry,animateFromCurrent,prior?.releasing);
   }
   function capture(root){
     const previous=new Map();
     for(const group of root.querySelectorAll('[data-pill-key][data-pill-ready]')){
       if(!group.offsetWidth)continue;
-      const style=getComputedStyle(group,'::before'),matrix=new DOMMatrixReadOnly(style.transform);
-      const spring=mounted.get(group)?.spring?.snapshot();
-      previous.set(group.dataset.pillKey,{
-        geometry:spring?.position?.slice(0,4)||[matrix.m41,matrix.m42,parseFloat(style.width),parseFloat(style.height)],
-        scroll:group.scrollLeft,focused:group.contains(document.activeElement),spring
-      });
+      const state=mounted.get(group);
+      if(state)previous.set(group.dataset.pillKey,{...state.motion.snapshot(),scroll:group.scrollLeft});
     }
     return previous;
   }
+  function onScroll(event){
+    const group=event.currentTarget;
+    group.style.setProperty('--pill-rail-scroll',group.scrollLeft+'px');
+  }
   window.addEventListener('resize',()=>{
-    for(const group of mounted.keys()){
-      group.removeAttribute('data-pill-moving');
-      update(group,false);
-    }
+    for(const group of mounted.keys())update(group,false);
   });
   const resize=new ResizeObserver(entries=>{
     for(const entry of entries){
-      const group=entry.target.closest(selector);
+      const group=entry.target.closest(pillGroupSelector);
       if(group&&mounted.has(group))update(group,false);
     }
   });
   return {
     capture,
     mount(root,previous){
-      for(const [group,{observer,options,spring}] of mounted){
+      for(const [group,{observer,options,motion}] of mounted){
         if(group.isConnected)continue;
-        spring?.destroy();
+        motion.destroy();
         observer.disconnect();
         resize.unobserve(group);
         for(const option of options)resize.unobserve(option);
         mounted.delete(group);
       }
-      for(const group of root.querySelectorAll(selector)){
+      for(const group of root.querySelectorAll(pillGroupSelector)){
         if(mounted.has(group))continue;
-        const options=new Set(group.children);
+        const options=new Set(pillOptions(group));
         const observer=new MutationObserver(records=>{
           if(records.some(record=>record.type==='childList'&&record.target===group)){
             for(const option of options)resize.unobserve(option);
             options.clear();
-            for(const option of group.children){options.add(option);resize.observe(option);}
+            for(const option of pillOptions(group)){options.add(option);resize.observe(option);}
           }
           update(group,records.some(record=>record.type==='attributes'));
         });
-        const spring=touchNavPills.has(group)?null:createSegmentMotion(group);
-        const state={observer,options,geometry:null,spring};
-        mounted.set(group,state);
+        const motion=createPillInteraction(group);
+        mounted.set(group,{observer,options,geometry:null,motion});
         observer.observe(group,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-pressed','aria-current']});
-        group.addEventListener('change',()=>update(group,true));
+        group.addEventListener('change',()=>update(group,true),{signal:motion.signal});
+        if(group.matches('.study-mode-options'))group.addEventListener('scroll',onScroll,{passive:true,signal:motion.signal});
         const prior=previous?.get(group.dataset.pillKey);
         if(prior&&group.offsetWidth){
           group.scrollLeft=prior.scroll;
-          place(group,state,prior.geometry,false);
-          if(prior.spring&&!reducedMotion.matches)spring?.restore(prior.spring);
-          update(group,true);
-          if(prior.spring?.tap&&state.geometry===prior.geometry&&!reducedMotion.matches){
-            group.setAttribute('data-pill-moving','');
-            spring?.align(state.geometry,true);
-          }
-          if(prior.focused)group.querySelector('[aria-pressed=true]')?.focus({preventScroll:true});
-        }else update(group,false);
+          onScroll({currentTarget:group});
+        }
+        update(group,Boolean(prior),prior);
+        if(prior?.focused)selectedPillOption(group)?.focus({preventScroll:true});
         resize.observe(group);
         for(const option of options)resize.observe(option);
       }
@@ -12464,9 +12445,9 @@ const studyRoom=(()=>{
       '沿用原有計分，顯示答對、答錯與未作答題數。';
   }
   function paperScoringFields(rules){
-    return '<div class="paper-scoring-options"><fieldset class="study-modes"><legend>計分方式</legend>'+
+    return '<div class="paper-scoring-options"><fieldset class="study-modes"><legend>計分方式</legend><div class="study-mode-options study-radio-segments">'+
       '<label><input type="radio" name="scoringMode" value="default"'+(!rules?' checked':'')+'> 沿用原有計分</label>'+
-      '<label><input type="radio" name="scoringMode" value="custom"'+(rules?' checked':'')+'> 自訂計分</label></fieldset>'+
+      '<label><input type="radio" name="scoringMode" value="custom"'+(rules?' checked':'')+'> 自訂計分</label></div></fieldset>'+
       '<div id="paper-scoring-fields"'+(!rules?' hidden':'')+'>'+
       ['correct','wrong'].map(key=>'<label class="study-field"><span>'+({correct:'答對每題得幾分',wrong:'答錯每題扣幾分'})[key]+'</span>'+
         '<input type="text" name="'+key+'Points" inputmode="decimal" maxlength="24" required'+(!rules?' disabled':'')+
@@ -13648,12 +13629,12 @@ const batchDialog=$id('study-batch');
     if(!p){go('papers');return;}
     draw('模擬考','<form id="paper-exam-config" class="study-surface"><p class="study-meta">'+esc(paperTitle(p))+'</p>'+
       '<p class="study-meta">'+paperScoringText(p.scoring)+'</p>'+
-      '<fieldset class="study-modes"><legend>作答時間</legend>'+
+      '<fieldset class="study-modes"><legend>作答時間</legend><div class="study-mode-options study-radio-segments">'+
       '<label><input type="radio" name="limit" value="unlimited" checked> 不限時</label> '+
-      '<label><input type="radio" name="limit" value="timed"> 限時</label></fieldset>'+
-      '<fieldset id="paper-exam-durations" class="study-modes paper-exam-durations" hidden disabled><legend>時間限制</legend>'+
+      '<label><input type="radio" name="limit" value="timed"> 限時</label></div></fieldset>'+
+      '<fieldset id="paper-exam-durations" class="study-modes paper-exam-durations" hidden disabled><legend>時間限制</legend><div class="study-mode-options study-radio-segments">'+
       [30,60,90,'custom'].map(value=>'<label><input type="radio" name="duration" value="'+value+'"'+
-        (value===30?' checked':'')+'> '+(value==='custom'?'自訂':value+' 分鐘')+'</label>').join('')+
+        (value===30?' checked':'')+'> '+(value==='custom'?'自訂':value+' 分鐘')+'</label>').join('')+'</div>'+
       '<label class="study-field" id="paper-exam-custom" hidden><span>自訂分鐘數</span>'+
       '<input type="number" name="minutes" min="1" step="1" inputmode="numeric" disabled required></label></fieldset>'+
       '<p class="study-error" role="alert"></p><div class="study-actions"><button class="btn btn-primary">開始</button></div></form>','paper-return');
