@@ -88,17 +88,27 @@
   const skip = dialog.querySelector('button');
 
   // Card Fan #04 in Motion Library uses a shared pivot and a .273 radian step.
-  // Start partly open, close around that pivot, then reveal the page through the stack.
-  const duration = 510;
-  const clamp = value => Math.max(0, Math.min(1, value));
+  const openStart = 24;
+  const openEnd = 170;
+  const closeStart = 260;
+  const closeEnd = 400;
+  const duration = 580;
+
+  function ease(progress) {
+    const t = Math.max(0, Math.min(1, progress));
+    return t * t * (3 - 2 * t);
+  }
+
   function draw(elapsed) {
-    const spread = .43 * (1 - clamp(elapsed / 200)) ** 2;
+    const opened = ease((elapsed - openStart) / (openEnd - openStart));
+    const closed = ease((elapsed - closeStart) / (closeEnd - closeStart));
+    const spread = opened * (1 - closed);
     cards.forEach((card, i) => {
       card.style.transform = `rotate(${(i - 2.35) * .273 * spread}rad)`;
     });
-    const reveal = clamp((elapsed - 225) / (duration - 225));
-    const fade = 1 - reveal * reveal * (3 - 2 * reveal);
-    stage.style.transform = `translate(-50%, -50%) scale(${1 + 1.6 * reveal ** 2})`;
+    const reveal = ease((elapsed - closeEnd) / (duration - closeEnd));
+    const fade = 1 - reveal;
+    stage.style.transform = `translate(-50%, -50%) scale(${1 + 1.6 * reveal})`;
     stage.style.opacity = veil.style.opacity = skip.style.opacity = fade;
   }
 
@@ -120,7 +130,9 @@
   function animate() {
     if (document.hidden) return;
     const now = performance.now();
-    elapsed += lastFrame === undefined ? 0 : now - lastFrame;
+    const delta = lastFrame === undefined ? 0 : now - lastFrame;
+    // Keep the opening readable if startup drops a frame.
+    elapsed += elapsed < closeStart ? Math.min(delta, 48) : delta;
     lastFrame = now;
     if (elapsed >= duration) {
       finish();
