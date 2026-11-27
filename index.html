@@ -7,23 +7,40 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="StudyOS">
-<meta name="theme-color" content="#f2e8da">
+<meta name="color-scheme" content="light dark">
+<style>
+/* Paint the theme canvas while the rest of the page is still loading. */
+:root {
+  --bg-light: #f2e8da;
+  --bg-dark: #26282c;
+  --bg: var(--bg-light);
+  color-scheme: light;
+  background-color: var(--bg);
+}
+:root[data-theme=dark] { --bg: var(--bg-dark); color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { --bg: var(--bg-dark); color-scheme: dark; }
+}
+</style>
 <script>
 const studyTheme=(()=>{
   const key='studyos-theme';
   const system=matchMedia('(prefers-color-scheme: dark)');
-  const chromeColor=document.querySelector('meta[name="theme-color"]');
+  const chromeColor=document.createElement('meta');
+  chromeColor.name='theme-color';
   let preference;
   try{preference=localStorage.getItem(key);}catch{}
   function update(){
     const theme=preference==='dark'||preference==='light'?preference:system.matches?'dark':'light';
-    document.documentElement.dataset.theme=theme;
-    chromeColor.content=theme==='dark'?'#26282c':'#f2e8da';
+    const root=document.documentElement;
+    root.dataset.theme=theme;
+    chromeColor.content=getComputedStyle(root).getPropertyValue('--bg').trim();
     for(const button of document.querySelectorAll('[data-theme-choice]')){
       button.setAttribute('aria-pressed',String(button.dataset.themeChoice===theme));
     }
   }
   update();
+  document.head.append(chromeColor);
   system.addEventListener('change',update);
   return {
     update,
@@ -40,7 +57,7 @@ const studyTheme=(()=>{
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <title>StudyOS</title>
-<link rel="preload" href="./studyos-intro.js?v=4" as="script">
+<link rel="preload" href="./studyos-intro.js?v=5" as="script">
 <style>
 /* ═══════════════════════════════════════════════════════════════
    Apple-grade UI — 課程進度追蹤
@@ -53,8 +70,6 @@ const studyTheme=(()=>{
      Legacy names are kept (old rules and JS inline styles still read them).
      The selected theme changes only these color tokens. */
 
-  color-scheme: light;
-  --bg: #f2e8da;
   --surface: #fffcf7;
   --card: var(--surface);
   --card-2: #f7eee2;
@@ -3138,8 +3153,6 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 #clear-calendar-filter svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;}
 
 :root[data-theme=dark] {
-  color-scheme: dark;
-  --bg: #26282c;
   --surface: #2b2d31;
   --card-2: #33363b;
   --elevated: #393c42;
@@ -16595,7 +16608,7 @@ if(document.readyState==='loading'){
   init();
 }
 </script>
-<script async src="./studyos-intro.js?v=4"></script>
+<script async src="./studyos-intro.js?v=5"></script>
 </body>
 </html>
 

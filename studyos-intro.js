@@ -29,6 +29,20 @@
       position: fixed; inset: 0; width: auto; height: auto; max-width: none; max-height: none;
       margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none;
       background: transparent; overflow: hidden; overscroll-behavior: contain;
+      --intro-rear: var(--sunken-h);
+      --intro-rear-light: var(--sunken);
+      --intro-middle: var(--bg);
+      --intro-front-shade: var(--card-2);
+      --intro-front: var(--elevated);
+      --intro-inset: var(--sunken);
+    }
+    :root[data-theme=dark] #studyos-intro {
+      --intro-rear: var(--surface);
+      --intro-rear-light: var(--card-2);
+      --intro-middle: var(--sunken);
+      --intro-front-shade: var(--elevated);
+      --intro-front: var(--accent-tint);
+      --intro-inset: var(--sunken-h);
     }
     #studyos-intro::backdrop { background: transparent; }
     #studyos-intro .intro-veil { position: absolute; inset: 0; background: var(--bg); }
@@ -38,20 +52,27 @@
     }
     #studyos-intro .intro-card {
       position: absolute; inset: 0; padding: 12%; border: 1px solid var(--border-strong);
-      border-radius: 12%; background: var(--surface);
-      background: color-mix(in srgb, var(--surface), var(--text-2) var(--tint));
-      box-shadow: 0 3px 12px rgba(0, 0, 0, .12);
+      border-radius: 12%; background: var(--intro-rear);
+      box-shadow: var(--shadow-md);
       transform-origin: 50% 118.63%;
     }
+    #studyos-intro .intro-card:nth-child(2) { background: var(--intro-rear-light); }
+    #studyos-intro .intro-card:nth-child(3) { background: var(--intro-middle); }
+    #studyos-intro .intro-card:nth-child(4) { background: var(--intro-front-shade); }
+    #studyos-intro .intro-card:last-child {
+      background: var(--intro-front);
+      /* The thin edges remain visible when the cards share an angle. */
+      box-shadow: 0 2px 0 -1px var(--intro-middle), 0 4px 0 -2px var(--intro-rear), var(--shadow-md);
+    }
     #studyos-intro .intro-card span {
-      display: block; height: 54%; border-radius: 14%; background: var(--selection-bg, var(--sunken-h));
-      background: color-mix(in srgb, var(--sunken-h), var(--text-2) 17%);
+      display: block; height: 54%; border-radius: 14%; background: var(--intro-inset);
+      box-shadow: inset 0 0 0 1px var(--border-lt);
     }
     #studyos-intro .intro-card::before, #studyos-intro .intro-card::after {
       content: ''; position: absolute; left: 12%; top: 64%; width: 51%; height: 4%;
       border-radius: 999px; background: var(--text-2); opacity: .5;
     }
-    #studyos-intro .intro-card::after { top: 77%; width: 37%; opacity: .33; }
+    #studyos-intro .intro-card::after { top: 77%; width: 24%; background: var(--selection-indicator); opacity: .8; }
     #studyos-intro-skip {
       position: absolute; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
       left: 50%; transform: translateX(-50%); min-height: 44px; padding: 0 16px;
@@ -65,7 +86,6 @@
   const stage = dialog.querySelector('.intro-stage');
   const veil = dialog.querySelector('.intro-veil');
   const skip = dialog.querySelector('button');
-  cards.forEach((card, i) => card.style.setProperty('--tint', (4 - i) * 5 + '%'));
 
   // Card Fan #04 in Motion Library uses a shared pivot and a .273 radian step.
   // Start partly open, close around that pivot, then reveal the page through the stack.
