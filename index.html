@@ -1074,7 +1074,6 @@ body{
 #today-task-tabs{display:grid;grid-template-columns:repeat(2,minmax(max-content,1fr));flex:none;max-inline-size:100%;scrollbar-width:none;border-radius:var(--r-pill);}
 #today-task-tabs .vt-btn{min-height:44px;padding:0 12px;border:0;box-shadow:none;text-decoration:none;white-space:nowrap;}
 #today-task-tabs .vt-btn:focus-visible{outline:2px dashed var(--ui-focus);outline-offset:-2px;}
-.today-task-feedback .toast{width:fit-content;margin-block-end:var(--sp-2);}
 #today-task-add{display:grid;place-items:center;flex:none;min-width:44px;min-height:44px;padding:0;font-size:1.3rem;}
 .today-task-completed{margin-block-start:var(--sp-3);}
 #today-task-lists .today-task-completed h4{margin:0 0 var(--sp-1);color:var(--text-2);}
@@ -2980,7 +2979,6 @@ body:has(#lesson-time-dialog[open]) #phone-course-dialog[data-calendar-schedule]
 #panel-r .day-completed{border-top:1px solid var(--border-lt);}
 #panel-r .day-completed > summary{cursor:pointer;align-content:center;min-height:44px;font-size:14px;font-weight:600;color:var(--text-2);}
 #panel-r .day-completed-list .day-lesson{border-top:1px solid var(--border-lt);}
-#panel-r .day-list-status{padding:12px 4px;margin:0;font-size:14px;color:var(--text-2);}
 
 #day-edit-panel [hidden]{display:none!important;}
 #day-edit-panel .day-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
@@ -3142,6 +3140,8 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
   #panel-cal .cal-head #phone-schedule-open{grid-area:2/3;justify-self:end;}
 }
 
+.phone-cal-summary :is(.wide-week,.phone-week)[hidden],#week-progress[hidden]{display:none;}
+@media(max-width:767px){.calendar-summary-options{margin-inline-start:auto;}}
 .calendar-summary-options{display:flex;align-items:center;gap:4px;min-width:0;max-width:min(55%,264px);}
 #calendar-more{flex:none;}
 #clear-calendar-filter{
@@ -3562,7 +3562,7 @@ dialog[data-app-dialog][open]::backdrop { animation: studyos-fade-in 140ms ease-
   font-weight: 700;
   letter-spacing: 0;
 }
-:is(#course-summary,.day-list-status,.study-local,.study-meta,.study-brief-meta,.account-backup-title) {
+:is(#course-summary,.study-local,.study-meta,.study-brief-meta,.account-backup-title) {
   font-size: var(--ui-caption);
   line-height: var(--ui-caption-leading);
 }
@@ -4310,7 +4310,6 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 #panel-r .day-heading{align-items:center;flex-wrap:wrap;min-width:0;}
 #panel-r .day-heading h2{overflow-wrap:anywhere;}
 #panel-r .day-schedule-entry{min-width:0;}
-#panel-r .day-panel-main .day-list-status{padding-inline:var(--sp-2);}
 #panel-r .day-study-options{
   display:grid;gap:var(--sp-2);margin-top:var(--sp-2);
 }
@@ -4328,14 +4327,12 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .study-brief-option{gap:var(--sp-2);padding-block:var(--sp-2);border-bottom:1px solid var(--border-lt);}
 #panel-r #study-exams-title{cursor:pointer;min-height:44px;align-content:center;}
 #panel-r #study-exams .study-exam-row{margin-block-start:var(--sp-2);}
-#today-lesson-progress{margin-block-end:var(--sp-3);}
 .lesson-progress{max-inline-size:18rem;}
 .lesson-progress-caption{color:var(--text-2);font-size:var(--ui-caption);font-variant-numeric:tabular-nums;}
 .lesson-progress-bar{
   appearance:none;display:block;inline-size:100%;block-size:3px;margin-block-start:5px;
   border:0;border-radius:var(--r-pill);background:var(--sunken);overflow:hidden;
 }
-.lesson-progress-bar[hidden]{display:none;}
 .lesson-progress-bar::-webkit-progress-bar{background:var(--sunken);}
 .lesson-progress-bar::-webkit-progress-value{background:var(--accent);border-radius:var(--r-pill);}
 .lesson-progress-bar::-moz-progress-bar{background:var(--accent);border-radius:var(--r-pill);}
@@ -5564,14 +5561,14 @@ onAuthStateChanged(auth,user=>{
         <button type="button" class="btn phone-only" id="phone-schedule-open" aria-label="安排課程" onclick="openCalendarSchedule(event)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
       <div class="wide-cal-tools phone-cal-summary">
-        <div class="wide-week">
+        <div id="wide-week" class="wide-week" hidden>
           <span><span id="wide-week-label">本週進度</span> · <b id="wide-week-count"></b></span>
           <span id="wide-week-track" role="progressbar" aria-label="本週課堂完成進度" aria-valuenow="0"><span id="wide-week-fill"></span></span>
         </div>
         <div class="wide-tools calendar-add-tools">
           <button type="button" class="btn btn-primary" id="wide-calendar-add" aria-label="新增或安排課程" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
         </div>
-        <div class="phone-week">
+        <div id="phone-week" class="phone-week" hidden>
           <span><span id="phone-week-label">本週進度</span> · <b id="phone-week-count"></b></span>
           <progress id="phone-week-progress" max="100" value="0" aria-label="本週課堂完成進度"></progress>
         </div>
@@ -5593,7 +5590,7 @@ onAuthStateChanged(auth,user=>{
           <button type="button" class="btn btn-sand" id="wide-exam-open" aria-haspopup="dialog" aria-controls="wide-exam-dialog">考試總覽</button>
           <button type="button" class="btn btn-sand" id="wide-drag-toggle" aria-controls="wide-drag" aria-expanded="false">待排課堂</button>
             </div>
-        <details class="week-progress" id="week-progress">
+        <details class="week-progress" id="week-progress" hidden>
           <summary id="week-progress-summary">
             <span class="week-progress-heading"><strong id="week-progress-label">本週進度</strong><span class="week-progress-range" id="week-progress-range"></span></span>
             <span class="week-progress-metric"><span>完成／已排</span><b id="week-progress-count"></b></span>
@@ -5637,14 +5634,10 @@ onAuthStateChanged(auth,user=>{
         <h2 id="day-label">選擇日期</h2>
         <button type="button" class="btn popup-close" aria-label="關閉日期詳情" id="day-panel-close" onclick="closeDayPanel()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
       </div>
-      <div class="lesson-progress" id="today-lesson-progress" hidden>
-        <p class="lesson-progress-caption" id="today-lesson-progress-text" role="status"></p>
-        <progress class="lesson-progress-bar" id="today-lesson-progress-bar" aria-label="今日課堂進度"></progress>
-      </div>
       <div class="day-schedule-entry">
         <p id="day-calendar-filter" role="status" hidden></p>
         <button type="button" class="btn btn-sand" id="global-search-day-return" hidden>返回搜尋</button>
-        <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-haspopup="dialog" aria-controls="phone-course-dialog">＋安排課程</button>
+        <button type="button" class="btn btn-primary" id="day-schedule-open" onclick="openDaySchedule()" aria-haspopup="dialog" aria-controls="phone-course-dialog">安排課程</button>
         <button type="button" class="btn btn-sand" id="today-makeup-open" aria-haspopup="dialog" aria-controls="makeup-dialog" hidden></button>
 
       </div>
@@ -8849,12 +8842,18 @@ function renderWeekProgress(localToday){
   for(const id of ['wide-week-label','phone-week-label','week-progress-label'])$id(id).textContent=label;
   for(const id of ['wide-week-track','phone-week-progress'])$id(id).setAttribute('aria-label',label+'（課堂）');
   const percentage=scheduled?Math.round(completed/scheduled*100):0;
-  $id('wide-week-count').textContent=completed+'／'+scheduled+' 堂';
+  const count=scheduled?completed+'／'+scheduled+' 堂':'';
+  for(const id of ['wide-week','phone-week']){
+    $id(id+'-count').textContent=count;
+    $id(id).hidden=!scheduled;
+  }
   $id('wide-week-track').setAttribute('aria-valuenow',percentage);
-  $id('wide-week-track').setAttribute('aria-valuetext',completed+'／'+scheduled+' 堂');
+  $id('wide-week-track').setAttribute('aria-valuetext',count);
   $id('wide-week-fill').style.width=percentage+'%';
-  $id('phone-week-count').textContent=completed+'／'+scheduled+' 堂';
   $id('phone-week-progress').value=percentage;
+  const weekDetails=$id('week-progress');
+  if(!scheduled&&weekDetails.contains(document.activeElement))focusCalendarMore();
+  weekDetails.hidden=!scheduled;
   if(!isMobile())return;
   const pending=entries.filter(({lesson})=>!lesson.done).map(({date,lesson})=>({
     date,time:lessonTimeLabel(lesson),name:course(lesson.courseId)?.name||'未知課程',late:date<localToday,
@@ -8863,7 +8862,7 @@ function renderWeekProgress(localToday){
   pending.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'24:00').localeCompare(b.time||'24:00'));
   document.getElementById('week-progress-range').textContent=
     dateLabel(start,true)+'–'+dateLabel(end,start.slice(0,4)!==end.slice(0,4));
-  document.getElementById('week-progress-count').textContent=completed+'／'+scheduled+' 堂';
+  $id('week-progress-count').textContent=count;
   document.getElementById('week-progress-overdue').textContent=overdue+' 堂';
   document.getElementById('week-progress-overdue-label').classList.toggle('is-overdue',overdue>0);
   const empty=document.getElementById('week-progress-empty');
@@ -9462,10 +9461,18 @@ function refreshDayScheduleCourses(){
     scheduleEntryFocus().focus({preventScroll:true});
   }
 }
-function openDaySchedule(){
-  beginCalendarSchedule(dayPanelDate()||localDateKey(),$id('day-schedule-open'),wideDay.open);
+function dayScheduleMode(date){
+  if(!S.courses.length)return 'manual';
+  if(date&&!S.calendar[date]?.length&&!S.courses.some(c=>remaining(c)>0))return 'courses';
+  return 'schedule';
 }
-function beginCalendarSchedule(date,opener,fromDay){
+function openDaySchedule(){
+  const date=dayPanelDate()||localDateKey();
+  const mode=dayScheduleMode(date);
+  if(mode==='courses'){openCoursesPage();return;}
+  beginCalendarSchedule(date,$id('day-schedule-open'),wideDay.open,mode);
+}
+function beginCalendarSchedule(date,opener,fromDay,mode='schedule'){
   if(dayScheduleDate)return;
   cancelCalendarSchedule();
   dayScheduleDate=date;
@@ -9487,7 +9494,7 @@ function beginCalendarSchedule(date,opener,fromDay){
   resetDayScheduleTime();
   renderConflictChoice('day-schedule-conflicts',date,{},[],'');
   refreshDayScheduleCourses();
-  openPhoneCourse('schedule');
+  openPhoneCourse(mode);
 }
 function finishCalendarSchedule(date){
   const onToday=isTodayPage();
@@ -10281,7 +10288,15 @@ function renderDayPanel(){
   const date=dayPanelDate(),onToday=isTodayPage();
   $id('global-search-day-return').hidden=onToday||!globalSearch?.fromLessonDate(date);
   $id('panel-r').dataset.dayContext=onToday?'today':'calendar';
-  $id('today-lesson-progress').hidden=!onToday||!date;
+  const schedule=$id('day-schedule-open'),mode=dayScheduleMode(date||localDateKey());
+  schedule.textContent={manual:'新增課程',schedule:'安排課程',courses:'前往我的課程'}[mode];
+  if(mode==='courses'){
+    schedule.removeAttribute('aria-haspopup');
+    schedule.removeAttribute('aria-controls');
+  }else{
+    schedule.setAttribute('aria-haspopup','dialog');
+    schedule.setAttribute('aria-controls','phone-course-dialog');
+  }
   syncTodayMakeupEntry();
   if(!date){
     label.textContent='選擇日期';
@@ -10308,15 +10323,6 @@ function renderDayPanel(){
   const allEvts=S.calendar[date]||[];
   const dayTotal=allEvts.length;
   const dayDone=allEvts.filter(e=>e.done).length;
-  const progressText=dayTotal?'已完成 '+dayDone+'／'+dayTotal+' 堂':onToday?'今日未排課':'當日未排課';
-  if(onToday){
-    const text=$id('today-lesson-progress-text'),bar=$id('today-lesson-progress-bar');
-    if(text.textContent!==progressText)text.textContent=progressText;
-    bar.hidden=!dayTotal;
-    bar.max=dayTotal||1;
-    bar.value=dayDone;
-  }
-
   const pending=[];
   const completed=[];
   const subjects=new Map(allEvts.map(lesson=>[lesson.courseId,course(lesson.courseId)]).filter(([,subject])=>subject));
@@ -10329,7 +10335,6 @@ function renderDayPanel(){
   const weekly=$id('today-weekly-review');
   if(weekly)weeklyReviewExpanded=weekly.open;
   el.dataset.renderedDate=date;
-  const status=pending.length?'':`<p class="day-list-status">${completed.length?'當天課程已全部完成。':onToday?'今天還沒有課堂。':'這天還沒有課堂。'}</p>`;
   const doneSection=completed.length?`<details class="day-completed" ${keepExpanded?'open':''}>
     <summary>已完成（${completed.length}）</summary>
     <div class="day-lesson-list day-completed-list">${completed.join('')}</div>
@@ -10339,11 +10344,11 @@ function renderDayPanel(){
   el.innerHTML=`  <div class="day-panel-shell">
     <section class="day-panel-section day-panel-main">
       <h3 class="day-panel-title">${onToday?'今日課程':'當日課程'}</h3>
-      ${onToday?'':`<div class="lesson-progress">
-        <p class="lesson-progress-caption" role="status">${progressText}</p>
-        <progress class="lesson-progress-bar" aria-label="當日課堂進度" max="${dayTotal||1}" value="${dayDone}" ${dayTotal?'':'hidden'}></progress>
-      </div>`}
-      <div class="day-course-list day-lesson-list">${status}${pending.join('')}</div>${doneSection}
+      ${dayTotal?`<div class="lesson-progress">
+        <p class="lesson-progress-caption" role="status">已完成 ${dayDone}／${dayTotal} 堂</p>
+        <progress class="lesson-progress-bar" aria-label="${onToday?'今日':'當日'}課堂進度" max="${dayTotal}" value="${dayDone}"></progress>
+      </div>`:`<p class="lesson-progress-caption">${onToday?'今天還沒有課堂。':'這天還沒有課堂。'}</p>`}
+      ${pending.length?`<div class="day-course-list day-lesson-list">${pending.join('')}</div>`:''}${doneSection}
       <div id="day-planned-reviews"></div>
     </section>${onToday?`<section id="today-tasks-slot" class="day-panel-section" aria-labelledby="today-tasks-title"><h3 class="day-panel-title" id="today-tasks-title">任務清單</h3></section>
     <div class="today-review-column">
@@ -10819,8 +10824,7 @@ for(const [id,mode] of [['phone-course-open','menu'],['phone-manual-open','manua
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
 }
 $id('wide-calendar-add').addEventListener('click',openCalendarSchedule);
-$id('schedule-courses-open').addEventListener('click',()=>{
-  closePhoneCourse({restoreFocus:false,returnDay:false});
+function openCoursesPage(){
   if(isMobile()){
     mobileTab('course');
     $id('phone-courses-title').focus();
@@ -10828,6 +10832,10 @@ $id('schedule-courses-open').addEventListener('click',()=>{
     setWidePage('courses');
     $id('wide-courses-title').focus();
   }
+}
+$id('schedule-courses-open').addEventListener('click',()=>{
+  closePhoneCourse({restoreFocus:false,returnDay:false});
+  openCoursesPage();
 });
 for(const [id,mode] of [['schedule-manual-open','manual'],['schedule-quick-open','quick'],['schedule-back','schedule']]){
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
@@ -15989,18 +15997,18 @@ todayTaskView=(()=>{
   root.innerHTML='<div class="today-task-toolbar"><div id="today-task-tabs" class="study-mode-options" role="group" aria-label="任務清單">'+
     groups.map(([type,title])=>'<button type="button" class="vt-btn" data-task-tab="'+type+'" aria-pressed="'+(type==='daily')+
       '" aria-controls="today-task-panel-'+type+'">'+title+'</button>').join('')+
-    '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業">＋</button></div>'+
-    '<div class="today-task-feedback" role="status" aria-atomic="true"><div class="toast toast-success show" hidden><span aria-hidden="true">✓</span><span></span></div></div>'+
+    '</div><button type="button" id="today-task-add" class="btn btn-primary" data-task-action="add" aria-label="新增每日作業" hidden>＋</button></div>'+
     groups.map(([type,title,placeholder])=>'<section id="today-task-panel-'+type+'" data-today-task-type="'+type+'" aria-label="'+title+'"'+
       (type==='daily'?'':' hidden')+'><form class="today-task-form" hidden>'+
       '<textarea data-elastic-field rows="1" aria-label="新增'+title+'" aria-describedby="today-task-status-'+type+'" maxlength="160" placeholder="'+placeholder+'"></textarea>'+
       '<p class="today-task-hint" id="today-task-hint-'+type+'" hidden>按 Enter 或點欄位外即可新增</p>'+
       '<button class="btn btn-primary">儲存</button><button type="button" class="btn btn-sand" data-task-action="cancel">取消</button>'+
-      '</form><p class="today-task-status" id="today-task-status-'+type+'" role="status"></p><div class="today-task-items"></div></section>').join('');
+      '</form><p class="today-task-status" id="today-task-status-'+type+'" role="status"></p>'+
+      '<button type="button" class="btn btn-primary today-task-first" data-task-action="add" hidden>新增第一項</button>'+
+      '<div class="today-task-items"></div></section>').join('');
   const sections=[...root.querySelectorAll('[data-today-task-type]')],add=root.querySelector('#today-task-add');
   const tabs=[...root.querySelectorAll('[data-task-tab]')];
-  const feedback=root.querySelector('.today-task-feedback .toast'),feedbackText=feedback.lastElementChild;
-  let timer,feedbackTimer,ownerEpoch=0,selected='daily';
+  let timer,ownerEpoch=0,selected='daily';
   const completionHold=520,completionAnimation=440,completionHolds=new Map();
   const taskMotion=matchMedia('(prefers-reduced-motion:no-preference)');
   const completionKey=item=>item.id+':'+item.date;
@@ -16013,16 +16021,13 @@ todayTaskView=(()=>{
     for(const key of completionHolds.keys())releaseCompletion(key);
     refresh();
   });
-  function clearQuickAddFeedback(){
-    clearTimeout(feedbackTimer);
-    feedback.hidden=true;
-    feedbackText.textContent='';
+  function syncAddControls(section){
+    const empty=section.dataset.taskEmpty==='true';
+    section.querySelector('.today-task-first').hidden=!empty||!section.querySelector('form').hidden;
+    if(!section.hidden)add.hidden=empty;
   }
-  function showQuickAddFeedback(section){
-    clearTimeout(feedbackTimer);
-    feedback.hidden=false;
-    feedbackText.textContent='已新增至'+section.getAttribute('aria-label');
-    feedbackTimer=setTimeout(clearQuickAddFeedback,2800);
+  function taskAddButton(section){
+    return section.dataset.taskEmpty==='true'?section.querySelector('.today-task-first'):add;
   }
   // A pending blur belongs to the input that initiated it, even after a tab change.
   const quickAdds=new Map();
@@ -16033,7 +16038,6 @@ todayTaskView=(()=>{
     draft.blurPending=false;
     const text=input.value.trim();
     if(text&&!save(section,'create',{text})){
-      clearQuickAddFeedback();
       input.setAttribute('aria-invalid','true');
       return;
     }
@@ -16041,8 +16045,7 @@ todayTaskView=(()=>{
     edit(section);
     const item=target&&!section.hidden&&editableTask(section.dataset.todayTaskType,target.id,Date.now());
     if(item)edit(section,true,{...item,date:target.date});
-    else if(restoreFocus&&!section.hidden)add.focus({preventScroll:true});
-    if(text&&section.dataset.todayTaskType==='daily')showQuickAddFeedback(section);
+    else if(restoreFocus&&!section.hidden)taskAddButton(section).focus({preventScroll:true});
   }
   function scheduleQuickBlur(draft,delay=0){
     clearTimeout(draft.blurTimer);
@@ -16115,6 +16118,7 @@ todayTaskView=(()=>{
       section.hidden=hidden;
     }
     add.setAttribute('aria-label','新增'+groups.find(group=>group[0]===type)[1]);
+    syncAddControls(sections.find(section=>!section.hidden));
   }
   function activeTasks(type,now){
     const date=localDateKey(new Date(now));
@@ -16154,6 +16158,7 @@ todayTaskView=(()=>{
     input.value=item?.text||'';
     input.setAttribute('aria-label',(item?'編輯':'新增')+title);
     status.textContent='';
+    syncAddControls(section);
     if(show)input.focus();
   }
   function rowHTML(item,type){
@@ -16180,6 +16185,9 @@ todayTaskView=(()=>{
       const completed=completedTasks(type,items,now).sort((a,b)=>b.completedAt-a.completedAt);
       for(const item of completed)deadlines.push(item.completedAt+todayTaskLifetime);
       const displayedCompleted=completed.filter(item=>!completing(item));
+      const hasTasks=type==='daily'?studyRoom.todayTasks().some(item=>item.type===type):items.length>0;
+      section.dataset.taskEmpty=String(!hasTasks);
+      syncAddControls(section);
       const list=section.querySelector('.today-task-items');
       const focus=list.contains(document.activeElement)?document.activeElement:null;
       const previous=focus?.closest('[data-today-task]');
@@ -16189,8 +16197,8 @@ todayTaskView=(()=>{
         section.querySelector('.today-task-status').textContent='這個項目已移除。';
       }
       const rows=entries=>'<ul class="memo-checklist">'+entries.map(item=>rowHTML(item,type)).join('')+'</ul>';
-      const markup=(pending.length?rows(pending):'<p class="memo-empty">'+
-        (type==='daily'?'今天沒有未完成的每日作業。':'目前沒有未完成的待辦事項。')+'</p>')+
+      const markup=(pending.length?rows(pending):hasTasks?'<p class="memo-empty">'+
+        (type==='daily'?'今天的每日作業已完成':'目前沒有未完成的待辦')+'</p>':'')+
         (displayedCompleted.length?'<div class="today-task-completed"><h4>已完成</h4>'+rows(displayedCompleted)+'</div>':'');
       if(list.dataset.rendered!==markup){
         list.dataset.rendered=markup;
@@ -16199,7 +16207,7 @@ todayTaskView=(()=>{
           const id=previous.dataset.todayTask,date=previous.dataset.taskDate;
           const row=findRow(section,id,date)||(type==='daily'?findRow(section,id,today):null);
           const selector='[data-task-action="'+focus.dataset.taskAction+'"]';
-          (row?.querySelector(selector)||row?.querySelector('.memo-check')||add).focus({preventScroll:true});
+          (row?.querySelector(selector)||row?.querySelector('.memo-check')||taskAddButton(section)).focus({preventScroll:true});
         }
       }
     }
@@ -16273,7 +16281,7 @@ todayTaskView=(()=>{
     if(id&&save(section,'edit',{id,text,date})){
       edit(section);
       const row=id&&(findRow(section,id,date)||findRow(section,id,localDateKey()));
-      (row?.querySelector('.memo-item-text')||add).focus({preventScroll:true});
+      (row?.querySelector('.memo-item-text')||taskAddButton(section)).focus({preventScroll:true});
     }
   });
   // Some touch keyboards send the newline edit without a keydown.
@@ -16299,7 +16307,7 @@ todayTaskView=(()=>{
       }else if(event.key==='Escape'&&draft&&!ime){
         event.preventDefault();
         edit(draft.section);
-        add.focus({preventScroll:true});
+        taskAddButton(draft.section).focus({preventScroll:true});
       }
       return;
     }
@@ -16325,7 +16333,7 @@ todayTaskView=(()=>{
     if(action==='cancel'){
       const row=findRow(section,section.dataset.editTask,section.dataset.editDate);
       edit(section);
-      (row?.querySelector('.memo-item-text')||add).focus({preventScroll:true});
+      (row?.querySelector('.memo-item-text')||taskAddButton(section)).focus({preventScroll:true});
       return;
     }
     const {todayTask:id,taskDate:date}=button.closest('[data-today-task]').dataset;
@@ -16355,7 +16363,6 @@ todayTaskView=(()=>{
     reset(){
       ownerEpoch++;
       for(const key of completionHolds.keys())releaseCompletion(key);
-      clearQuickAddFeedback();
       select('daily');
       if(['刪除每日作業','刪除待辦事項'].includes($id('confirm-title').textContent))hideConfirm();
       sections.forEach(section=>edit(section));
