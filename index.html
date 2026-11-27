@@ -4272,7 +4272,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 }
 @media(min-width:800px){
   #study-room:has(.paper-review-layout){width:min(100%,1120px);}
-  .paper-review-layout{grid-template-columns:minmax(220px,.85fr) minmax(0,2fr);}
+  .paper-review-layout{grid-template-columns:minmax(min(20rem,42%),.85fr) minmax(0,2fr);}
   .paper-review-sidebar{display:block;position:sticky;top:16px;min-width:0;}
   .paper-review-sidebar #paper-result-list{max-height:60vh;overflow-y:auto;overscroll-behavior:contain;}
 }
@@ -4907,6 +4907,12 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   .paper-result-filters .btn {
     min-height:44px;
   }
+}
+.paper-review-sidebar .paper-result-filters .btn {
+  min-inline-size:44px;
+  padding-inline:5px;
+  gap:.25em;
+  font-size:.875rem;
 }
 .paper-review-count {
   flex:none;
