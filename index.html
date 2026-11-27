@@ -2095,11 +2095,11 @@ button:active:not(:disabled){filter:brightness(.91);}
 #panel-l .section{margin-bottom:var(--sp-6);}
 #panel-l .section-label{font-size:1rem;font-weight:600;color:var(--text);}
 #panel-l .course-list-section>.section-label{display:none;}
-.course-list-section .muted,.day-empty{color:var(--text-3);font-size:var(--ui-label);}
+.day-empty{color:var(--text-3);font-size:var(--ui-label);}
 #course-list{
   background:var(--surface);border:1px solid var(--border-lt);border-radius:var(--r);
 }
-.course-list-section .muted{padding:var(--sp-4);}
+
 #course-list .course-card{
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px 8px;
   padding:12px;margin:0;background:none;border:0;border-radius:0;box-shadow:none;transform:none;
@@ -2661,7 +2661,6 @@ button.cal-exam:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
   .wide-course-row .course-remaining{grid-column:1;}
   .wide-course-row strong{overflow-wrap:anywhere;}
   .wide-course-row span{color:var(--text-2);font-size:var(--ui-caption);}
-  .wide-course-empty{padding:16px;color:var(--text-3);}
   .wide-dialog[open]{display:block;}
   .wide-dialog{
     position:fixed;inset:0;margin:auto;width:min(620px,calc(100% - 32px));
@@ -3101,7 +3100,8 @@ dialog[data-repeat-preview] > :not(#repeat-preview-content){display:none!importa
 :is(#wide-calendar-add,#phone-schedule-open,#phone-course-open) svg{
   display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;pointer-events:none;
 }
-#panel-cal #phone-schedule-open[hidden]{display:none;}
+#panel-cal #phone-schedule-open[hidden],#phone-course-open[hidden],#wide-add-open[hidden]{display:none;}
+.course-list-empty{padding:var(--sp-4);}
 :is(dialog,.modal,#confirm-dialog,#account-panel,#exam-popover,#wide-drag,#calendar-more) .popup-close svg{display:block;}
 #memo-modal,#reschedule-dialog,#repeat-preview,#makeup-dialog,#exam-progress-dialog,#backup-import-dialog,#confirm-dialog,.modal{padding:clamp(20px,3vw,24px);}
 @media(max-width:767px){
@@ -3784,7 +3784,7 @@ body:has(#drag-ghost.active) .week-wrap .week-ev { pointer-events: none; }
 }
 #global-search-dialog .makeup-head {flex:none;margin:0;}
 #global-search-dialog .study-field {flex:none;margin:0;}
-#global-search-status {flex:none;margin:0;}
+#global-search-dialog :is(#global-search-example,#global-search-status) {flex:none;margin:0;}
 #global-search-status:empty {display:none;}
 #global-search-results {min-height:0;overflow:auto;overscroll-behavior:contain;scroll-padding:4px;}
 .global-search-group h3 {margin:10px 4px 4px;font-size:var(--ui-label);color:var(--text-2);}
@@ -4029,6 +4029,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
 .paper-answer-key-values div{padding:var(--sp-2);background:var(--card-2);border-radius:var(--r-sm);}
 .paper-answer-key-values dd{margin:0;}
 .paper-archive-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:var(--sp-3);}
+.paper-archive-toolbar[hidden]{display:none;}
 .paper-archive-toolbar .study-field{flex:1 1 16rem;margin:0;}
 .paper-archive-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
 #paper-archive-status:empty{display:none;}
@@ -5431,7 +5432,7 @@ onAuthStateChanged(auth,user=>{
         <h2 id="wide-courses-title" tabindex="-1">我的課程</h2>
         <div class="wide-tools">
           <button type="button" class="btn btn-sand" id="wide-makeup-open" aria-haspopup="dialog">補課清單</button>
-          <button type="button" class="btn btn-primary" id="wide-add-open" aria-haspopup="dialog">＋新增課程</button>
+          <button type="button" class="btn btn-primary" id="wide-add-open" aria-haspopup="dialog" hidden>＋新增課程</button>
         </div>
       </div>
       <ul class="wide-course-list" id="wide-course-list"></ul>
@@ -5442,7 +5443,7 @@ onAuthStateChanged(auth,user=>{
     </section>
 
     <aside class="panel panel-l" id="panel-l">
-      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2 id="phone-courses-title" tabindex="-1">我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></div><p id="course-summary"></p></div>
+      <div class="mobile-page-intro course-summary-intro"><div class="phone-courses-head"><h2 id="phone-courses-title" tabindex="-1">我的課程</h2><button type="button" class="btn btn-sand phone-only" id="phone-course-open" aria-label="新增課程或快速輸入" aria-haspopup="dialog" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></div><p id="course-summary"></p></div>
       <div class="tablet-course-heading">
         <h2>我的課程</h2>
         <button type="button" class="btn btn-sand" id="tablet-course-close" onclick="closeTabletPanel()">關閉</button>
@@ -5657,7 +5658,8 @@ onAuthStateChanged(auth,user=>{
 </template>
 <dialog id="global-search-dialog" class="local-dialog" aria-labelledby="global-search-title">
   <div class="makeup-head"><h2 id="global-search-title">全站搜尋</h2><button type="button" class="btn popup-close" id="global-search-close" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
-  <label class="study-field"><span>搜尋課堂、知識庫與考古題</span><input id="global-search-query" type="search" placeholder="例如：中國醫 115" autocomplete="off" aria-controls="global-search-results"></label>
+  <label class="study-field"><span>搜尋課堂、知識庫與考古題</span><input id="global-search-query" type="search" autocomplete="off" aria-controls="global-search-results" aria-describedby="global-search-example"></label>
+  <p id="global-search-example" class="study-meta">例如：生物、第 6 堂、中國醫</p>
   <p id="global-search-status" class="study-meta" role="status"></p>
   <div id="global-search-results"></div>
 </dialog>
@@ -8104,13 +8106,13 @@ function renderWideCourses(){
     const focused=wideCourses.contains(document.activeElement)&&document.activeElement.dataset.wideCourse;
     wideCourses.innerHTML=rows;
     if(focused)focusWideCourse(focused);
-  }else if(!rows && !wideCourses.querySelector('.wide-course-empty')){
-    wideCourses.innerHTML='<li class="wide-course-empty">尚未新增課程</li>';
+  }else if(!rows && !$id('wide-first-course')){
+    wideCourses.innerHTML='<li class="course-list-empty"><button type="button" class="btn btn-primary" id="wide-first-course" aria-haspopup="dialog">新增第一門課程</button></li>';
   }
 }
 function focusWideCourse(id){
   const row=[...wideCourses.querySelectorAll('[data-wide-course]')].find(button=>button.dataset.wideCourse===id);
-  (row||$id('wide-add-open')).focus({preventScroll:true});
+  (row||$id('wide-first-course')||$id('wide-add-open')).focus({preventScroll:true});
 }
 function openWideCourse(id,mode='course'){
   const c=course(id);
@@ -8145,6 +8147,7 @@ bindWideDialog(wideCourse,dismissWideCourse);
 wideCourses.addEventListener('click',event=>{
   const row=event.target.closest('[data-wide-course]');
   if(row)openWideCourse(row.dataset.wideCourse);
+  else if(event.target.closest('#wide-first-course'))openWideCourse(null,'add');
 });
 $id('wide-course-close').addEventListener('click',closeWideCourse);
 $id('wide-memo-open').addEventListener('click',event=>openMemoModal(wideCourseId,event.currentTarget));
@@ -8434,7 +8437,9 @@ function syncFolds(){
 function renderCourseSummary(){
   const el=document.getElementById('course-summary');if(!el)return;
   const n=S.courses.length,rem=S.courses.reduce((t,c)=>t+remaining(c),0);
-  el.textContent=n?`${n} 門課${rem>=1?` · 尚有 ${rem} 堂未安排`:''}`:'還沒有課程，請先新增第一門';
+  el.textContent=n?`${n} 門課${rem>=1?` · 尚有 ${rem} 堂未安排`:''}`:'';
+  $id('phone-course-open').hidden=!n;
+  $id('wide-add-open').hidden=!n;
 }
 function renderCourses(){
   renderCourseSummary();
@@ -8449,7 +8454,10 @@ function renderCourses(){
     if(!selected){closeWideCourse();return;}
     $id('wide-course-title').textContent=selected.name;
   }
-  if(!S.courses.length){el.innerHTML='<div class="muted">尚未新增課程</div>';return;}
+  if(!S.courses.length){
+    if(!$id('phone-first-course'))el.innerHTML='<div class="course-list-empty"><button type="button" class="btn btn-primary" id="phone-first-course" aria-haspopup="dialog">新增第一門課程</button></div>';
+    return;
+  }
   const show=isMobile()?(S.courseListExpanded?S.courses:S.courses.slice(0,COURSE_PREVIEW)):(selected?[selected]:[]);
   const focusedExamId=document.activeElement?.dataset.examProgress;
 
@@ -10794,7 +10802,8 @@ function closePhoneCourse({restoreFocus=true,returnDay=true}={}){
     else openDayPanel();
   }
   if(restoreFocus){
-    const fallback=$id(wasSchedule?(isMobile()?'phone-schedule-open':'wide-calendar-add'):'phone-course-open');
+    const fallback=wasSchedule?$id(isMobile()?'phone-schedule-open':'wide-calendar-add'):
+      $id('phone-first-course')||$id('phone-course-open');
     const opener=courseDialogOpener?.getClientRects().length?courseDialogOpener:fallback;
     opener?.focus({preventScroll:true});
   }
@@ -10823,6 +10832,12 @@ phoneCourseDialog.querySelector('[data-local-close]').addEventListener('click',c
 for(const [id,mode] of [['phone-course-open','menu'],['phone-manual-open','manual'],['phone-quick-open','quick'],['phone-existing-repeat','repeat']]){
   $id(id).addEventListener('click',()=>openPhoneCourse(mode));
 }
+$id('course-list').addEventListener('click',event=>{
+  const opener=event.target.closest('#phone-first-course');
+  if(!opener)return;
+  courseDialogOpener=opener;
+  openPhoneCourse('manual');
+});
 $id('wide-calendar-add').addEventListener('click',openCalendarSchedule);
 function openCoursesPage(){
   if(isMobile()){
@@ -12067,7 +12082,9 @@ const studyRoom=(()=>{
     render();
     if(archive){
       const card=[...root.querySelectorAll('[data-study-action=paper-open]')].find(button=>button.dataset.paper===archive.id);
-      (card||$id('paper-query')).focus({preventScroll:true});
+      const fallback=$id('paper-archive-toolbar').hidden?
+        $id('paper-archive-results').querySelector('[data-study-action=paper-new]')||$id('study-heading'):$id('paper-query');
+      (card||fallback).focus({preventScroll:true});
       restoreReviewScroll(archive.scroll);
       paperArchiveOrigin=null;
       return;
@@ -12214,10 +12231,19 @@ const studyRoom=(()=>{
       }).join('')+'</div>';
   }
   function updatePaperList(){
-    const list=$id('paper-archive-results'),query=normalizePaperSearch(paperSearch);
-    const keywords=query?query.split(' '):[];
+    const list=$id('paper-archive-results'),status=$id('paper-archive-status');
     const papers=(data.papers||[]).filter(p=>!paperSubjectRef||paperRef(p)===paperSubjectRef)
       .sort((a,b)=>Number(b.year)-Number(a.year)||paperSchool(a).localeCompare(paperSchool(b),'zh-Hant'));
+    $id('paper-archive-toolbar').hidden=!papers.length;
+    if(!papers.length){
+      $id('paper-query').value=paperSearch='';
+      status.textContent='';
+      list.innerHTML=paperSubjectRef?'<section class="study-surface">'+action('建立第一份試卷','paper-new',true)+'</section>':
+        '<p class="study-empty">還沒有試卷。從考古題首頁選擇考科後，即可新增。</p>';
+      return;
+    }
+    const query=normalizePaperSearch(paperSearch);
+    const keywords=query?query.split(' '):[];
     const groups=new Map();
     for(const p of papers){
       const year=String(Number(p.year));
@@ -12230,10 +12256,9 @@ const studyRoom=(()=>{
     }
     const clear=$id('paper-query-clear');
     clear.hidden=!paperSearch;
-    $id('paper-archive-status').textContent=query?'找到 '+[...groups.values()].reduce((total,items)=>total+items.length,0)+' 份試卷':'';
+    status.textContent=query?'找到 '+[...groups.values()].reduce((total,items)=>total+items.length,0)+' 份試卷':'';
     if(!groups.size){
-      list.innerHTML=papers.length?'<p class="study-empty">找不到符合的試卷。</p>':
-        '<p class="study-empty">'+(paperSubjectRef?'還沒有試卷。按「＋ 新增試卷」建立第一份。':'還沒有試卷。從考古題首頁選擇考科後，即可新增。')+'</p>';
+      list.innerHTML='<p class="study-empty">找不到符合的試卷。</p>';
       return;
     }
     const counts=new Map();
@@ -12251,7 +12276,7 @@ const studyRoom=(()=>{
   }
   function paperList(){
     draw(esc(paperSubjectRef?paperSubject+'・考古題':'歷屆試卷'),
-      (paperSubjectRef?paperModes('paper-list'):'')+'<div class="paper-archive-toolbar">'+
+      (paperSubjectRef?paperModes('paper-list'):'')+'<div id="paper-archive-toolbar" class="paper-archive-toolbar" hidden>'+
       '<label class="study-field"><span>搜尋學校或年度</span><input id="paper-query" type="search" placeholder="例如：中國醫 115" value="'+esc(paperSearch)+'" autocomplete="off"></label>'+
       '<div class="paper-archive-actions"><button id="paper-query-clear" type="button" class="btn btn-sand" data-study-action="paper-clear" hidden>清除搜尋</button>'+
       (paperSubjectRef?action('＋ 新增試卷','paper-new',true):'')+'</div></div>'+
@@ -16383,6 +16408,7 @@ todayTaskView.mount();
 globalSearch=(()=>{
   const dialog=$id('global-search-dialog'),input=$id('global-search-query');
   const list=$id('global-search-results'),status=$id('global-search-status'),trigger=$id('global-search-open');
+  const example=$id('global-search-example');
   const groups=[['lesson','課堂'],['knowledge','知識庫'],['paper','考古題']];
   let results=[],target=null,opener=null,savedScroll=0,selectedKey='',previousMarkup='';
   const normalized=value=>String(value??'').normalize('NFKC').toLocaleLowerCase('zh-Hant').replace(/\s+/g,' ').trim();
@@ -16413,6 +16439,7 @@ globalSearch=(()=>{
   function refresh(){
     if(!dialog.open)return;
     const query=normalized(input.value),tokens=query.split(' ').filter(Boolean);
+    example.hidden=Boolean(query);
     if(!tokens.length){
       status.textContent='';list.replaceChildren();results=[];previousMarkup='';
       return;
@@ -16474,7 +16501,7 @@ globalSearch=(()=>{
   }
   function reset(){
     close(false);
-    input.value='';savedScroll=0;target=null;selectedKey='';results=[];previousMarkup='';
+    input.value='';example.hidden=false;savedScroll=0;target=null;selectedKey='';results=[];previousMarkup='';
     status.textContent='';list.replaceChildren();
     $id('global-search-day-return').hidden=true;
     $id('global-search-study-return')?.remove();
