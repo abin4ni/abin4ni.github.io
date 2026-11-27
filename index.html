@@ -4084,10 +4084,7 @@ input::placeholder,textarea::placeholder{color:var(--text-3);opacity:1;}
   .paper-answer-actions{position:sticky;bottom:0;z-index:2;margin-top:var(--sp-3);padding:var(--sp-2) 0;
     background:var(--surface);border-top:1px solid var(--border-lt);}
 }
-#study-room .paper-exam-tools{justify-content:space-between;margin-block:var(--sp-2) var(--sp-3);}
-.paper-exam-tools [data-study-action=paper-exam-clear]{background:transparent;color:var(--text-2);}
-.paper-exam-tools [data-study-action=paper-exam-clear]:hover:not(:disabled){background:var(--sunken);}
-.paper-exam-tools [data-study-action=paper-exam-clear]:disabled{opacity:.56;}
+#study-room .paper-exam-tools{justify-content:flex-start;margin-block:var(--sp-2) var(--sp-3);}
 .paper-exam-durations:not([hidden]){display:flex;flex-wrap:wrap;gap:var(--sp-3);}
 .paper-exam-warning:empty{display:none;}
 .paper-exam-header{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);}
@@ -13963,8 +13960,7 @@ const batchDialog=$id('study-batch');
       (session.scoring?'<p class="study-meta">'+paperScoringText(session.scoring)+'</p>':'')+
       (mockExam.deadline?'<p id="paper-exam-warning" class="study-meta paper-exam-warning" role="status"></p>':'')+
       '<div class="study-actions paper-exam-tools">'+
-      (q?action(uncertaintyButton(marked),'paper-exam-mark',false,'aria-pressed="'+marked+'"')+
-        action('清除答案','paper-exam-clear',false,'form="paper-exam-form" '+(answer?'':'disabled')):'')+'</div>'+
+      (q?action(uncertaintyButton(marked),'paper-exam-mark',false,'aria-pressed="'+marked+'"'):'')+'</div>'+
       '<form id="paper-exam-form">'+(q?paperAttemptQuestion(q,answer):'<p class="study-empty">這題已從試卷移除，可繼續作答其他題目。</p>')+
       '<div class="study-actions paper-answer-actions paper-exam-answer-actions">'+
       '<div class="paper-exam-action-group">'+action('題號表','paper-exam-map',false,'id="paper-exam-map-footer" '+trigger)+
@@ -14912,10 +14908,12 @@ const batchDialog=$id('study-batch');
       persist();
     }
   });
-  function savePaperAnswer(input){
-    if(input.name!=='answer'||input.form?.id!=='paper-exam-form'||!session?.mockExam||checkMockDeadline())return;
+  function savePaperAnswer(input,answer=input.value){
+    if(input.name!=='answer'||input.form?.id!=='paper-exam-form'||input.disabled||
+      !session?.mockExam||roundComplete(session)||checkMockDeadline())return;
+    const radio=input.type==='radio';
+    if(radio&&!input.checked)return;
     const id=session.queue[session.index],answers=session.mockExam.answers,previous=answers[id];
-    const answer=input.value,radio=input.type==='radio';
     if(answer===(previous||''))return;
     if(answer)answers[id]=answer;
     else delete answers[id];
@@ -14927,12 +14925,26 @@ const batchDialog=$id('study-batch');
       }else input.value=previous||'';
       return;
     }
+    if(radio&&!answer)input.checked=false;
     root.querySelector('.paper-exam-status').textContent='未作答 '+examUnanswered(session)+' 題';
-    root.querySelector('[data-study-action=paper-exam-clear]').disabled=!answer;
     if(examMapDialog.open)updatePaperQuestionMap();
   }
+  const paperRadio='#paper-exam-form input[type=radio][name=answer]';
   root.addEventListener('input',event=>savePaperAnswer(event.target));
+  root.addEventListener('keydown',event=>{
+    const option=event.target;
+    if(event.key!==' '||!option.matches(paperRadio)||!option.checked&&!event.repeat)return;
+    event.preventDefault();
+    if(!event.repeat)savePaperAnswer(option,'');
+  });
   root.addEventListener('click',event=>{
+    const option=event.target;
+    // The label forwards activation to its radio. A checked radio emits no input on reactivation.
+    if(option.matches(paperRadio)&&option.checked&&
+      session?.mockExam?.answers[session.queue[session.index]]===option.value){
+      savePaperAnswer(option,'');
+      return;
+    }
     const button=event.target.closest('[data-study-action]');
     if(!button)return;
     const act=button.dataset.studyAction;
@@ -15171,11 +15183,6 @@ const batchDialog=$id('study-batch');
       if(act==='paper-exam-mark'){
         const marked=session.mockExam.marked[id]=!session.mockExam.marked[id];
         if(!saveMockDraft({id,marked}))session.mockExam.marked[id]=!marked;
-      }
-      if(act==='paper-exam-clear'){
-        const previous=session.mockExam.answers[id];
-        delete session.mockExam.answers[id];
-        if(!saveMockDraft({id,answer:''}))session.mockExam.answers[id]=previous;
       }
       render();
       const next=root.querySelector('[data-study-action="'+act+'"]:not(:disabled)');
